@@ -61,6 +61,8 @@ local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7)
 local max_gibs_per_bone = CreateConVar("gs2_max_gibs_per_bone", 10)
 local max_gibs			= CreateConVar("gs2_max_gibs", 128)
 
+local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
+
 local GIB_CONN_DATA = {}
 
 local function GenerateConnData(ent, phys_bone)
@@ -160,7 +162,7 @@ function CreateGibs(ent, phys_bone)
 
 	local cached = GS2AreGibsCached[mdl]
 
-	local chance = cached and gib_factor:GetFloat() or 1 --spawn all first time for caching
+	local chance = (cached or !generate_all:GetBool()) and gib_factor:GetFloat() or 1 --spawn all first time for caching
 
 	if (chance <= 0) then
 		return
