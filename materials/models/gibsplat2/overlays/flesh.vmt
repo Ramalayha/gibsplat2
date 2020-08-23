@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+	"$basetexture"	"models/gibsplat2/overlays/flesh"
+	"$alphatest" "1"
+} //sv_cheats 1;lua_run_cl local e=Entity(1):GetEyeTrace().Entity SafeRemoveEntity(s) s=ClientsideModel("models/gibsplat2/skeleton/spine4.mdl") s:SetSkin(2) s:SetParent(e) s:AddEffects(EF_BONEMERGE)

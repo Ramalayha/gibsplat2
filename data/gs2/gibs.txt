@@ -1,0 +1,111 @@
+"gibs"
+{
+	"male"
+	{
+		"ValveBiped.Bip01_Head1"
+		{
+			"models/gibsplat2/gibs/jaw.mdl"
+			{
+				"vec_offset"			"-1 -3.5 0"
+				"ang_offset"			"0 -90 -90"
+			}
+			"models/gibsplat2/gibs/skull.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 -90 -90"
+			}
+			"models/gibsplat2/gibs/brain.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 -90 -90"
+			}
+		}
+		"ValveBiped.Bip01_Spine2"
+		{
+			"models/gibsplat2/gibs/rib01.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib02.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib03.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib04.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib05.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib06.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib07.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib08.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib09.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib10.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib11.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib12.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib13.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib14.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib15.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}
+			"models/gibsplat2/gibs/rib16.mdl"
+			{
+				"vec_offset"			"0 0 0"
+				"ang_offset"			"0 0 0"
+			}			
+		}
+	}
+	"female"
+	{
+
+	}
+}
