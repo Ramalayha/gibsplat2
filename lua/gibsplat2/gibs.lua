@@ -110,6 +110,9 @@ local function GenerateConnData(ent, phys_bone)
 		GIB_CONN_DATA[mdl][phys_bone][gib_index1] = {}
 		local mesh1 = gib1:GetPhysicsObject():GetMeshConvexes()[1]
 		for _, gib2 in pairs(gibs) do
+			if (!custom_gibs:GetBool() and gib2:GetClass() == "gs2_gib_custom") then
+				continue
+			end
 			local gib_index2 = gib2:GetGibIndex()
 			local mesh2 = gib2:GetMesh()
 			local is_conn = false
