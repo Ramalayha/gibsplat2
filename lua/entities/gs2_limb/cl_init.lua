@@ -95,9 +95,11 @@ function ENT:Think()
 	local body = self:GetBody()
 	if IsValid(body) then		
 		local pos = body:GetBonePosition(body:TranslatePhysBoneToBone(self:GetTargetBone() or 0))
-		self:SetPos(pos)
-		self:SetRenderOrigin(pos)
-		self:SetupBones()
+		if pos then
+			self:SetPos(pos)
+			self:SetRenderOrigin(pos)
+			self:SetupBones()
+		end
 	end
 end
 
@@ -231,6 +233,9 @@ function ENT:Draw()
 			
 			local self_bone = self:TranslatePhysBoneToBone(self_phys_bone)
 			local self_matrix = body:GetBoneMatrix(self_bone)
+			if !self_matrix then
+				return
+			end
 			self_matrix:Scale(vec_zero)
 			
 			for bone = 0, self:GetBoneCount()-1 do

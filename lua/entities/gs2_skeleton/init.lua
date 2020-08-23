@@ -5,8 +5,8 @@ include("shared.lua")
 
 function ENT:Initialize()
 	local body = self:GetBody()
-	self:SetModel(body:GetModel())
+	--self:SetModel("models/Roller.mdl")
+	self:SetPos(body:GetPos())
 	self:SetParent(body)
-	self:AddEffects(EF_BONEMERGE)
 	self:DrawShadow(false)
 end

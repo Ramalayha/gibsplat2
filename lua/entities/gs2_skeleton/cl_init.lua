@@ -13,7 +13,9 @@ local band 		= bit.band
 local lshift 	= bit.lshift
 local bnot 		= bit.bnot
 
-local skeleton_parts = util.KeyValuesToTable(file.Read("data/gs2/skeletons.txt", "GAME")).skeleton_parts
+local text = file.Read("data/gs2/skeletons.txt", "GAME")
+
+local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 
 local function GetOrCreateSkel(self, bone)
 	local mdl = self:GetModel()
