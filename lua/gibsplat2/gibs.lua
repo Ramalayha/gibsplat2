@@ -193,7 +193,7 @@ function CreateGibs(ent, phys_bone)
 
 	local gib_index = 0
 
-	local limit = cached and max_gibs_per_bone:GetInt() or 128
+	local limit = (cached or !generate_all:GetBool()) and max_gibs_per_bone:GetInt() or 128
 
 	if custom_gibs then
 		for gib_mdl, data in pairs(custom_gibs) do
