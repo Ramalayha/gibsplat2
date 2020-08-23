@@ -13,7 +13,7 @@ local band 		= bit.band
 local lshift 	= bit.lshift
 local bnot 		= bit.bnot
 
-local text = file.Read("data/gs2/skeletons.txt", "GAME")
+local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
 
 local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 

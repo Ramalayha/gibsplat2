@@ -20,7 +20,7 @@ end
 
 AddFolder("models/gibsplat2/*")
 AddFolder("materials/models/gibsplat2/*")
-AddFolder("data/gs2/*")
+AddFolder("gibsplat2/*")
 
 resource.AddFile("materials/models/alienflesh.vmt")
 resource.AddFile("materials/models/zombieflesh.vmt")

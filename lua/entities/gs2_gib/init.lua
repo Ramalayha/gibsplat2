@@ -49,6 +49,10 @@ function ENT:DoMerge()
 end
 
 function ENT:AddMerge(gib)
+	if (gib:GetClass() == "gs2_gib_custom") then
+		gib.GS2_merge = self
+		return
+	end
 	self.AdditionalMeshes = self.AdditionalMeshes or {}
 	if gib.AdditionalMeshes then
 		for _, mesh in pairs(gib.AdditionalMeshes) do

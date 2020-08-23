@@ -14,7 +14,9 @@ game.AddDecal("YellowBloodSmall", {
 	"decals/alienflesh/shot5"
 })
 
-local body_types = util.KeyValuesToTable(file.Read("data/gs2/skeletons.txt", "GAME")).body_types
+local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
+
+local body_types = util.KeyValuesToTable(text or "").body_types or {}
 
 local MDLTYPE_CACHE = {}
 
@@ -147,7 +149,9 @@ end
 
 local G_GIBS = {}
 
-local gib_info = util.KeyValuesToTable(file.Read("data/gs2/gibs.txt", "GAME"))
+local text = file.Read("gibsplat2/gibs.vmt", "GAME")
+
+local gib_info = util.KeyValuesToTable(text or "")
 
 local PHYS_MAT_CACHE = {}
 
@@ -268,31 +272,33 @@ function CreateGibs(ent, phys_bone)
 	--Connect
 	local chance = gib_merge_chance:GetFloat()
 	for gib_index1, gib1 in pairs(gibs) do
-		local conns = GIB_CONN_DATA[mdl][phys_bone][gib_index1]
-		if conns then			
-			while true do
-				local parent = gib1.GS2_merge
-				if IsValid(parent) then
-					gib1 = parent
-				else
-					break
-				end
-			end	
-			for _, gib_index2 in pairs(conns) do
-				local gib2 = gibs[gib_index2]				
-				if (gib2 and math.random() < chance) then
-					while true do
-						local parent = gib2.GS2_merge
-						if IsValid(parent) then
-							gib2 = parent
-						else
-							break
-						end
-					end
-					if (gib1 != gib2) then
-						gib1:AddMerge(gib2)	
+		if (gib1:GetClass() != "gs2_gib_custom") then
+			local conns = GIB_CONN_DATA[mdl][phys_bone][gib_index1]
+			if conns then			
+				while true do
+					local parent = gib1.GS2_merge
+					if IsValid(parent) then
+						gib1 = parent
+					else
+						break
 					end
 				end	
+				for _, gib_index2 in pairs(conns) do
+					local gib2 = gibs[gib_index2]				
+					if (gib2 and math.random() < chance) then
+						while true do
+							local parent = gib2.GS2_merge
+							if IsValid(parent) then
+								gib2 = parent
+							else
+								break
+							end
+						end
+						if (gib1 != gib2) then
+							gib1:AddMerge(gib2)	
+						end
+					end	
+				end
 			end
 		end
 	end

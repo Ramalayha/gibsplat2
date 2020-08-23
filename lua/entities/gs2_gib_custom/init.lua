@@ -6,14 +6,8 @@ include("shared.lua")
 function ENT:Initialize()
 	self.Created = CurTime()
 	if !self.GS2_merge then
-		local mesh = self:GetMesh()
-		if self.AdditionalMeshes then
-			table.insert(self.AdditionalMeshes, mesh)
-			self:PhysicsInitMultiConvex(self.AdditionalMeshes)
-		else
-			self:PhysicsInit(SOLID_VPHYSICS)
-		end
-		
+		self:PhysicsInit(SOLID_VPHYSICS)
+				
 		self:EnableCustomCollisions(true)
 		self:SetCustomCollisionCheck(true)
 		self:SetSolid(SOLID_VPHYSICS)
@@ -30,30 +24,6 @@ function ENT:Initialize()
 	end
 end
 
-function ENT:GetMesh()
-	if self.PhysMesh then
-		return self.PhysMesh
-	end
-	
-	local phys = self:GetPhysicsObject()
-	if !IsValid(phys) then
-		self:PhysicsInit(SOLID_VPHYSICS)
-		phys = self:GetPhysicsObject()
-	end
-
-	local memes = {}
-	local mesh = phys:GetMeshConvexes()[1]
-	for _, vert in pairs(mesh) do
-		memes[vert.pos] = true
-	end
-	table.Empty(mesh)
-	for vert in pairs(memes) do
-		table.insert(mesh, vert)
-	end
-	self.PhysMesh = mesh
-	return mesh
-end
-
 function ENT:DoMerge()
 	if self.GS2_merge then
 		self.GS2_dummy = true			
@@ -61,35 +31,6 @@ function ENT:DoMerge()
 		self:PhysicsDestroy()
 		return true
 	end
-end
-
-function ENT:AddMerge(gib)
-	self.AdditionalMeshes = self.AdditionalMeshes or {}
-	if gib.AdditionalMeshes then
-		for _, mesh in pairs(gib.AdditionalMeshes) do
-			local new_mesh = {}
-			for index, vert in pairs(mesh) do
-				local wpos = gib:LocalToWorld(vert)
-				local lpos = self:WorldToLocal(wpos)
-				new_mesh[index] = vert
-			end
-			table.insert(self.AdditionalMeshes, new_mesh)
-		end
-	end
-	local mesh = gib:GetMesh()
-	local new_mesh = {}
-	for index, vert in pairs(mesh) do
-		local wpos = gib:LocalToWorld(vert)
-		local lpos = self:WorldToLocal(wpos)
-		new_mesh[index] = vert
-	end
-	table.insert(self.AdditionalMeshes, new_mesh)
-	gib.GS2_merge = self
-	
-	local lpos, lang = WorldToLocal(gib:GetPos(), gib:GetAngles(), self:GetPos(), self:GetAngles())
-
-	gib.GS2_lpos = lpos
-	gib.GS2_lang = lang
 end
 
 function ENT:OnTakeDamage(dmginfo)
