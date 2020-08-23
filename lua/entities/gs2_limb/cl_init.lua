@@ -46,12 +46,6 @@ function ENT:Initialize()
 	self.Created = CurTime()
 
 	self.GS2BoneList = {}
-
-	local body = self:GetBody()
-
-	body.GS2Limbs = body.GS2Limbs or {}
-
-	body.GS2Limbs[self:GetTargetBone()] = self
 end
 
 function ENT:OnRemove()
@@ -65,6 +59,9 @@ end
 function ENT:Think()
 	local body = self:GetBody()
 	if IsValid(body) then
+		body.GS2Limbs = body.GS2Limbs or {}
+		body.GS2Limbs[self:GetTargetBone()] = self
+		
 		self:SetParent(body)
 		if (self:GetModel() != body:GetModel()) then
 			self:SetModel(body:GetModel())
