@@ -11,7 +11,7 @@ function ENT:Initialize()
 			table.insert(self.AdditionalMeshes, mesh)
 			self:PhysicsInitMultiConvex(self.AdditionalMeshes)
 		else
-			self:PhysicsInitConvex(mesh)
+			self:PhysicsInit(SOLID_VPHYSICS)
 		end
 		
 		self:EnableCustomCollisions(true)
