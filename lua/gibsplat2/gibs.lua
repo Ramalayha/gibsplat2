@@ -58,6 +58,7 @@ end
 
 local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3)
 local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7)
+local custom_gibs		= CreateConVar("gs2_gib_custom", 1)
 local max_gibs_per_bone = CreateConVar("gs2_max_gibs_per_bone", 10)
 local max_gibs			= CreateConVar("gs2_max_gibs", 128)
 
@@ -273,33 +274,35 @@ function CreateGibs(ent, phys_bone)
 
 	--Connect
 	local chance = gib_merge_chance:GetFloat()
-	for gib_index1, gib1 in pairs(gibs) do
-		if (gib1:GetClass() != "gs2_gib_custom") then
-			local conns = GIB_CONN_DATA[mdl][phys_bone][gib_index1]
-			if conns then			
-				while true do
-					local parent = gib1.GS2_merge
-					if IsValid(parent) then
-						gib1 = parent
-					else
-						break
-					end
-				end	
-				for _, gib_index2 in pairs(conns) do
-					local gib2 = gibs[gib_index2]				
-					if (gib2 and math.random() < chance) then
-						while true do
-							local parent = gib2.GS2_merge
-							if IsValid(parent) then
-								gib2 = parent
-							else
-								break
-							end
-						end
-						if (gib1 != gib2) then
-							gib1:AddMerge(gib2)	
+	if (chance > 0) then
+		for gib_index1, gib1 in pairs(gibs) do
+			if (gib1:GetClass() != "gs2_gib_custom") then
+				local conns = GIB_CONN_DATA[mdl][phys_bone][gib_index1]
+				if conns then			
+					while true do
+						local parent = gib1.GS2_merge
+						if IsValid(parent) then
+							gib1 = parent
+						else
+							break
 						end
 					end	
+					for _, gib_index2 in pairs(conns) do
+						local gib2 = gibs[gib_index2]				
+						if (gib2 and math.random() < chance) then
+							while true do
+								local parent = gib2.GS2_merge
+								if IsValid(parent) then
+									gib2 = parent
+								else
+									break
+								end
+							end
+							if (gib1 != gib2) then
+								gib1:AddMerge(gib2)	
+							end
+						end	
+					end
 				end
 			end
 		end
