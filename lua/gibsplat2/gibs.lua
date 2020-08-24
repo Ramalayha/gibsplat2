@@ -162,6 +162,8 @@ local gib_info = util.KeyValuesToTable(text or "")
 local PHYS_MAT_CACHE = {}
 
 function CreateGibs(ent, phys_bone)
+	do return end --need to redisng a lot :(
+		
 	local mdl = ent:GetModel()
 
 	local cached = GS2AreGibsCached[mdl]

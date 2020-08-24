@@ -1,6 +1,6 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 		= CreateConVar("gs2_enabled", 0)
+local enabled 		= CreateConVar("gs2_enabled", 1)
 local gib_chance 	= CreateConVar("gs2_gib_chance", 0.3)
 
 local ang_zero = Angle(0, 0, 0)
