@@ -14,6 +14,8 @@ function ENT:Initialize()
 	self:SetNotSolid(true)
 	self:SetMoveType(MOVETYPE_NONE)
 	self:SetParent(ent) --Deletes us with ent
+
+	self:DrawShadow(false)
 end
 
 function ENT:UpdateTransmitState()

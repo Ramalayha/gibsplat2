@@ -10,6 +10,8 @@ function ENT:Initialize()
 	self:SetModel(body:GetModel())
 	self:SetSkin(body:GetSkin())
 	self:SetPos(body:GetPos())
+	self:SetParent(body)
+	self:SetTransmitWithParent(true)
 	self:DrawShadow(false)
 	body:DrawShadow(false)
 	body:SetColor(invis)
@@ -17,7 +19,7 @@ function ENT:Initialize()
 	for _, data in pairs(body:GetBodyGroups()) do
 		local bg = body:GetBodygroup(data.id)
 		self:SetBodygroup(data.id, bg)
-	end
+	end	
 end
 
 function ENT:UpdateTransmitState()

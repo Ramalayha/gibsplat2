@@ -59,18 +59,6 @@ end
 function ENT:Think()
 	local body = self:GetBody()
 	if IsValid(body) then
-		if (self.GS2RenderMeshes and !IsValid(self.GS2RenderMeshes[1])) then --Reentered PVS
-			local self_phys_bone = self:GetTargetBone()
-			local meshes = GetBoneMeshes(body, self_phys_bone)
-			for key, mesh in pairs(meshes) do
-				local M = ents.CreateClientside("gs2_limb_mesh")
-				M:SetMesh(mesh)
-				M:SetBody(body, self_phys_bone)				
-				M:Spawn()
-				M.GS2ParentLimb = self
-				self.GS2RenderMeshes[key] = M
-			end	
-		end
 		body.GS2Limbs = body.GS2Limbs or {}
 		body.GS2Limbs[self:GetTargetBone()] = self
 		
@@ -170,7 +158,6 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 end
 
 function ENT:UpdateRenderInfo()
-	self:SetupBones()
 	local dis_mask = self:GetDisMask()
 	local gib_mask = self:GetGibMask()
 
@@ -197,10 +184,12 @@ function ENT:UpdateRenderInfo()
 			break			
 		end
 	end
-	self:SetupBones()
+	
+	local body = self:GetBody()
+	
 	if is_lonely then
 		self.GS2RenderMeshes = {}
-		local body = self:GetBody()
+		
 		if IsValid(body) then
 			--If no other parts are attached generate a mesh to optimize
 			local meshes = GetBoneMeshes(body, self_phys_bone)
@@ -214,6 +203,8 @@ function ENT:UpdateRenderInfo()
 			end		
 		end 
 	else
+		self:SetupBones()
+		body:SetupBones()
 		--Otherwise update bone info
 		table.Empty(self.GS2BoneList)		
 		self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bor(dis_mask, gib_mask))	
@@ -312,5 +303,12 @@ hook.Add("OnEntityCreated", HOOK_NAME, function(ent)
 				end
 			end
 		end)
+	end
+end)
+
+hook.Add("NotifyShouldTransmit", HOOK_NAME, function(ent, should)
+	if (should and ent.UpdateRenderInfo) then
+		ent.GS2RenderMeshes = nil
+		ent:UpdateRenderInfo()
 	end
 end)
