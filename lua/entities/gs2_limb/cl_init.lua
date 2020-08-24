@@ -59,6 +59,18 @@ end
 function ENT:Think()
 	local body = self:GetBody()
 	if IsValid(body) then
+		if (self.GS2RenderMeshes and !IsValid(self.GS2RenderMeshes[1])) then --Reentered PVS
+			local self_phys_bone = self:GetTargetBone()
+			local meshes = GetBoneMeshes(body, self_phys_bone)
+			for key, mesh in pairs(meshes) do
+				local M = ents.CreateClientside("gs2_limb_mesh")
+				M:SetMesh(mesh)
+				M:SetBody(body, self_phys_bone)				
+				M:Spawn()
+				M.GS2ParentLimb = self
+				self.GS2RenderMeshes[key] = M
+			end	
+		end
 		body.GS2Limbs = body.GS2Limbs or {}
 		body.GS2Limbs[self:GetTargetBone()] = self
 		
