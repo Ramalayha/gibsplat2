@@ -21,7 +21,3 @@ function ENT:Initialize()
 		self:SetBodygroup(data.id, bg)
 	end	
 end
-
-function ENT:UpdateTransmitState()
-	return TRANSMIT_ALWAYS
-end
