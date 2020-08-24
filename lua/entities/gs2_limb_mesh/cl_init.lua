@@ -35,14 +35,14 @@ end
 
 function ENT:Think()
 	if IsValid(self.Body) then
-		local mask = self.Body:GetNWInt("GS2GibMask", 0)
+		local mask = self.GS2ParentLimb:GetGibMask()
 
 		if (bit.band(mask, bit.lshift(1, self.PhysBone)) != 0) then
 			self:Remove()
 			return
 		end
 		
-		local min, max = self.Body:GetRenderBounds()
+		local min, max = self.Body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
 		min = self.Body:LocalToWorld(min)
 		max = self.Body:LocalToWorld(max)
 		self:SetRenderBoundsWS(min, max)

@@ -331,7 +331,9 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		end
 
 		for _, limb in pairs(self.GS2Limbs) do
-			limb:SetGibMask(mask)
+			if IsValid(limb) then
+				limb:SetGibMask(mask)
+			end
 		end
 
 		local phys = self:GetPhysicsObjectNum(phys_bone)
@@ -498,7 +500,9 @@ function ENTITY:MakeCustomRagdoll()
 			end
 
 			for _, limb in pairs(self.GS2Limbs) do
-				limb:SetDisMask(mask)				
+				if IsValid(limb) then
+					limb:SetDisMask(mask)	
+				end			
 			end
 
 			/*local temp = ents.Create("prop_physics")

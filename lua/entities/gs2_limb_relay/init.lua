@@ -1,5 +1,4 @@
-ENT.Type = "anim"
-ENT.Base = "base_anim"
+include("shared.lua")
 
 local gib_chance = CreateConVar("gs2_gib_chance", 0.3)
 
