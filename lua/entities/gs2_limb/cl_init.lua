@@ -79,7 +79,7 @@ function ENT:Think()
 				end
 			end
 		end
-		local min, max = body:GetRenderBounds()
+		local min, max = body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
 		min = body:LocalToWorld(min)
 		max = body:LocalToWorld(max)
 		self:SetRenderBoundsWS(min, max)
