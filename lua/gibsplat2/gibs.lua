@@ -1,3 +1,121 @@
+include("clipmesh.lua")
+
+local NUM_PARTS = 10
+
+local PHYS_GIB_CACHE = {}
+
+function GetPhysGibMeshes(mdl, phys_bone)
+	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
+		return PHYS_GIB_CACHE[mdl][phys_bone]
+	end
+
+	math.randomseed(util.CRC(mdl) + phys_bone)
+
+	local temp
+	if SERVER then
+		temp = ents.Create("prop_ragdoll")
+		temp:SetModel(mdl)
+		temp:Spawn()
+	else
+		temp = ClientsideRagdoll(mdl)
+	end
+	
+	local phys = temp:GetPhysicsObjectNum(phys_bone)
+
+	local convexes = phys:GetMeshConvexes()
+
+	temp:Remove()
+
+	local points = {}
+
+	for _, convex in pairs(convexes) do
+		for _, vert in pairs(convex) do
+			table.insert(points, vert.pos)
+		end
+	end
+
+	temp = SERVER and ents.Create("prop_physics") or ents.CreateClientProp()
+
+	temp:PhysicsInitConvex(points)
+
+	local convex = temp:GetPhysicsObject():GetMeshConvexes()[1]
+
+	temp:Remove()
+
+	local min, max = phys:GetAABB()
+	local size = max - min
+
+	local points = {}
+
+	local LEFT = NUM_PARTS
+
+	while (LEFT > 0) do
+		local point = Vector()
+		point.x = math.Rand(min.x, max.x)
+		point.y = math.Rand(min.y, max.y)
+		point.z = math.Rand(min.z, max.z)
+
+		local is_inside = true
+
+		for vert_index = 1, #convex - 2, 3 do
+			local v1 = convex[vert_index]
+			local v2 = convex[vert_index + 1]
+			local v3 = convex[vert_index + 2]
+
+			local p1 = v1.pos
+			local p2 = v2.pos
+			local p3 = v3.pos
+
+			local n = (p3 - p1):Cross(p2 - p1)
+			n:Normalize()
+
+			local d = n:Dot(p1) * 0.9
+
+			if (n:Dot(point) > d) then
+				is_inside = false
+				break
+			end
+		end
+		
+		if is_inside then
+			table.insert(points, point)
+			LEFT = LEFT - 1
+		end
+	end
+
+	local meshes = VoronoiSplit(convex, points)
+
+	if CLIENT then
+		for key, mesh in pairs(meshes) do
+			local center = mesh.center
+			for _, vert in ipairs(mesh.triangles) do
+				vert.normal = (vert.pos - center):GetNormal()
+				vert.u = vert.pos.x / size.x + vert.pos.z / size.z
+				vert.v = vert.pos.y / size.y + vert.pos.z / size.z
+			end
+			local M = Mesh()
+			M:BuildFromTriangles(mesh.triangles)
+			mesh.mesh = M
+		end
+	else
+		for _, mesh in pairs(meshes) do
+			local vertex_buffer = {}
+			for _, vert in pairs(mesh.triangles) do
+				vertex_buffer[vert.pos] = true
+			end
+			table.Empty(mesh.triangles)
+			for vert in pairs(vertex_buffer) do
+				table.insert(mesh.triangles, vert)
+			end
+		end
+	end
+	
+	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+	PHYS_GIB_CACHE[mdl][phys_bone] = meshes
+
+	return meshes
+end
+
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
 	"decals/flesh/blood2",
@@ -161,179 +279,68 @@ local gib_info = util.KeyValuesToTable(text or "")
 
 local PHYS_MAT_CACHE = {}
 
+local function GetChildMeshRec(ent, output)
+	output[#output + 1] = ent.GS2GibInfo.triangles
+	for _, child in ipairs(ent:GetChildren()) do
+		GetChildMeshRec(child, output)
+	end
+end
+
 function CreateGibs(ent, phys_bone)
-	do return end --need to redisng a lot :(
-		
-	local mdl = ent:GetModel()
+	local meshes = GetPhysGibMeshes(ent:GetModel(), phys_bone)
 
-	local cached = GS2AreGibsCached[mdl]
-
-	local chance = (cached or !generate_all:GetBool()) and gib_factor:GetFloat() or 1 --spawn all first time for caching
-
-	if (chance <= 0) then
-		return
-	end
-
-	local bone = ent:TranslatePhysBoneToBone(phys_bone)
-	local bone_name = ent:GetBoneName(bone)
-
-	local phys = ent:GetPhysicsObjectNum(phys_bone)
-	local phys_mat = phys:GetMaterial()
-
-	if (PHYS_MAT_CACHE[phys_mat] == NULL) then
-		return
-	elseif !PHYS_MAT_CACHE[phys_mat] then
-		if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
-			PHYS_MAT_CACHE[phys_mat] = "models/"..phys_mat
-		else
-			PHYS_MAT_CACHE[phys_mat] = NULL
-			return
-		end
-	end
-
-	local body_type = GS2GetBodyType(mdl)
-
-	local custom_gibs = gib_info[body_type] and gib_info[body_type][bone_name:lower()]
+	local factor = gib_factor:GetFloat()
 
 	local gibs = {}
 
-	local gib_index = 0
+	for key, mesh in ipairs(meshes) do
+		if (math.random() < factor) then
+			local gib = ents.Create("gs2_gib")
+			gib:SetBody(ent)
+			gib:SetTargetBone(phys_bone)
+			gib:SetGibIndex(key)
+			gib:Spawn()
 
-	local limit = (cached or !generate_all:GetBool()) and max_gibs_per_bone:GetInt() or 128
+			ent:DeleteOnRemove(gib)
 
-	if custom_gibs then
-		for gib_mdl, data in pairs(custom_gibs) do
-			if (math.random() < chance) then
-				local vec_offset = Vector(unpack(data.vec_offset:Split(" ")))
-				local ang_offset = Angle(unpack(data.ang_offset:Split(" ")))
-
-				local pos, ang = LocalToWorld(vec_offset, ang_offset, phys:GetPos(), phys:GetAngles())
-
-				local gib = ents.Create("gs2_gib_custom")
-				gib:SetModel(gib_mdl)
-				gib:SetPos(pos)
-				gib:SetAngles(ang)
-				gib:Spawn()
-				
-				gibs[gib_index] = gib
-			end
-			gib_index = gib_index + 1
-			if (gib_index >= limit) then
-				break
-			end
+			table.insert(gibs, gib)
 		end
 	end
 
-	GIB_CONN_DATA[mdl] = GIB_CONN_DATA[mdl] or {}
-
-	if !GIB_CONN_DATA[mdl][phys_bone] then
-		GenerateConnData(ent, phys_bone)
-	end
-
-	local mat = PHYS_MAT_CACHE[phys_mat]
-	
-	local phys_pos 		= phys:GetPos()
-	local phys_ang 		= phys:GetAngles()
-	local phys_vel 		= phys:GetVelocity()
-	local phys_angvel 	= phys:GetAngleVelocity()
-	local min, max 		= phys:GetAABB()
-	local phys_size 	= max - min	
-
-	local num_x = math.max(1, math.floor(phys_size.x / 4))
-	local num_y = math.max(1, math.floor(phys_size.y / 4))
-	local num_z = math.max(1, math.floor(phys_size.z / 4))
-
-	for x = 0, num_x - 1 do
-		for y = 0, num_y - 1 do
-			for z = 0, num_z - 1 do
-				if (math.random() <= chance) then
-					local gib = ents.Create("gs2_gib")					
-					gib:SetBody(ent)
-					gib:SetTargetBone(phys_bone)
-					gib:SetGibIndex(gib_index)
-					gib:SetOffsetFactor(Vector(x / (num_x + 1), y / (num_y + 1), z / (num_z + 1)))									
-					
-					gibs[gib_index] = gib
-					table.insert(G_GIBS, gib)					
-				end
-				gib_index = gib_index + 1
-				if (gib_index >= limit) then
-					break
-				end
-			end
-			if (gib_index >= limit) then
-				break
-			end
-		end
-		if (gib_index >= limit) then
-			break
-		end
-	end
-
-	if !cached then
-		for _, gib in pairs(gibs) do
-			SafeRemoveEntity(gib)
-		end
-		return
-	end
-
-	--Connect
 	local chance = gib_merge_chance:GetFloat()
-	if (chance > 0) then
-		for gib_index1, gib1 in pairs(gibs) do
-			if (gib1:GetClass() != "gs2_gib_custom") then
-				local conns = GIB_CONN_DATA[mdl][phys_bone][gib_index1]
-				if conns then			
-					while true do
-						local parent = gib1.GS2_merge
-						if IsValid(parent) then
-							gib1 = parent
-						else
-							break
-						end
-					end	
-					for _, gib_index2 in pairs(conns) do
-						local gib2 = gibs[gib_index2]				
-						if (gib2 and math.random() < chance) then
-							while true do
-								local parent = gib2.GS2_merge
-								if IsValid(parent) then
-									gib2 = parent
-								else
+
+	for _, gib in ipairs(gibs) do
+		if !IsValid(gib:GetParent()) then		
+			for _, gib2 in ipairs(gibs) do
+				if (gib != gib2 and math.random() < chance and !IsValid(gib2:GetParent())) then
+					for _, conn in ipairs(gib.GS2GibInfo.conns) do
+						if (gib2:GetGibIndex() == conn) then
+							gib2:SetNotSolid(true)	
+							local parent = gib
+							repeat
+								local next_parent = parent:GetParent()
+								if (next_parent == NULL) then
 									break
 								end
-							end
-							if (gib1 != gib2) then
-								gib1:AddMerge(gib2)	
-							end
-						end	
+								parent = next_parent
+							until (parent == NULL)
+							gib2:SetParent(parent)	
+
+							break
+						end
 					end
 				end
 			end
 		end
 	end
 
-	ent.GS2Gibs = ent.GS2Gibs or {}
-
-	for _, gib in pairs(gibs) do
-		gib:Spawn()	
-		ent:DeleteOnRemove(gib)
-		table.insert(ent.GS2Gibs, gib)		
-	end
-
-	for _, gib in pairs(gibs) do
-		if !gib:DoMerge() then
-			local gib_phys = gib:GetPhysicsObject()
-			gib_phys:SetVelocity(phys:GetVelocity() + VectorRand(-0.1, 0.1) * phys:GetVelocity():Length())
-			gib_phys:AddAngleVelocity(phys:GetAngleVelocity() + VectorRand(-0.1, 0.1) * phys:GetAngleVelocity():Length())
+	for _, gib in ipairs(gibs) do
+		if !IsValid(gib:GetParent()) then
+			local convexes = {}
+			GetChildMeshRec(gib, convexes)
+			
+			gib:PhysicsInitMultiConvex(convexes)
+			gib:InitPhysics()
 		end
-	end
-
-	for _, gib in pairs(gibs) do
-		SafeRemoveEntityDelayed(gib, 20)
-	end
-
-	for i = 1, #G_GIBS - max_gibs:GetInt() do		
-		SafeRemoveEntity(table.remove(G_GIBS, 1))
 	end
 end

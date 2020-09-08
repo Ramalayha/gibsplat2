@@ -295,7 +295,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			const.__noblood = no_gibs
 			SafeRemoveEntity(const)			
 		end
-			
+		
 		--Detach any spectators
 		if (phys_bone == 0) then
 			for _, ply in pairs(player.GetHumans()) do
@@ -477,16 +477,18 @@ function ENTITY:MakeCustomRagdoll()
 			mask = bit.bor(mask, bit.lshift(1, part_info.child))
 			self:SetNWInt("GS2DisMask", mask)		
 
-			local limb = ents.Create("gs2_limb")
-			limb:SetBody(self)					
-			limb:SetTargetBone(part_info.child)	
-			limb:Spawn()
-			limb:SetLightingOriginEntity(self.GS2LimbRelays[part_info.child])
+			if !self:GS2IsGibbed(part_info.child) then
+				local limb = ents.Create("gs2_limb")
+				limb:SetBody(self)					
+				limb:SetTargetBone(part_info.child)	
+				limb:Spawn()
+				limb:SetLightingOriginEntity(self.GS2LimbRelays[part_info.child])
 
-			self:DeleteOnRemove(limb)
+				self:DeleteOnRemove(limb)
 
-			self.GS2Limbs = self.GS2Limbs or {}
-			self.GS2Limbs[part_info.child] = limb
+				self.GS2Limbs = self.GS2Limbs or {}
+				self.GS2Limbs[part_info.child] = limb
+			end
 
 			if !IsValid(self.GS2Limbs[0]) then
 				local limb = ents.Create("gs2_limb")
@@ -504,37 +506,6 @@ function ENTITY:MakeCustomRagdoll()
 					limb:SetDisMask(mask)	
 				end			
 			end
-
-			/*local temp = ents.Create("prop_physics")
-			temp:SetModel(self:GetModel())
-			temp:Spawn()
-			temp:ResetSequence(temp:LookupSequence("ragdoll"))
-
-			local bone = temp:TranslatePhysBoneToBone(part_info.child)			
-			
-			local matrix = temp:GetBoneMatrix(bone)
-			local pos, ang = matrix:GetTranslation(), matrix:GetAngles()
-			
-			local parent_bone = temp:GetBoneParent(bone)
-
-			local parent_matrix = temp:GetBoneMatrix(parent_bone)
-			local parent_pos, parent_ang = parent_matrix:GetTranslation(), parent_matrix:GetAngles()--temp:GetBonePosition(parent_bone)
-			if pos and parent_pos then	
-				
-				local EF = EffectData()	
-				EF:SetOrigin(Vector(2,0,0))
-				EF:SetAngles(Angle(0,0,0))		
-				EF:SetEntity(self)
-				EF:SetHitBox(bone)
-				EF:SetColor(self.__gs2bloodcolor or BLOOD_COLOR_RED)
-				--util.Effect("gs2_bloodspray", EF)	
-
-				EF:SetAngles(Angle(180,0,0))
-				EF:SetOrigin(Vector(self:BoneLength(bone),0,0))
-				EF:SetHitBox(parent_bone)				
-				--util.Effect("gs2_bloodspray", EF)	
-			end
-			temp:Remove()*/
 		end)
 
 		self.GS2Joints[part_info.child] = self.GS2Joints[part_info.child] or {}
