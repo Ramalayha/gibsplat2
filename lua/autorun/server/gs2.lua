@@ -7,6 +7,7 @@ include("gibsplat2/buildmesh.lua")
 AddCSLuaFile("gibsplat2/buildmesh.lua")
 AddCSLuaFile("gibsplat2/getmodelgender.lua")
 AddCSLuaFile("gibsplat2/gibs.lua")
+AddCSLuaFile("gibsplat2/clipmesh.lua")
 
 local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")
