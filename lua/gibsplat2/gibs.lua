@@ -518,6 +518,8 @@ function CreateGibs(ent, phys_bone)
 
 					gib.convex = data.convex
 
+					ent:DeleteOnRemove(gib)
+
 					table.insert(custom_gibs, gib)
 				end
 			end
