@@ -4,7 +4,6 @@ local NUM_PARTS = 10
 
 local PHYS_GIB_CACHE = {}
 
-<<<<<<< HEAD
 local GIB_VERSION = 2
 
 local FILE = FindMetaTable("File")
@@ -148,8 +147,6 @@ end
 
 ReadGibCache()
 
-=======
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 function GetPhysGibMeshes(mdl, phys_bone)
 	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
 		return PHYS_GIB_CACHE[mdl][phys_bone]
@@ -259,11 +256,8 @@ function GetPhysGibMeshes(mdl, phys_bone)
 	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
 	PHYS_GIB_CACHE[mdl][phys_bone] = meshes
 
-<<<<<<< HEAD
 	WriteGibCache(mdl, phys_bone, meshes)
 
-=======
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 	return meshes
 end
 
@@ -443,7 +437,6 @@ end
 local PHYS_MAT_CACHE = {}
 
 local function GetChildMeshRec(ent, output)
-<<<<<<< HEAD
 	if ent.GS2GibInfo then
 		table.Add(output, ent.GS2GibInfo.triangles)
 	else		
@@ -451,14 +444,10 @@ local function GetChildMeshRec(ent, output)
 		ent:PhysicsDestroy()
 		ent.GS2_dummy = true
 	end
-=======
-	output[#output + 1] = ent.GS2GibInfo.triangles
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 	for _, child in ipairs(ent:GetChildren()) do
 		GetChildMeshRec(child, output)
 	end
 end
-<<<<<<< HEAD
 
 function CreateGibs(ent, phys_bone)
 	local mdl = ent:GetModel()
@@ -477,17 +466,9 @@ function CreateGibs(ent, phys_bone)
 	if gib_data then
 		local bone = ent:TranslatePhysBoneToBone(phys_bone)
 		local bone_name = ent:GetBoneName(bone):lower()
-=======
-
-function CreateGibs(ent, phys_bone)
-	local meshes = GetPhysGibMeshes(ent:GetModel(), phys_bone)
-
-	local factor = gib_factor:GetFloat()
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 
 		local bone_pos, bone_ang = ent:GetBonePosition(bone)
 
-<<<<<<< HEAD
 		local custom_gib_data = gib_data[bone_name]
 
 		custom_gibs = {}
@@ -577,41 +558,6 @@ function CreateGibs(ent, phys_bone)
 							until (parent == NULL)
 							gib2:SetParent(parent)	
 
-=======
-	for key, mesh in ipairs(meshes) do
-		if (math.random() < factor) then
-			local gib = ents.Create("gs2_gib")
-			gib:SetBody(ent)
-			gib:SetTargetBone(phys_bone)
-			gib:SetGibIndex(key)
-			gib:Spawn()
-
-			ent:DeleteOnRemove(gib)
-
-			table.insert(gibs, gib)
-		end
-	end
-
-	local chance = gib_merge_chance:GetFloat()
-
-	for _, gib in ipairs(gibs) do
-		if !IsValid(gib:GetParent()) then		
-			for _, gib2 in ipairs(gibs) do
-				if (gib != gib2 and math.random() < chance and !IsValid(gib2:GetParent())) then
-					for _, conn in ipairs(gib.GS2GibInfo.conns) do
-						if (gib2:GetGibIndex() == conn) then
-							gib2:SetNotSolid(true)	
-							local parent = gib
-							repeat
-								local next_parent = parent:GetParent()
-								if (next_parent == NULL) then
-									break
-								end
-								parent = next_parent
-							until (parent == NULL)
-							gib2:SetParent(parent)	
-
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 							break
 						end
 					end
@@ -620,7 +566,6 @@ function CreateGibs(ent, phys_bone)
 		end
 	end
 
-<<<<<<< HEAD
 	if custom_gibs then
 		for _, custom_gib in ipairs(custom_gibs) do
 			for _, gib in ipairs(ents.FindInBox(custom_gib:WorldSpaceAABB())) do
@@ -650,15 +595,4 @@ function CreateGibs(ent, phys_bone)
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
 		SafeRemoveEntity(table.remove(G_GIBS, 1))
 	end
-=======
-	for _, gib in ipairs(gibs) do
-		if !IsValid(gib:GetParent()) then
-			local convexes = {}
-			GetChildMeshRec(gib, convexes)
-			
-			gib:PhysicsInitMultiConvex(convexes)
-			gib:InitPhysics()
-		end
-	end
->>>>>>> 6576c1780fdf7503385bdb98f0fef873d98c6ca6
 end
