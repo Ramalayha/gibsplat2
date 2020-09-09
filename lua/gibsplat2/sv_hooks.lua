@@ -36,7 +36,7 @@ hook.Add("CreateEntityRagdoll", HOOK_NAME, function(ent, doll)
 		timer.Simple(0, function()
 			if IsValid(doll) then
 				for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
-					if (!GS2AreGibsCached[doll:GetModel()] or math.random() < gib_chance:GetFloat()) then
+					if (math.random() < gib_chance:GetFloat()) then
 						doll:GS2Gib(phys_bone)
 					end
 				end

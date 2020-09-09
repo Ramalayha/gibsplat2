@@ -1,12 +1,10 @@
 include("shared.lua")
 
-local MAT_CACHE = {}
+local dummy_mesh = Mesh()
 
 local mat_default = Material("models/flesh")
 
-MAT_CACHE["models/flesh"] = mat_default
-
-local dummy_mesh = Mesh()
+local MATERIAL_CACHE = {}
 
 function ENT:Initialize()
 	self.MeshData = {}
@@ -15,32 +13,22 @@ function ENT:Initialize()
 end
 
 function ENT:Think()
-	if (self.MeshData.Mesh == dummy_mesh) then
-		local mesh, min, max = self:GetMesh()
-		if mesh then
-			self:SetRenderBounds(min, max)
-			self.MeshData.Mesh = mesh
-		end
-	end
 	local body = self:GetBody()
-	if !IsValid(body) then		
-		return
-	end
-	local phys_mat = body:GetNWString("GS2PhysMat")
-
-	if phys_mat then
-		if (MAT_CACHE[phys_mat] == NULL) then
-			return
-		elseif !MAT_CACHE[phys_mat] then
-			if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
-				MAT_CACHE[phys_mat] = Material("models/"..phys_mat)
-				self.MeshData.Material = MAT_CACHE[phys_mat]
-			else
-				MAT_CACHE[phys_mat] = NULL	
+	if (self.MeshData.Mesh == dummy_mesh) then
+		local gib_index = self:GetGibIndex()
+		if (gib_index > 0) then			
+			local phys_bone = self:GetTargetBone()	
+			if IsValid(body) then
+				self.MeshData.Mesh = GetPhysGibMeshes(body:GetModel(), phys_bone)[gib_index].mesh
 			end
-		else
-			self.MeshData.Material = MAT_CACHE[phys_mat]
-		end		
+		end	
+	end
+	if (self.MeshData.Material == mat_default) then
+		local phys_mat = body:GetNWString("GS2PhysMat", "")
+		if (phys_mat != "") then
+			MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/"..phys_mat)
+			self.MeshData.Material = MATERIAL_CACHE[phys_mat]
+		end
 	end
 end
 

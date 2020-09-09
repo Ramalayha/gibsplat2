@@ -35,6 +35,10 @@ end
 
 function ENT:Think()
 	if IsValid(self.Body) then
+		if !IsValid(self.GS2ParentLimb) then
+			SafeRemoveEntity(self)
+			return
+		end
 		local mask = self.GS2ParentLimb:GetGibMask()
 
 		if (bit.band(mask, bit.lshift(1, self.PhysBone)) != 0) then
@@ -51,6 +55,7 @@ function ENT:Think()
 		if !self.is_flesh and phys_mat and !self.FleshMat then				
 			self.FleshMat = Material("models/"..phys_mat)					
 		end
+		self:NextThink(0)
 	end
 end
 

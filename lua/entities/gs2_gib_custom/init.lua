@@ -5,32 +5,22 @@ include("shared.lua")
 
 function ENT:Initialize()
 	self.Created = CurTime()
-	if !self.GS2_merge then
-		self:PhysicsInit(SOLID_VPHYSICS)
+
+	self:PhysicsInit(SOLID_VPHYSICS)
 				
-		self:EnableCustomCollisions(true)
-		self:SetCustomCollisionCheck(true)
-		self:SetSolid(SOLID_VPHYSICS)
-		self:SetMoveType(MOVETYPE_VPHYSICS)
-		--self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
-		self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
-		
-		local self_phys = self:GetPhysicsObject()
+	self:EnableCustomCollisions(true)
+	self:SetCustomCollisionCheck(true)
+	self:SetSolid(SOLID_VPHYSICS)
+	self:SetMoveType(MOVETYPE_VPHYSICS)
+	--self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
+	self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+	
+	local self_phys = self:GetPhysicsObject()
 
-		self_phys:SetMaterial("watermelon")
-		self_phys:Wake()	
-		self_phys:SetDragCoefficient(0.3)	
-		self_phys:SetAngleDragCoefficient(0.3)
-	end
-end
-
-function ENT:DoMerge()
-	if self.GS2_merge then
-		self.GS2_dummy = true			
-		self:SetParent(self.GS2_merge)
-		self:PhysicsDestroy()
-		return true
-	end
+	self_phys:SetMaterial("watermelon")
+	self_phys:Wake()	
+	self_phys:SetDragCoefficient(0.3)	
+	self_phys:SetAngleDragCoefficient(0.3)
 end
 
 function ENT:OnTakeDamage(dmginfo)
