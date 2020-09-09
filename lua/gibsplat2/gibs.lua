@@ -532,7 +532,7 @@ function CreateGibs(ent, phys_bone)
 			gib:SetGibIndex(key)
 			gib:Spawn()
 
-			--ent:DeleteOnRemove(gib)
+			ent:DeleteOnRemove(gib)
 
 			table.insert(gibs, gib)			
 		end
