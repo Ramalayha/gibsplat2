@@ -214,10 +214,11 @@ end
 local function null() end
 
 function ENT:Draw()
-	if !self.GS2RenderMeshes and self.GS2BoneList then
-		--Scale bones and draw
-		local body = self:GetBody()
-		if IsValid(body) then
+	local body = self:GetBody()
+	if IsValid(body) then
+		body.RenderOverride = null --Hide actual ragdoll
+		if !self.GS2RenderMeshes and self.GS2BoneList then
+			--Scale bones and draw			
 			local self_phys_bone = self:GetTargetBone()
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self_phys_bone]
@@ -226,8 +227,7 @@ function ENT:Draw()
 					SetColorModulation(mod, mod, mod)
 				end
 			end		
-			--body:SetNoDraw(true)
-			body.RenderOverride = null --Hide actual ragdoll			
+									
 			--self:SnatchModelInstance(body) --Transfers decals
 
 			--Draw flesh

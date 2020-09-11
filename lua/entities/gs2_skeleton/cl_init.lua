@@ -129,13 +129,15 @@ function ENT:Draw()
 				end
 
 				if IsValid(part) then											
-					local matrix = body:GetBoneMatrix(bone)	
-					local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
-					part:SetRenderOrigin(pos)
-					part:SetRenderAngles(ang)	
-					render.SetLightingOrigin(pos)				
-					part:SetupBones()					
-					part:DrawModel()					
+					local matrix = body:GetBoneMatrix(bone)
+					if matrix then
+						local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
+						part:SetRenderOrigin(pos)
+						part:SetRenderAngles(ang)	
+						render.SetLightingOrigin(pos)				
+						part:SetupBones()					
+						part:DrawModel()
+					end					
 				end
 			end
 
@@ -151,13 +153,15 @@ function ENT:Draw()
 				end
 
 				if IsValid(part) then					
-					local matrix = body:GetBoneMatrix(parent_bone)					
-					local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
-					part:SetRenderOrigin(pos)
-					part:SetRenderAngles(ang)	
-					render.SetLightingOrigin(pos)	
-					part:SetupBones()
-					part:DrawModel()					
+					local matrix = body:GetBoneMatrix(parent_bone)
+					if matrix then					
+						local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
+						part:SetRenderOrigin(pos)
+						part:SetRenderAngles(ang)	
+						render.SetLightingOrigin(pos)	
+						part:SetupBones()
+						part:DrawModel()
+					end					
 				end
 			end
 

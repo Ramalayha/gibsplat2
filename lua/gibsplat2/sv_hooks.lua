@@ -261,7 +261,7 @@ hook.Add("OnEntityCreated", HOOK_NAME, function(ent)
 	end
 end)
 
-hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
+/*hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
 	if !enabled:GetBool() then return end
 	if (ent1:GetClass() == "gs2_gib") then
 		if (ent2:GetClass() == "gs2_gib") then
@@ -284,4 +284,4 @@ hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
 			--return false
 		end
 	end
-end)
+end)*/
