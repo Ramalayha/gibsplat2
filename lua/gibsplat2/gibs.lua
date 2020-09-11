@@ -145,7 +145,7 @@ local function ReadGibCache()
 	end
 end
 
-ReadGibCache()
+--ReadGibCache()
 
 function GetPhysGibMeshes(mdl, phys_bone)
 	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
