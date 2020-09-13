@@ -89,7 +89,7 @@ local function ShouldGib(dmginfo)
 	return math.random() > gib_chance	
 end
 
-local function GS2EntityTakeDamage(ent, dmginfo) print"h"
+local function GS2EntityTakeDamage(ent, dmginfo)
 	local dmg = dmginfo:GetDamage()
 	local dmg_pos = dmginfo:GetDamagePosition()
 	local dmg_force = dmginfo:GetDamageForce()
@@ -302,7 +302,7 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 			hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
 		end
 		hook.Add("SetupPlayerVisibility", HOOK_NAME, GS2SetupPlayerVisibility)
-		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage) print"h"
+		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 	else
 		PLAYER.CreateRagdoll = oldCreateRagdoll
 		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
