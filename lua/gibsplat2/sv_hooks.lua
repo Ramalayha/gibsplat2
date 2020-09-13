@@ -1,14 +1,15 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 		= CreateConVar("gs2_enabled", 1)
-local gib_chance 	= CreateConVar("gs2_gib_chance", 0.3)
+local enabled 			= CreateConVar("gs2_enabled", 0)
+local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0)
+local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 0)
+local gib_chance 		= CreateConVar("gs2_gib_chance", 0.3)
 
 local ang_zero = Angle(0, 0, 0)
 
 local HOOK_NAME = "GibSplat2"
 
-hook.Add("CreateEntityRagdoll", HOOK_NAME, function(ent, doll)
-	if !enabled:GetBool() then return end
+local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
 	doll.__gs2bloodcolor = ent:GetBloodColor()
 	doll:MakeCustomRagdoll()
@@ -43,10 +44,9 @@ hook.Add("CreateEntityRagdoll", HOOK_NAME, function(ent, doll)
 			end	
 		end)
 	end
-end)
+end
 
-hook.Add("SetupPlayerVisibility", HOOK_NAME, function(ply)
-	if !enabled:GetBool() then return end
+local function GS2SetupPlayerVisibility(ply)
 	for _, doll in pairs(ents.FindByClass("prop_ragdoll")) do
 		if (doll:GetNWInt("GS2GibMask", 0) != 0) then
 			for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
@@ -55,7 +55,7 @@ hook.Add("SetupPlayerVisibility", HOOK_NAME, function(ply)
 			end
 		end
 	end
-end)
+end
 
 local AXIS_X 	= 1
 local AXIS_Y	= 2
@@ -89,8 +89,7 @@ local function ShouldGib(dmginfo)
 	return math.random() > gib_chance	
 end
 
-hook.Add("EntityTakeDamage", HOOK_NAME, function(ent, dmginfo)
-	if !enabled:GetBool() then return end
+local function GS2EntityTakeDamage(ent, dmginfo) print"h"
 	local dmg = dmginfo:GetDamage()
 	local dmg_pos = dmginfo:GetDamagePosition()
 	local dmg_force = dmginfo:GetDamageForce()
@@ -248,16 +247,90 @@ hook.Add("EntityTakeDamage", HOOK_NAME, function(ent, dmginfo)
 			end
 		end
 	end
-end)
+end
 
-hook.Add("OnEntityCreated", HOOK_NAME, function(ent)
-	if !enabled:GetBool() then return end
+local function GS2OnEntityCreated(ent)
 	if ent:IsRagdoll() then
 		timer.Simple(0, function()
 			if (IsValid(ent) and !ent.__gs2custom) then
 				ent:MakeCustomRagdoll()
 			end
 		end)
+	end
+end
+
+local PLAYER = FindMetaTable("Player")
+
+local oldCreateRagdoll = PLAYER.CreateRagdoll
+
+local dolls = {}
+
+local function CreateRagdoll(self)
+	SafeRemoveEntity(dolls[self])
+
+	local ragdoll = ents.Create("prop_ragdoll")
+	ragdoll:SetModel(self:GetModel())
+	ragdoll:SetPos(self:GetPos())
+	ragdoll:SetAngles(self:GetAngles())
+	ragdoll:Spawn()
+
+	ragdoll:MakeCustomRagdoll()
+
+	for i = 0, ragdoll:GetPhysicsObjectCount()-1 do
+		local phys = ragdoll:GetPhysicsObjectNum(i)
+		local bone = ragdoll:TranslatePhysBoneToBone(i)
+		local matrix = self:GetBoneMatrix(bone)
+		local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--self:GetBonePosition(bone)
+		phys:SetPos(pos)
+		phys:SetAngles(ang)
+		phys:SetVelocity(self:GetVelocity())
+	end
+
+	self:SpectateEntity(ragdoll)
+	self:Spectate(OBS_MODE_CHASE)
+
+	dolls[self] = ragdoll
+end
+
+cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
+ 	if (new == "1") then
+ 		if player_ragdolls:GetBool() then
+			PLAYER.CreateRagdoll = CreateRagdoll
+		end
+		if default_ragdolls:GetBool() then
+			hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
+			hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
+		end
+		hook.Add("SetupPlayerVisibility", HOOK_NAME, GS2SetupPlayerVisibility)
+		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage) print"h"
+	else
+		PLAYER.CreateRagdoll = oldCreateRagdoll
+		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
+		hook.Remove("OnEntityCreated", HOOK_NAME)
+		hook.Remove("SetupPlayerVisibility", HOOK_NAME)
+		hook.Remove("EntityTakeDamage", HOOK_NAME)		
+	end
+end)
+
+cvars.AddChangeCallback("gs2_default_ragdolls", function(_, _, new)
+	if !enabled:GetBool() then return end
+
+	if (new == "1") then
+		hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
+		hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
+	else
+		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
+		hook.Remove("OnEntityCreated", HOOK_NAME)
+	end
+end)
+
+cvars.AddChangeCallback("gs2_player_ragdolls", function(_, _, new)
+	if !enabled:GetBool() then return end
+	
+	if (new == "1") then
+		PLAYER.CreateRagdoll = CreateRagdoll
+	else
+		PLAYER.CreateRagdoll = oldCreateRagdoll
 	end
 end)
 

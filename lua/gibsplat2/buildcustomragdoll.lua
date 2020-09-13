@@ -147,6 +147,7 @@ local function RestorePose(self)
 		local phys = self:GetPhysicsObjectNum(phys_bone)		
 		phys:SetPos(posang.pos)
 		phys:SetAngles(posang.ang)
+		--phys:EnableMotion(false)
 		RESTORE_POSE[phys_bone] = nil
 	end
 end
@@ -594,54 +595,3 @@ function ENTITY:MakeCustomRagdoll()
 
 	self.__gs2custom = true
 end
-
-local PLAYER = FindMetaTable("Player")
-
-local dolls = {}
-
-function PLAYER:CreateRagdoll()
-	SafeRemoveEntity(dolls[self])
-
-	local ragdoll = ents.Create("prop_ragdoll")
-	ragdoll:SetModel(self:GetModel())
-	ragdoll:SetPos(self:GetPos())
-	ragdoll:SetAngles(self:GetAngles())
-	ragdoll:Spawn()
-
-	ragdoll:MakeCustomRagdoll()
-
-	for i = 0, ragdoll:GetPhysicsObjectCount()-1 do
-		local phys = ragdoll:GetPhysicsObjectNum(i)
-		local bone = ragdoll:TranslatePhysBoneToBone(i)
-		local matrix = self:GetBoneMatrix(bone)
-		local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--self:GetBonePosition(bone)
-		phys:SetPos(pos)
-		phys:SetAngles(ang)
-		phys:SetVelocity(self:GetVelocity())
-	end
-
-	self:SpectateEntity(ragdoll)
-	self:Spectate(OBS_MODE_CHASE)
-
-	dolls[self] = ragdoll
-end
-
-concommand.Add("spawnragdoll", function(ply,cmd,args)
-	local tr = ply:GetEyeTrace()
-
-	local doll = ents.Create("prop_ragdoll")
-	doll:SetModel(args[1] or "models/breen.mdl")
-	doll:SetPos(tr.HitPos)
-	doll:Spawn()
-	
-	doll:MakeCustomRagdoll()
-
-	for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
-		local phys =  doll:GetPhysicsObjectNum(phys_bone)
-		phys:EnableMotion(false)
-	end
-	undo.Create("ragdoll")
-	undo.AddEntity(doll)
-	undo.SetPlayer(ply)
-	undo.Finish()
-end)
