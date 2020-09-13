@@ -72,6 +72,62 @@ local function WriteGibCache(mdl, phys_bone, data)
 	F:Close()
 end
 
+local function ReadGibFile(F, mdl)
+	local phys_bone = F:ReadShort()
+
+	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+
+	local data = {}
+
+	for i = 1, F:ReadShort() do
+		local entry = {}
+		entry.center = F:ReadVector()
+		entry.conns = {}
+		for j = 1, F:ReadShort() do
+			entry.conns[j] = F:ReadShort()
+		end
+		entry.triangles = {}
+		if SERVER then
+			for j = 1, F:ReadLong() do
+				entry.triangles[j] = F:ReadVector()
+			end
+		else
+			local VERTEX_BUFFER = {}
+			local min = Vector(math.huge, math.huge, math.huge)
+			local max = -min
+			for j = 1, F:ReadLong() do
+				local pos = F:ReadVector()
+				min.x = math.min(min.x, pos.x)
+				min.y = math.min(min.y, pos.y)
+				min.z = math.min(min.z, pos.z)
+
+				max.x = math.max(max.x, pos.x)
+				max.y = math.max(max.y, pos.y)
+				max.z = math.max(max.z, pos.z)
+
+				VERTEX_BUFFER[j] = {pos = pos}
+			end
+
+			local size = max - min
+
+			for _, vert in ipairs(VERTEX_BUFFER) do
+				vert.u = vert.pos.x / size.x + vert.pos.z / size.z
+				vert.v = vert.pos.y / size.y + vert.pos.z / size.z
+				vert.normal = (vert.pos - entry.center):GetNormal()
+			end
+
+			for j = 1, F:ReadLong() do
+				entry.triangles[j] = VERTEX_BUFFER[F:ReadLong()]
+			end
+			entry.mesh = Mesh()
+			entry.mesh:BuildFromTriangles(entry.triangles)
+		end
+		data[i] = entry
+	end
+
+	PHYS_GIB_CACHE[mdl][phys_bone] = data
+end
+
 local function ReadGibCache()
 	local prefix = SERVER and "gibsplat2/sv_gib_cache/" or "gibsplat2/cl_gib_cache/"
 	
@@ -81,71 +137,24 @@ local function ReadGibCache()
 		local F = file.Open(prefix..file_name, "rb", "DATA")
  		
  		if (F:ReadByte() != GIB_VERSION) then
- 			F:Close()
- 			file.Delete(prefix..file_name)		
- 			continue
- 		end
+			F:Close()
+			file.Delete(prefix..file_name)		
+			continue
+		end
 
- 		local mdl = F:Read(F:ReadShort())
- 		local phys_bone = F:ReadShort()
+		local mdl = F:Read(F:ReadShort())
 
- 		PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
-
- 		local data = {}
-
- 		for i = 1, F:ReadShort() do
- 			local entry = {}
- 			entry.center = F:ReadVector()
- 			entry.conns = {}
- 			for j = 1, F:ReadShort() do
- 				entry.conns[j] = F:ReadShort()
- 			end
- 			entry.triangles = {}
- 			if SERVER then
- 				for j = 1, F:ReadLong() do
- 					entry.triangles[j] = F:ReadVector()
- 				end
- 			else
- 				local VERTEX_BUFFER = {}
- 				local min = Vector(math.huge, math.huge, math.huge)
- 				local max = -min
- 				for j = 1, F:ReadLong() do
- 					local pos = F:ReadVector()
- 					min.x = math.min(min.x, pos.x)
- 					min.y = math.min(min.y, pos.y)
- 					min.z = math.min(min.z, pos.z)
-
- 					max.x = math.max(max.x, pos.x)
- 					max.y = math.max(max.y, pos.y)
- 					max.z = math.max(max.z, pos.z)
-
- 					VERTEX_BUFFER[j] = {pos = pos}
- 				end
-
- 				local size = max - min
-
- 				for _, vert in ipairs(VERTEX_BUFFER) do
- 					vert.u = vert.pos.x / size.x + vert.pos.z / size.z
- 					vert.v = vert.pos.y / size.y + vert.pos.z / size.z
- 					vert.normal = (vert.pos - entry.center):GetNormal()
- 				end
-
- 				for j = 1, F:ReadLong() do
- 					entry.triangles[j] = VERTEX_BUFFER[F:ReadLong()]
- 				end
- 				entry.mesh = Mesh()
- 				entry.mesh:BuildFromTriangles(entry.triangles)
- 			end
- 			data[i] = entry
- 		end
-
- 		PHYS_GIB_CACHE[mdl][phys_bone] = data
-
+		local succ, err = pcall(ReadGibFile, F, mdl)
 		F:Close()
+
+		if !succ then
+			print("Failed to load gib mesh for "..mdl.." ("..file_name..") Deleting!")
+			file.Delete(prefix..file_name)
+		end	
 	end
 end
 
---ReadGibCache()
+ReadGibCache()
 
 function GetPhysGibMeshes(mdl, phys_bone)
 	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
