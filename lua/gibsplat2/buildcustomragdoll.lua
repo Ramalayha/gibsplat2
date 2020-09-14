@@ -92,7 +92,7 @@ local function LoadRagdollPoses()
 	end
 end
 
---LoadRagdollPoses()
+LoadRagdollPoses()
 
 local RESTORE_POSE = {}
 
