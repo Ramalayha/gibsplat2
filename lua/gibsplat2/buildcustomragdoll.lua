@@ -92,7 +92,7 @@ local function LoadRagdollPoses()
 	end
 end
 
-LoadRagdollPoses()
+--LoadRagdollPoses()
 
 local RESTORE_POSE = {}
 
@@ -106,16 +106,18 @@ local function PutInRagdollPose(self)
 		--Ugly hack because not all ragdoll spawn in the correct pose
 		if (seq == 0) then
 			temp = ents.Create("prop_ragdoll")
-			temp:SetModel(mdl)		
+			temp:SetModel(mdl)
 			temp:Spawn()
 		else
 			temp = ents.Create("prop_physics")
 			temp:SetModel(mdl)		
 			temp:Spawn()
-			temp:ResetSequence(seq)
+			temp:ResetSequence(-2)
+			temp:SetCycle(0)
+			temp:SetPlaybackRate(0)
 		end
 						
-		for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
+		for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
 			local bone = temp:TranslatePhysBoneToBone(phys_bone)
 			local matrix = temp:GetBoneMatrix(bone)
 			local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--temp:GetBonePosition(bone)

@@ -1,4 +1,4 @@
-local VERSION = 1
+local VERSION = 2
 
 local MSG_REQ_POSE = "GS2ReqRagdollPose"
 
@@ -7,48 +7,49 @@ util.AddNetworkString(MSG_REQ_POSE)
 net.Receive(MSG_REQ_POSE, function(len, ply)
 	local mdl = net.ReadString()
 	local temp = ents.Create("prop_physics")
-	temp:SetModel(mdl)
-	temp:Spawn()
+	temp:SetModel(mdl)	
+	
 	local seq = temp:LookupSequence("ragdoll")
-	local up
+
 	if (seq == 0) then
 		temp:Remove()
 		temp = ents.Create("prop_ragdoll")
-		temp:SetModel(mdl)
-		temp:Spawn()
-		
-		up = Vector(0,0,1)
+		temp:SetModel(mdl)		
+		temp:SetAngles(Angle(0, -90, 0))
 	else
-		temp:ResetSequence(seq)	
-			
-		up = temp:GetUp()	
+		temp:ResetSequence(-2)
+		temp:SetCycle(0)
+		temp:SetPlaybackRate(0)
+		for pose_param = 0, temp:GetNumPoseParameters() - 1 do
+			local min, max = temp:GetPoseParameterRange(pose_param)
+			temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+		end
 	end
-
-	local ang = Angle(0, 0, 0)
-	ang:RotateAroundAxis(up, -90)
-
+	
 	local bone_count = temp:GetBoneCount()
 
-	net.Start(MSG_REQ_POSE)
-	net.WriteString(mdl)
-	net.WriteUInt(bone_count, 16)
-	for bone = 0, bone_count - 1 do
-		local matrix = temp:GetBoneMatrix(bone)
-		if matrix then
-			local bone_pos, bone_ang = matrix:GetTranslation(), matrix:GetAngles()
-			bone_pos:Rotate(ang)
-			bone_ang:RotateAroundAxis(up, -90)
-			matrix:Identity()
-			matrix:Translate(bone_pos)
-			matrix:Rotate(bone_ang)
-		else
-			matrix = Matrix()
+	net.Start(MSG_REQ_POSE)		
+	if (seq == 0) then
+		net.WriteBool(true)
+		net.WriteString(mdl)
+		local bone_count = temp:GetBoneCount()
+		net.WriteUInt(bone_count, 16)
+		for bone = 0, bone_count - 1 do
+			net.WriteMatrix(temp:GetBoneMatrix(bone) or Matrix())
 		end
-		net.WriteMatrix(matrix)
+	else
+		net.WriteBool(false)
+		net.WriteEntity(temp)
 	end
 	net.Send(ply)
+	
+	temp:SetPos(ply:GetPos())
 
-	temp:Remove()
+	if (seq == 0) then
+		temp:Remove()
+	else
+		SafeRemoveEntityDelayed(temp, 1)
+	end	
 end)
 end
 
@@ -92,12 +93,16 @@ local function WriteBonePositions(mdl)
 
 	local F = file.Open(file_name, "wb", "DATA")
 
+	if !F then
+		return
+	end
+
 	F:WriteByte(VERSION)
 	F:WriteShort(#mdl)
 	F:Write(mdl)
 
-	F:WriteShort(#BONE_CACHE[mdl])
-	for bone = 0, num_bones - 1 do
+	F:WriteShort(#BONE_CACHE[mdl] + 1)
+	for bone = 0, #BONE_CACHE[mdl] do
 		local matrix = BONE_CACHE[mdl][bone]
 		WriteVector(F, matrix:GetTranslation())
 		WriteAngle(F, matrix:GetAngles())
@@ -130,14 +135,39 @@ local function LoadBonePositions()
 	end
 end
 
-LoadBonePositions()
+--LoadBonePositions()
 
 net.Receive(MSG_REQ_POSE, function()
-	local mdl = net.ReadString()
-	BONE_CACHE[mdl] = {}
-	local num_bones = net.ReadUInt(16)
-	for bone = 0, num_bones - 1 do
-		BONE_CACHE[mdl][bone] = net.ReadMatrix()
+	local mdl
+	if net.ReadBool() then
+		mdl = net.ReadString()
+		BONE_CACHE[mdl] = {}
+		for bone = 0, net.ReadUInt(16) - 1 do			
+			BONE_CACHE[mdl][bone] = net.ReadMatrix()
+		end
+	else
+		local ent = net.ReadEntity()
+		if IsValid(ent) then
+			local pos = ent:GetPos()
+			ent = ent:BecomeRagdollOnClient()
+			ent:SetupBones()
+			mdl = ent:GetModel()
+			BONE_CACHE[mdl] = {}
+			for bone = 0, ent:GetBoneCount() - 1 do
+				local matrix = Matrix()				
+				local bone_matrix = ent:GetBoneMatrix(bone)
+				if bone_matrix then
+					matrix:Translate(bone_matrix:GetTranslation() - pos)
+					matrix:Rotate(bone_matrix:GetAngles())
+				end
+				BONE_CACHE[mdl][bone] = matrix
+			end
+			ent:Remove()
+		end
+	end
+
+	if mdl then
+		WriteBonePositions(mdl)
 	end
 end)
 
@@ -230,6 +260,12 @@ local function LoadBoneMeshes()
 
 		local version = F:ReadByte()
 		
+		if (version != VERSION) then
+			F:Close()
+			file.Delete("gibsplat2/mesh_cache/"..file_name)
+			continue
+		end
+
 		local mdl 			= F:Read(F:ReadShort())
 		local bg_mask 		= F:ReadLong()
 		local num_entries 	= F:ReadShort()
@@ -274,7 +310,7 @@ local function LoadBoneMeshes()
 	end
 end
 
-LoadBoneMeshes()
+--LoadBoneMeshes()
 
 function GetBoneMeshes(ent, phys_bone, norec)
 	local mdl = ent:GetModel()
@@ -300,26 +336,17 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	local temp = ClientsideModel(mdl)	
 	temp:SetupBones()
 
-	if BONE_CACHE[mdl] then
-		for bone, matrix in pairs(BONE_CACHE[mdl]) do
-			if (temp:BoneHasFlag(bone, BONE_USED_BY_ANYTHING)) then
-				temp:SetBoneMatrix(bone, matrix)
-			end
-		end
-	else
+	if !BONE_CACHE[mdl] then
 		temp:Remove()
 		net.Start(MSG_REQ_POSE)
 		net.WriteString(mdl)
 		net.SendToServer()
-		return {}
+		return {}		
 	end
 
 	local bone = temp:TranslatePhysBoneToBone(phys_bone)
-	local bone_matrix = temp:GetBoneMatrix(bone)
+	local bone_matrix = BONE_CACHE[mdl][bone]
 	local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()--temp:GetBonePosition(bone)
-	
-	local bone_length = ent:BoneLength(ent:GetChildBones(bone)[1] or 0)
-	bone_length = math.min(bone_length, temp:BoneLength(temp:GetChildBones(bone)[1] or 0))
 	
 	local new_meshes = {}
 	
@@ -411,14 +438,14 @@ function GetBoneMeshes(ent, phys_bone, norec)
 						until (current_bone == -1)
 
 						if (current_bone != -1) then
-							local current_matrix = temp:GetBoneMatrix(current_bone)
+							local current_matrix = BONE_CACHE[mdl][current_bone]
 
 							local current_pos = current_matrix:GetTranslation()
 							local current_ang = current_matrix:GetAngles()
 
 							local parent_bone = temp:GetBoneParent(current_bone)
 
-							local parent_matrix = temp:GetBoneMatrix(parent_bone)
+							local parent_matrix = BONE_CACHE[mdl][parent_bone]
 
 							local parent_pos = parent_matrix:GetTranslation()
 							local parent_ang = parent_matrix:GetAngles()
@@ -444,11 +471,11 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							local parent_bone = temp:GetBoneParent(weight.bone)
 
 							if (temp:TranslateBoneToPhysBone(parent_bone) == phys_bone) then
-								local weight_matrix = temp:GetBoneMatrix(weight.bone)
+								local weight_matrix = BONE_CACHE[mdl][weight.bone]
 								local weight_pos = weight_matrix:GetTranslation()
 								local weight_ang = weight_matrix:GetAngles()
 
-								local parent_matrix = temp:GetBoneMatrix(parent_bone)
+								local parent_matrix = BONE_CACHE[mdl][parent_bone]
 								local parent_pos = parent_matrix:GetTranslation()
 								local parent_ang = parent_matrix:GetAngles()
 
