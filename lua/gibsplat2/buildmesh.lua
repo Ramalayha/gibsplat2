@@ -1,67 +1,36 @@
-local VERSION = 3
+local VERSION = 5
 
 local MSG_REQ_POSE = "GS2ReqRagdollPose"
 
 if SERVER then
 util.AddNetworkString(MSG_REQ_POSE)
-net.Receive(MSG_REQ_POSE, function(len, ply)
-	local mdl = net.ReadString()
-	local temp = ents.Create("prop_physics")
-	temp:SetModel(mdl)	
-	
-	local seq = temp:LookupSequence("ragdoll")
 
-	if (seq == 0) then
-		temp:Remove()
-		temp = ents.Create("prop_ragdoll")
-		temp:SetModel(mdl)		
-		temp:SetAngles(Angle(0, -90, 0))
-		local cv = GetConVar("gs2_enabled")
-		local old = cv:GetBool()
-		cv:SetBool(false)
-		temp:Spawn()
-		cv:SetBool(old)
-	else
-		temp:ResetSequence(-2)
-		temp:SetCycle(0)
-		temp:SetPlaybackRate(0)
-		for pose_param = 0, temp:GetNumPoseParameters() - 1 do
-			if !temp:GetPoseParameterName(pose_param):find("^body_") then
-				local min, max = temp:GetPoseParameterRange(pose_param)
-				temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
-			end
-		end
+local ragdoll_ang = Angle(0, -90, 0) --idk why this is 
+
+net.Receive(MSG_REQ_POSE, function(len, ply)
+	local ent = net.ReadEntity()
+	if !IsValid(ent) then
+		return
 	end
-	
-	--This forces temp to setup its bone
-	local meme = ents.Create("prop_physics")
-	meme:FollowBone(temp, 0)
-	meme:Remove()
+	local mdl = ent:GetModel()
+	local temp = ents.Create("prop_ragdoll")
+	temp:SetModel(mdl)
+	temp:SetAngles(ragdoll_ang)
 
 	local bone_count = temp:GetBoneCount()
 
 	net.Start(MSG_REQ_POSE)		
-	if (seq == 0) then
-		net.WriteBool(true)
-		net.WriteString(mdl)
-		local bone_count = temp:GetBoneCount()
-		net.WriteUInt(bone_count, 16)
-		for bone = 0, bone_count - 1 do
-			net.WriteMatrix(temp:GetBoneMatrix(bone) or Matrix())
-		end
-	else
-		net.WriteBool(false)
-		net.WriteEntity(temp)
+	net.WriteEntity(ent)
+	local bone_count = temp:GetBoneCount()
+	net.WriteUInt(bone_count, 16)
+	for bone = 0, bone_count - 1 do
+		net.WriteMatrix(temp:GetBoneMatrix(bone) or Matrix())
 	end
 	net.Send(ply)
 	
 	temp:SetPos(ply:GetPos())
 
-	if (seq == 0) then
-		temp:Remove()
-	else
-		SafeRemoveEntityDelayed(temp, 1)
-	end	
+	temp:Remove()
 end)
 end
 
@@ -150,36 +119,22 @@ end
 LoadBonePositions()
 
 net.Receive(MSG_REQ_POSE, function()
-	local mdl
-	if net.ReadBool() then
-		mdl = net.ReadString()
-		BONE_CACHE[mdl] = {}
-		for bone = 0, net.ReadUInt(16) - 1 do			
-			BONE_CACHE[mdl][bone] = net.ReadMatrix()
-		end
-	else
-		local ent = net.ReadEntity()
-		if IsValid(ent) then
-			local pos = ent:GetPos()
-			ent = ent:BecomeRagdollOnClient()
-			ent:SetupBones()
-			mdl = ent:GetModel()
-			BONE_CACHE[mdl] = {}
-			for bone = 0, ent:GetBoneCount() - 1 do
-				local matrix = Matrix()				
-				local bone_matrix = ent:GetBoneMatrix(bone)
-				if bone_matrix then
-					matrix:Translate(bone_matrix:GetTranslation() - pos)
-					matrix:Rotate(bone_matrix:GetAngles())
-				end
-				BONE_CACHE[mdl][bone] = matrix
-			end
-			ent:Remove()
-		end
+	local ent = net.ReadEntity()
+	if !IsValid(ent) then
+		return
 	end
+	local mdl = ent:GetModel()
+	BONE_CACHE[mdl] = {}
+	for bone = 0, net.ReadUInt(16) - 1 do			
+		BONE_CACHE[mdl][bone] = net.ReadMatrix()
+	end
+	
+	WriteBonePositions(mdl)
+	GetBoneMeshes(ent, 0)
 
-	if mdl then
-		WriteBonePositions(mdl)
+	--Update all limbs
+	for _, limb in ipairs(ents.FindByClass("gs2_limb")) do
+		limb:UpdateRenderInfo()
 	end
 end)
 
@@ -346,16 +301,38 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	end
 
 	local temp = ClientsideModel(mdl)	
-	temp:SetupBones()
+	
+	if !BONE_CACHE[mdl] then		
+		if (temp:LookupSequence("ragdoll") == 0) then		
+			temp:Remove()
+			net.Start(MSG_REQ_POSE)
+			net.WriteEntity(ent)
+			net.SendToServer()
+			MESH_CACHE[mdl] = {}
+			return MESH_CACHE[mdl]	
+		else
+			temp:ResetSequence(-2)
+			temp:SetCycle(0)
+			temp:SetPlaybackRate(0)
+			
+			for pose_param = 0, temp:GetNumPoseParameters() - 1 do
+				if !temp:GetPoseParameterName(pose_param):find("^body_") then
+					local min, max = temp:GetPoseParameterRange(pose_param)
+					temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+				end
+			end
 
-	if !BONE_CACHE[mdl] then
-		MESH_CACHE[mdl] = {}
-		temp:Remove()
-		net.Start(MSG_REQ_POSE)
-		net.WriteString(mdl)
-		net.SendToServer()
-		return MESH_CACHE[mdl]	
+			temp:SetupBones()
+			
+			BONE_CACHE[mdl] = {}
+
+			for bone = 0, temp:GetBoneCount() - 1 do		
+				BONE_CACHE[mdl][bone] = temp:GetBoneMatrix(bone) or Matrix()
+			end		
+		end		
 	end
+
+	temp:SetupBones()
 
 	local bone = temp:TranslatePhysBoneToBone(phys_bone)
 	local bone_matrix = BONE_CACHE[mdl][bone]

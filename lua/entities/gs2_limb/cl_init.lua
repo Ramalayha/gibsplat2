@@ -189,12 +189,11 @@ function ENT:UpdateRenderInfo()
 		end
 	end
 		
-	if is_lonely then
-		self.GS2RenderMeshes = {}
-		
-		if IsValid(body) then
-			--If no other parts are attached generate a mesh to optimize
-			local meshes = GetBoneMeshes(body, self_phys_bone)
+	if is_lonely then		
+		--If no other parts are attached generate a mesh to optimize
+		local meshes = GetBoneMeshes(body, self_phys_bone)
+		if (#meshes > 0) then
+			self.GS2RenderMeshes = {}
 			for key, mesh in pairs(meshes) do
 				local M = ents.CreateClientside("gs2_limb_mesh")
 				M:SetMesh(mesh)
@@ -203,8 +202,8 @@ function ENT:UpdateRenderInfo()
 
 				M.GS2ParentLimb = self
 				self.GS2RenderMeshes[key] = M
-			end		
-		end 
+			end
+		end		
 	else
 		self:SetupBones()
 		body:SetupBones()
