@@ -1,6 +1,6 @@
 --sv_cheats 1;god;impulse 101;lua_openscript gs2.lua
 
-local VERSION = 1
+local VERSION = 2
 
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -110,17 +110,27 @@ local function PutInRagdollPose(self)
 			temp:Spawn()
 		else
 			temp = ents.Create("prop_physics")
-			temp:SetModel(mdl)		
+			temp:SetModel(mdl)	
 			temp:Spawn()
 			temp:ResetSequence(-2)
 			temp:SetCycle(0)
-			temp:SetPlaybackRate(0)
+
+			for pose_param = 0, temp:GetNumPoseParameters() - 1 do
+				local min, max = temp:GetPoseParameterRange(pose_param)
+				--temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+			end
 		end
+
+		--This forces temp to setup its bone
+		local meme = ents.Create("prop_physics")
+		meme:FollowBone(temp, 0)
+		meme:Remove()
 						
 		for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
 			local bone = temp:TranslatePhysBoneToBone(phys_bone)
 			local matrix = temp:GetBoneMatrix(bone)
 			local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--temp:GetBonePosition(bone)
+			
 			pose[phys_bone] = {
 				pos = pos,
 				ang = ang

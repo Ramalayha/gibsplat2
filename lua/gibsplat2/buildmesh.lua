@@ -1,4 +1,4 @@
-local VERSION = 2
+local VERSION = 3
 
 local MSG_REQ_POSE = "GS2ReqRagdollPose"
 
@@ -26,6 +26,11 @@ net.Receive(MSG_REQ_POSE, function(len, ply)
 		end
 	end
 	
+	--This forces temp to setup its bone
+	local meme = ents.Create("prop_physics")
+	meme:FollowBone(temp, 0)
+	meme:Remove()
+
 	local bone_count = temp:GetBoneCount()
 
 	net.Start(MSG_REQ_POSE)		
@@ -337,11 +342,12 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	temp:SetupBones()
 
 	if !BONE_CACHE[mdl] then
+		MESH_CACHE[mdl] = {}
 		temp:Remove()
 		net.Start(MSG_REQ_POSE)
 		net.WriteString(mdl)
 		net.SendToServer()
-		return {}		
+		return MESH_CACHE[mdl]	
 	end
 
 	local bone = temp:TranslatePhysBoneToBone(phys_bone)
