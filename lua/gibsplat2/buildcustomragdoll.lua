@@ -437,7 +437,7 @@ function ENTITY:MakeCustomRagdoll()
 	for _, part_info in pairs(CONST_INFO) do
 		local phys_parent = self:GetPhysicsObjectNum(part_info.parent)
 		local phys_child  = self:GetPhysicsObjectNum(part_info.child)
-
+		
 		local const_bs = ents.Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
@@ -449,6 +449,7 @@ function ENTITY:MakeCustomRagdoll()
 		const_rc:SetPos(phys_child:GetPos())
 		const_rc:SetAngles(phys_child:GetAngles())
 		const_rc:SetPhysConstraintObjects(phys_parent, phys_child)
+		const_rc:SetKeyValue("spawnflags", 2) --free movement
 		for key, value in pairs(part_info) do
 			const_rc:SetKeyValue(key, value)
 		end
@@ -545,7 +546,7 @@ function ENTITY:MakeCustomRagdoll()
 		if data.Speed > 1000 then
 			local mask = self:GetNWInt("GS2GibMask", 0)
 			if bit.band(mask, bit.lshift(1, phys_bone)) == 0 then
-				self:GS2Gib(phys_bone)
+				--self:GS2Gib(phys_bone)
 			end		
 		elseif data.Speed > 100 then			
 			local mask = self:GetNWInt("GS2DisMask", 0)

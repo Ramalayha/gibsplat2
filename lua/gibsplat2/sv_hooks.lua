@@ -5,6 +5,11 @@ local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0)
 local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 0)
 local gib_chance 		= CreateConVar("gs2_gib_chance", 0.3)
 
+if game.SinglePlayer() then
+	enabled:SetBool(true)
+	default_ragdolls:SetBool(true)
+end
+
 local ang_zero = Angle(0, 0, 0)
 
 local HOOK_NAME = "GibSplat2"

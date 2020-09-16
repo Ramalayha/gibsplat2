@@ -158,6 +158,10 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 end
 
 function ENT:UpdateRenderInfo()
+	local body = self:GetBody()
+	if !IsValid(body) then
+		return
+	end
 	local dis_mask = self:GetDisMask()
 	local gib_mask = self:GetGibMask()
 
@@ -184,9 +188,7 @@ function ENT:UpdateRenderInfo()
 			break			
 		end
 	end
-	
-	local body = self:GetBody()
-	
+		
 	if is_lonely then
 		self.GS2RenderMeshes = {}
 		
