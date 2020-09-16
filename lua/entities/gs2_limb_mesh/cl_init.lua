@@ -8,7 +8,7 @@ local min 		= math.min
 local MAT_CACHE = {}
 
 function ENT:Initialize()
-	
+	self.Created = CurTime()
 end
 
 function ENT:SetBody(body, phys_bone)
@@ -56,6 +56,8 @@ function ENT:Think()
 			self.FleshMat = Material("models/"..phys_mat)					
 		end
 		self:NextThink(0)
+	elseif (self.Created and CurTime() - self.Created > 1) then
+		self:Remove()
 	end
 end
 

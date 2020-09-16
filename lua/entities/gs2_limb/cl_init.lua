@@ -198,6 +198,7 @@ function ENT:UpdateRenderInfo()
 				M:SetMesh(mesh)
 				M:SetBody(body, self_phys_bone)				
 				M:Spawn()
+
 				M.GS2ParentLimb = self
 				self.GS2RenderMeshes[key] = M
 			end		

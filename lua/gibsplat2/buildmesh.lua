@@ -16,13 +16,20 @@ net.Receive(MSG_REQ_POSE, function(len, ply)
 		temp = ents.Create("prop_ragdoll")
 		temp:SetModel(mdl)		
 		temp:SetAngles(Angle(0, -90, 0))
+		local cv = GetConVar("gs2_enabled")
+		local old = cv:GetBool()
+		cv:SetBool(false)
+		temp:Spawn()
+		cv:SetBool(old)
 	else
 		temp:ResetSequence(-2)
 		temp:SetCycle(0)
 		temp:SetPlaybackRate(0)
 		for pose_param = 0, temp:GetNumPoseParameters() - 1 do
-			local min, max = temp:GetPoseParameterRange(pose_param)
-			temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+			if !temp:GetPoseParameterName(pose_param):find("^body_") then
+				local min, max = temp:GetPoseParameterRange(pose_param)
+				temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+			end
 		end
 	end
 	
