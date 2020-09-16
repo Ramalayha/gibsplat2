@@ -2,6 +2,9 @@
 
 local VERSION = 2
 
+local min_strength = CreateConVar("gs2_min_constraint_strength", 4000)
+local strength_mul = CreateConVar("gs2_constraint_strength_multiplier", 250)
+
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
 
@@ -13,6 +16,8 @@ local decals = {
 
 local GetModelConstraintInfo = GetModelConstraintInfo
 local timer_Simple = timer.Simple
+local min = math.min
+local max = math.max
 
 local RAGDOLL_POSE = {}
 
@@ -441,7 +446,7 @@ function ENTITY:MakeCustomRagdoll()
 		local const_bs = ents.Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", 5000)
+		const_bs:SetKeyValue("forcelimit", max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass())))
 		const_bs:Spawn()
 		const_bs:Activate()
 
@@ -449,7 +454,7 @@ function ENTITY:MakeCustomRagdoll()
 		const_rc:SetPos(phys_child:GetPos())
 		const_rc:SetAngles(phys_child:GetAngles())
 		const_rc:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_rc:SetKeyValue("spawnflags", 2) --free movement
+		const_rc:SetKeyValue("spawnflags", 2) --free movement, let const_bs keep them together
 		for key, value in pairs(part_info) do
 			const_rc:SetKeyValue(key, value)
 		end
