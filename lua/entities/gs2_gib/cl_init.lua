@@ -21,7 +21,7 @@ function ENT:Think()
 			if IsValid(body) then
 				local meshes = GetPhysGibMeshes(body:GetModel(), phys_bone)
 				if (meshes and meshes[gib_index]) then
-					self.MeshData.Mesh = meshes[gib_index].mesh
+					self.MeshData.Mesh = meshes[gib_index].mesh or dummy_mesh
 				end
 			end
 		end	
