@@ -175,7 +175,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 	local phys = temp:GetPhysicsObjectNum(phys_bone)
 
 	if !IsValid(phys) then
-		return {}
+		return
 	end
 
 	local convexes = phys:GetMeshConvexes()

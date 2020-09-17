@@ -19,7 +19,10 @@ function ENT:Think()
 		if (gib_index > 0) then			
 			local phys_bone = self:GetTargetBone()	
 			if IsValid(body) then
-				self.MeshData.Mesh = GetPhysGibMeshes(body:GetModel(), phys_bone)[gib_index].mesh
+				local meshes = GetPhysGibMeshes(body:GetModel(), phys_bone)
+				if (meshes and meshes[gib_index]) then
+					self.MeshData.Mesh = meshes[gib_index].mesh
+				end
 			end
 		end	
 	end
