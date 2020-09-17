@@ -92,9 +92,13 @@ local function WriteBonePositions(mdl)
 	F:Close()
 end
 
+local cur_file
+
 local function LoadBonePositions()
 	for _, file_name in pairs(file.Find("gibsplat2/bone_cache/*.txt", "DATA")) do
 		local F = file.Open("gibsplat2/bone_cache/"..file_name, "rb", "DATA")
+
+		cur_file = "gibsplat2/bone_cache/"..file_name
 
 		if (F:ReadByte() != VERSION) then
 			F:Close()
@@ -116,7 +120,11 @@ local function LoadBonePositions()
 	end
 end
 
-pcall(LoadBonePositions())
+local err, msg = pcall(LoadBonePositions)
+if err then
+	print("LoadBonePositions: '"..cur_file.."' is corrupt, deleting!")
+	file.Delete(cur_file)
+end
 
 net.Receive(MSG_REQ_POSE, function()
 	local ent = net.ReadEntity()
@@ -225,6 +233,8 @@ local function LoadBoneMeshes()
 	for _, file_name in pairs(file.Find("gibsplat2/mesh_cache/*.txt", "DATA")) do
 		local F = file.Open("gibsplat2/mesh_cache/"..file_name, "rb", "DATA")
 
+		cur_file = "gibsplat2/mesh_cache/"..file_name
+
 		local version = F:ReadByte()
 		
 		if (version != VERSION) then
@@ -277,7 +287,11 @@ local function LoadBoneMeshes()
 	end
 end
 
-pcall(LoadBoneMeshes())
+local err, msg = pcall(LoadBoneMeshes)
+if err then
+	print("LoadBonePositions: '"..cur_file.."' is corrupt, deleting!")
+	file.Delete(cur_file)
+end
 
 function GetBoneMeshes(ent, phys_bone, norec)
 	local mdl = ent:GetModel()
