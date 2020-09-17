@@ -318,7 +318,9 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 	local temp = ClientsideModel(mdl)	
 	
-	if !BONE_CACHE[mdl] then		
+	local bone = temp:TranslatePhysBoneToBone(phys_bone)
+
+	if (!BONE_CACHE[mdl] or !BONE_CACHE[mdl][bone]) then		
 		if (temp:LookupSequence("ragdoll") == 0) then		
 			temp:Remove()
 			net.Start(MSG_REQ_POSE)
@@ -350,7 +352,6 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 	temp:SetupBones()
 
-	local bone = temp:TranslatePhysBoneToBone(phys_bone)
 	local bone_matrix = BONE_CACHE[mdl][bone]
 	local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()--temp:GetBonePosition(bone)
 	
