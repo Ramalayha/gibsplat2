@@ -3,6 +3,7 @@
 local VERSION = 2
 
 local min_strength = CreateConVar("gs2_min_constraint_strength", 4000)
+local max_strength = CreateConVar("gs2_max_constraint_strength", 15000)
 local strength_mul = CreateConVar("gs2_constraint_strength_multiplier", 250)
 
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
@@ -446,7 +447,7 @@ function ENTITY:MakeCustomRagdoll()
 		local const_bs = ents.Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass())))
+		const_bs:SetKeyValue("forcelimit", min(max_strength, max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
 		const_bs:Activate()
 
