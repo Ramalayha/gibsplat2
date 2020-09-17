@@ -341,6 +341,10 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	local new_meshes = {}
 	
 	local MESHES = util.GetModelMeshes(mdl, 0, bg_mask)
+
+	if !MESHES then
+		return {}
+	end
 	
 	for _, MESH in pairs(MESHES) do	
 		for _, vert in pairs(MESH.verticies) do
