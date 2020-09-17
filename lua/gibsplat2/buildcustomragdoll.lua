@@ -447,7 +447,7 @@ function ENTITY:MakeCustomRagdoll()
 		local const_bs = ents.Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", min(max_strength, max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass()))))
+		const_bs:SetKeyValue("forcelimit", min(max_strength:GetFloat(), max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
 		const_bs:Activate()
 
