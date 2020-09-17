@@ -24,6 +24,10 @@ matrix_inf:Translate(Vector(math.huge))
 
 net.Receive("GS2Dissolve", function()
 	local ent = net.ReadEntity()
+	if !IsValid(ent) then
+		return
+	end
+	
 	local start = net.ReadFloat()
 	local mask = net.ReadUInt(32)
 
