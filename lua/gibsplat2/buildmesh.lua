@@ -142,7 +142,9 @@ net.Receive(MSG_REQ_POSE, function()
 
 	--Update all limbs
 	for _, limb in ipairs(ents.FindByClass("gs2_limb")) do
-		limb:UpdateRenderInfo()
+		if IsValid(limb) then
+			limb:UpdateRenderInfo()
+		end
 	end
 end)
 
