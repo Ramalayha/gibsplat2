@@ -92,7 +92,7 @@ local function WriteBonePositions(mdl)
 	F:Close()
 end
 
-local cur_file
+local cur_file = ""
 
 local function LoadBonePositions()
 	for _, file_name in pairs(file.Find("gibsplat2/bone_cache/*.txt", "DATA")) do
