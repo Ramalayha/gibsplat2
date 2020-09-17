@@ -116,7 +116,7 @@ local function LoadBonePositions()
 	end
 end
 
-LoadBonePositions()
+pcall(LoadBonePositions())
 
 net.Receive(MSG_REQ_POSE, function()
 	local ent = net.ReadEntity()
@@ -277,7 +277,7 @@ local function LoadBoneMeshes()
 	end
 end
 
-LoadBoneMeshes()
+pcall(LoadBoneMeshes())
 
 function GetBoneMeshes(ent, phys_bone, norec)
 	local mdl = ent:GetModel()
