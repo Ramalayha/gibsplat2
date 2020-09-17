@@ -294,7 +294,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 	local KVs = util.GetModelInfo(mdl).KeyValues
 
-	local phys_mat = KVs:match('solid {.-"index" "'..phys_bone..'".-"surfaceprop" "([^"]-)"')
+	local phys_mat = KVs and KVs:match('solid {.-"index" "'..phys_bone..'".-"surfaceprop" "([^"]-)"')
 
 	if phys_mat and Material("models/gibsplat2/overlays/"..phys_mat):IsError() then
 		phys_mat = nil
