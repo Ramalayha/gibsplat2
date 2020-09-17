@@ -172,6 +172,10 @@ function GetPhysGibMeshes(mdl, phys_bone)
 		temp = ClientsideRagdoll(mdl)
 	end
 	
+	if !IsValid(temp) then
+		return
+	end
+
 	local phys = temp:GetPhysicsObjectNum(phys_bone)
 
 	if !IsValid(phys) then
