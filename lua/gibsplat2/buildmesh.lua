@@ -289,7 +289,7 @@ end
 
 local err, msg = pcall(LoadBoneMeshes)
 if err then
-	print("LoadBonePositions: '"..cur_file.."' is corrupt, deleting!")
+	print("LoadBoneMeshes: '"..cur_file.."' is corrupt, deleting!")
 	file.Delete(cur_file)
 end
 
