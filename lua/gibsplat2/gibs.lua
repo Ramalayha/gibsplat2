@@ -179,6 +179,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 	local phys = temp:GetPhysicsObjectNum(phys_bone)
 
 	if !IsValid(phys) then
+		temp:Remove()
 		return
 	end
 
