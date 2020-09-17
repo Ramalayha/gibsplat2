@@ -317,7 +317,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	end
 
 	local temp = ClientsideModel(mdl)	
-	
+	temp:SetupBones()
 	local bone = temp:TranslatePhysBoneToBone(phys_bone)
 
 	if (!BONE_CACHE[mdl] or !BONE_CACHE[mdl][bone]) then		
@@ -329,6 +329,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 			MESH_CACHE[mdl] = {}
 			return MESH_CACHE[mdl]	
 		else
+			temp:Remove()
+			temp = ClientsideModel(mdl) --Have to recreate to set default pose
 			temp:ResetSequence(-2)
 			temp:SetCycle(0)
 			temp:SetPlaybackRate(0)
