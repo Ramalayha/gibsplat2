@@ -362,6 +362,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	local MESHES = util.GetModelMeshes(mdl, 0, bg_mask)
 
 	if !MESHES then
+		temp:Remove()
 		return {}
 	end
 	
