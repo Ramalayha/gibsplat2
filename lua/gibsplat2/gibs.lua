@@ -4,7 +4,9 @@ local NUM_PARTS = 10
 
 local PHYS_GIB_CACHE = {}
 
-local GIB_VERSION = 2
+local GIB_VERSION = 3
+
+local HOOK_NAME = "GibSplat2"
 
 local FILE = FindMetaTable("File")
 
@@ -18,10 +20,11 @@ function FILE:ReadVector()
 	return Vector(self:ReadFloat(), self:ReadFloat(), self:ReadFloat())
 end
 
-local function WriteGibCache(mdl, phys_bone, data)
+local function WriteGibCache(mdl)
+	local gib_data = PHYS_GIB_CACHE[mdl]
 	local prefix = SERVER and "gibsplat2/sv_gib_cache/" or "gibsplat2/cl_gib_cache/"
 	
-	local file_name = prefix..util.CRC(mdl)..phys_bone..".txt"
+	local file_name = prefix..util.CRC(mdl)..".txt"
 
 	file.CreateDir("gibsplat2")
 	file.CreateDir(prefix)
@@ -33,38 +36,40 @@ local function WriteGibCache(mdl, phys_bone, data)
 	F:WriteByte(GIB_VERSION)
 	F:WriteShort(#mdl)
 	F:Write(mdl)
-	F:WriteShort(phys_bone)
-
-	F:WriteShort(#data)
-
-	for _, entry in ipairs(data) do
-		F:WriteVector(entry.center)
-		F:WriteShort(#entry.conns)
-		for _, conn in ipairs(entry.conns) do
-			F:WriteShort(conn)
-		end
-		if SERVER then
-			F:WriteLong(#entry.triangles)
-			for _, vert in ipairs(entry.triangles) do
-				F:WriteVector(vert)
+	
+	F:WriteShort(#gib_data)
+	for phys_bone, data in pairs(gib_data) do
+		F:WriteShort(phys_bone)
+		F:WriteShort(#data)	
+		for _, entry in ipairs(data) do
+			F:WriteVector(entry.center)
+			F:WriteShort(#entry.conns)
+			for _, conn in ipairs(entry.conns) do
+				F:WriteShort(conn)
 			end
-		else
-			local VERTEX_BUFFER = {}
-			local INDEX_BUFFER = {}
-			for _, vert in ipairs(entry.triangles) do
-				local index = table.KeyFromValue(VERTEX_BUFFER, vert)
-				if !index then
-					index = table.insert(VERTEX_BUFFER, vert)		
+			if SERVER then
+				F:WriteLong(#entry.triangles)
+				for _, vert in ipairs(entry.triangles) do
+					F:WriteVector(vert)
 				end
-				table.insert(INDEX_BUFFER, index)
-			end
-			F:WriteLong(#VERTEX_BUFFER)
-			for _, vert in ipairs(VERTEX_BUFFER) do
-				F:WriteVector(vert.pos)
-			end
-			F:WriteLong(#INDEX_BUFFER)
-			for _, index in ipairs(INDEX_BUFFER) do
-				F:WriteLong(index)
+			else
+				local VERTEX_BUFFER = {}
+				local INDEX_BUFFER = {}
+				for _, vert in ipairs(entry.triangles) do
+					local index = table.KeyFromValue(VERTEX_BUFFER, vert)
+					if !index then
+						index = table.insert(VERTEX_BUFFER, vert)		
+					end
+					table.insert(INDEX_BUFFER, index)
+				end
+				F:WriteLong(#VERTEX_BUFFER)
+				for _, vert in ipairs(VERTEX_BUFFER) do
+					F:WriteVector(vert.pos)
+				end
+				F:WriteLong(#INDEX_BUFFER)
+				for _, index in ipairs(INDEX_BUFFER) do
+					F:WriteLong(index)
+				end
 			end
 		end
 	end
@@ -72,60 +77,69 @@ local function WriteGibCache(mdl, phys_bone, data)
 	F:Close()
 end
 
-local function ReadGibFile(F, mdl)
-	local phys_bone = F:ReadShort()
-
-	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
-
-	local data = {}
-
-	for i = 1, F:ReadShort() do
-		local entry = {}
-		entry.center = F:ReadVector()
-		entry.conns = {}
-		for j = 1, F:ReadShort() do
-			entry.conns[j] = F:ReadShort()
-		end
-		entry.triangles = {}
-		if SERVER then
-			for j = 1, F:ReadLong() do
-				entry.triangles[j] = F:ReadVector()
-			end
-		else
-			local VERTEX_BUFFER = {}
-			local min = Vector(math.huge, math.huge, math.huge)
-			local max = -min
-			for j = 1, F:ReadLong() do
-				local pos = F:ReadVector()
-				min.x = math.min(min.x, pos.x)
-				min.y = math.min(min.y, pos.y)
-				min.z = math.min(min.z, pos.z)
-
-				max.x = math.max(max.x, pos.x)
-				max.y = math.max(max.y, pos.y)
-				max.z = math.max(max.z, pos.z)
-
-				VERTEX_BUFFER[j] = {pos = pos}
-			end
-
-			local size = max - min
-
-			for _, vert in ipairs(VERTEX_BUFFER) do
-				vert.u = vert.pos.x / size.x + vert.pos.z / size.z
-				vert.v = vert.pos.y / size.y + vert.pos.z / size.z
-				vert.normal = (vert.pos - entry.center):GetNormal()
-			end
-
-			for j = 1, F:ReadLong() do
-				entry.triangles[j] = VERTEX_BUFFER[F:ReadLong()]
-			end
-			entry.mesh = Mesh()
-			entry.mesh:BuildFromTriangles(entry.triangles)
-		end
-		data[i] = entry
+local function ReadGibFile(F)
+	local VERSION = F:ReadByte()
+	if (VERSION != GIB_VERSION) then
+		F:Close()
+		return false
 	end
 
-	PHYS_GIB_CACHE[mdl][phys_bone] = data
+	local mdl = F:Read(F:ReadShort())
+	
+	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+
+	for i = 0, F:ReadShort() do
+		local phys_bone = F:ReadShort()
+		local data = {}
+		for j = 1, F:ReadShort() do
+			local entry = {}
+			entry.center = F:ReadVector()
+			entry.conns = {}
+			for k = 1, F:ReadShort() do
+				entry.conns[k] = F:ReadShort()
+			end
+			entry.triangles = {}
+			if SERVER then
+				for k = 1, F:ReadLong() do
+					entry.triangles[k] = F:ReadVector()
+				end
+			else
+				local VERTEX_BUFFER = {}
+				local min = Vector(math.huge, math.huge, math.huge)
+				local max = -min
+				for k = 1, F:ReadLong() do
+					local pos = F:ReadVector()
+					min.x = math.min(min.x, pos.x)
+					min.y = math.min(min.y, pos.y)
+					min.z = math.min(min.z, pos.z)
+
+					max.x = math.max(max.x, pos.x)
+					max.y = math.max(max.y, pos.y)
+					max.z = math.max(max.z, pos.z)
+
+					VERTEX_BUFFER[k] = {pos = pos}
+				end
+
+				local size = max - min
+
+				for _, vert in ipairs(VERTEX_BUFFER) do
+					vert.u = vert.pos.x / size.x + vert.pos.z / size.z
+					vert.v = vert.pos.y / size.y + vert.pos.z / size.z
+					vert.normal = (vert.pos - entry.center):GetNormal()
+				end
+
+				for k = 1, F:ReadLong() do
+					entry.triangles[k] = VERTEX_BUFFER[F:ReadLong()]
+				end
+				entry.mesh = Mesh()
+				entry.mesh:BuildFromTriangles(entry.triangles)
+			end
+			data[j] = entry
+		end
+		PHYS_GIB_CACHE[mdl][phys_bone] = data
+	end
+	
+	return true
 end
 
 local function ReadGibCache()
@@ -154,13 +168,13 @@ local function ReadGibCache()
 	end
 end
 
-ReadGibCache()
+--ReadGibCache()
 
 function GetPhysGibMeshes(mdl, phys_bone)
 	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
 		return PHYS_GIB_CACHE[mdl][phys_bone]
 	end
-
+	
 	math.randomseed(util.CRC(mdl) + phys_bone)
 
 	local temp
@@ -208,15 +222,11 @@ function GetPhysGibMeshes(mdl, phys_bone)
 
 	local points = {}
 
-	local LEFT = NUM_PARTS
-
-	while (LEFT > 0) do
+	for i = 1, NUM_PARTS do
 		local point = Vector()
 		point.x = math.Rand(min.x, max.x)
 		point.y = math.Rand(min.y, max.y)
 		point.z = math.Rand(min.z, max.z)
-
-		local is_inside = true
 
 		for vert_index = 1, #convex - 2, 3 do
 			local v1 = convex[vert_index]
@@ -232,16 +242,14 @@ function GetPhysGibMeshes(mdl, phys_bone)
 
 			local d = n:Dot(p1) * 0.9
 
-			if (n:Dot(point) > d) then
-				is_inside = false
-				break
+			local d2 = n:Dot(point)
+
+			if (d2 > d) then
+				point:Sub(n * (d2 - d))
 			end
 		end
 		
-		if is_inside then
-			table.insert(points, point)
-			LEFT = LEFT - 1
-		end
+		table.insert(points, point)		
 	end
 
 	local meshes = VoronoiSplit(convex, points)
@@ -274,7 +282,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
 	PHYS_GIB_CACHE[mdl][phys_bone] = meshes
 
-	WriteGibCache(mdl, phys_bone, meshes)
+	--WriteGibCache(mdl, phys_bone, meshes)
 
 	return meshes
 end
@@ -615,4 +623,73 @@ function CreateGibs(ent, phys_bone)
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
 		SafeRemoveEntity(table.remove(G_GIBS, 1))
 	end
+end
+
+if CLIENT then
+hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
+	local mdl = ent:GetModel()
+	if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
+		local should_write = false
+		local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)..".txt"
+		if file.Exists(path, "DATA") then
+			local F = file.Open(path, "rb", "DATA")
+			if !pcall(ReadGibFile, F) then
+				print("ReadGibFile: corrupt file '"..path.."' deleting!")
+				file.Delete(path)	
+				should_write = true		
+			end
+			F:Close()			
+		end
+		PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+		for phys_bone = 0, 23 do
+			if (phys_bone != 0 and ent:TranslatePhysBoneToBone(phys_bone) == 0) then
+				break 
+			end
+			if !PHYS_GIB_CACHE[mdl][phys_bone] then
+				GetPhysGibMeshes(mdl, phys_bone)
+				should_write = true
+			end	
+		end
+		if should_write then	
+			WriteGibCache(mdl)			
+		end 
+	end
+end)
+end
+
+if SERVER then
+	hook.Add("OnEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
+		timer.Simple(0, function()
+			if !IsValid(ent) then
+				return
+			end
+			local mdl = ent:GetModel()
+			if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
+				local should_write = false
+				local path = "gibsplat2/sv_gib_cache/"..util.CRC(mdl)..".txt"
+				if file.Exists(path, "DATA") then
+					local F = file.Open(path, "rb", "DATA")
+					if !pcall(ReadGibFile, F) then
+						print("ReadGibFile: corrupt file '"..path.."' deleting!")
+						file.Delete(path)
+						should_write = true
+					end
+					F:Close()					
+				end
+				PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+				for phys_bone = 0, 23 do
+					if (phys_bone != 0 and ent:TranslatePhysBoneToBone(phys_bone) == 0) then
+						break 
+					end
+					if !PHYS_GIB_CACHE[mdl][phys_bone] then
+						GetPhysGibMeshes(mdl, phys_bone)
+						should_write = true
+					end			
+				end
+				if should_write then
+					WriteGibCache(mdl)
+				end
+			end
+		end)
+	end)
 end

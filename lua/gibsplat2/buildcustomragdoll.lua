@@ -102,7 +102,7 @@ LoadRagdollPoses()
 
 local RESTORE_POSE = {}
 
-local function PutInRagdollPose(self)
+function PutInRagdollPose(self)
 	local mdl = self:GetModel()
 	local pose = RAGDOLL_POSE[mdl]
 	if !pose then
@@ -145,6 +145,7 @@ local function PutInRagdollPose(self)
 
 		temp:Remove()
 		RAGDOLL_POSE[mdl] = pose
+		WriteRagdollPose(mdl)
 	end
 
 	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
