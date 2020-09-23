@@ -1,6 +1,8 @@
 --sv_cheats 1;god;impulse 101;lua_openscript gs2.lua
 
-local VERSION = 2
+local VERSION = 3
+
+local HOOK_NAME = "GibSplat2"
 
 local min_strength = CreateConVar("gs2_min_constraint_strength", 4000)
 local max_strength = CreateConVar("gs2_max_constraint_strength", 15000)
@@ -44,7 +46,7 @@ end
 local function ReadAngle(F, ang)
 	local p = F:ReadFloat()
 	local y = F:ReadFloat()
-	local t = F:ReadFloat()
+	local r = F:ReadFloat()
 	return Angle(p, y, r)
 end
 
@@ -57,6 +59,10 @@ local function WriteRagdollPose(mdl)
 	file.Write(file_name, "") --creates file
 
 	local F = file.Open(file_name, "wb", "DATA")
+
+	if !F then		
+		return
+	end
 
 	F:WriteByte(VERSION)
 	F:WriteShort(#mdl)
@@ -72,7 +78,41 @@ local function WriteRagdollPose(mdl)
 	F:Close()
 end
 
-local function LoadRagdollPoses()
+local function LoadRagdollPose(mdl)
+	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)..".txt"
+	if !file.Exists(path, "DATA") then
+		return false
+	end
+
+	local F = file.Open(path, "rb", "DATA")
+
+	if (F:ReadByte() != VERSION) then
+		F:Close()
+		return false
+	end
+
+	local mdl = F:Read(F:ReadShort())
+
+	RAGDOLL_POSE[mdl] = {}
+
+	local num_entries = F:ReadShort()
+
+	for entry_index = 0, num_entries do
+		local phys_bone = F:ReadShort()
+		local pos = ReadVector(F)
+		local ang = ReadAngle(F)
+		RAGDOLL_POSE[mdl][phys_bone] = {
+			pos = pos,
+			ang = ang
+		}
+	end
+
+	F:Close()
+
+	return true
+end
+
+local function LoadAllRagdollPoses()
 	for _, file_name in pairs(file.Find("gibsplat2/pose_cache/*.txt", "DATA")) do
 		local F = file.Open("gibsplat2/pose_cache/"..file_name, "rb", "DATA")
 
@@ -86,7 +126,7 @@ local function LoadRagdollPoses()
 
 		local num_entries = F:ReadShort()
 
-		for entry_index = 1, num_entries do
+		for entry_index = 0, num_entries do
 			local phys_bone = F:ReadShort()
 			local pos = ReadVector(F)
 			local ang = ReadAngle(F)
@@ -98,7 +138,7 @@ local function LoadRagdollPoses()
 	end
 end
 
-LoadRagdollPoses()
+--LoadAllRagdollPoses()
 
 local RESTORE_POSE = {}
 
@@ -150,6 +190,11 @@ function PutInRagdollPose(self)
 
 	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
 		local posang = pose[phys_bone]
+		if !posang then
+			RAGDOLL_POSE[mdl] = nil
+			PutInRagdollPose(self)
+			return
+		end
 		local phys = self:GetPhysicsObjectNum(phys_bone)
 		RESTORE_POSE[phys_bone] = {
 			pos = phys:GetPos(),
@@ -615,3 +660,14 @@ function ENTITY:MakeCustomRagdoll()
 
 	self.__gs2custom = true
 end
+
+hook.Add("OnEntityCreated", HOOK_NAME.."_LoadRagdollPoses", function(ent)
+	timer.Simple(0, function()
+		if IsValid(ent) then
+			local mdl = ent:GetModel()
+			if (mdl and !RAGDOLL_POSE[mdl] and util.IsValidRagdoll(mdl)) then
+				LoadRagdollPose(mdl)
+			end
+		end
+	end)
+end)
