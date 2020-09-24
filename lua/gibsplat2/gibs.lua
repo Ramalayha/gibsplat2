@@ -25,11 +25,11 @@ local function WriteGibCache(mdl)
 		game.CleanUpMap() --Prevents freezes
 	end
 	local gib_data = PHYS_GIB_CACHE[mdl]
-	local prefix = SERVER and "gibsplat2/sv_gib_cache/" or "gibsplat2/cl_gib_cache/"
+	local prefix = SERVER and "gibsplat2_data/sv_gib_cache/" or "gibsplat2_data/cl_gib_cache/"
 	
 	local file_name = prefix..util.CRC(mdl)..".txt"
 
-	file.CreateDir("gibsplat2")
+	file.CreateDir("gibsplat2_data")
 	file.CreateDir(prefix)
 
 	file.Write(file_name, "")
@@ -315,7 +315,7 @@ game.AddDecal("YellowBloodSmall", {
 	"decals/alienflesh/shot5"
 })
 
-local text = file.Read("materials/gibsplat2/skeletons.vmt", "GAME")
+local text = file.Read("materials/gibsplat2_data/skeletons.vmt", "GAME")
 
 local body_types = util.KeyValuesToTable(text or "").body_types or {}
 
@@ -455,7 +455,7 @@ end
 
 local G_GIBS = {}
 
-local text = file.Read("materials/gibsplat2/gibs.vmt", "GAME")
+local text = file.Read("materials/gibsplat2_data/gibs.vmt", "GAME")
 
 local gib_info = util.KeyValuesToTable(text or "")
 
@@ -641,7 +641,7 @@ if CLIENT then
 	hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
 		local mdl = ent:GetModel()
 		if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
-			local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)
+			local path = "gibsplat2_data/cl_gib_cache/"..util.CRC(mdl)
 			local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 			if F then
 				if !pcall(ReadGibFile, F) then
@@ -671,7 +671,7 @@ if SERVER then
 			end
 			local mdl = ent:GetModel()
 			if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
-				local path = "gibsplat2/sv_gib_cache/"..util.CRC(mdl)
+				local path = "gibsplat2_data/sv_gib_cache/"..util.CRC(mdl)
 				local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 				if F then
 					if !pcall(ReadGibFile, F) then

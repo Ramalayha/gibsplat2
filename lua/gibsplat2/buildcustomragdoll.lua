@@ -51,10 +51,10 @@ local function ReadAngle(F, ang)
 end
 
 local function WriteRagdollPose(mdl)
-	local file_name = "gibsplat2/pose_cache/"..util.CRC(mdl)..".txt"
+	local file_name = "gibsplat2_data/pose_cache/"..util.CRC(mdl)..".txt"
 
-	file.CreateDir("gibsplat2")
-	file.CreateDir("gibsplat2/pose_cache")
+	file.CreateDir("gibsplat2_data")
+	file.CreateDir("gibsplat2_data/pose_cache")
 
 	file.Write(file_name, "") --creates file
 
@@ -77,7 +77,7 @@ local function WriteRagdollPose(mdl)
 end
 
 local function LoadRagdollPose(mdl)
-	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)
+	local path = "gibsplat2_data/pose_cache/"..util.CRC(mdl)
 	
 	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
