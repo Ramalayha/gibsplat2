@@ -315,7 +315,7 @@ game.AddDecal("YellowBloodSmall", {
 	"decals/alienflesh/shot5"
 })
 
-local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
+local text = file.Read("materials/gibsplat2/skeletons.vmt", "GAME")
 
 local body_types = util.KeyValuesToTable(text or "").body_types or {}
 
@@ -455,7 +455,7 @@ end
 
 local G_GIBS = {}
 
-local text = file.Read("gibsplat2/gibs.vmt", "GAME")
+local text = file.Read("materials/gibsplat2/gibs.vmt", "GAME")
 
 local gib_info = util.KeyValuesToTable(text or "")
 
@@ -642,7 +642,7 @@ if CLIENT then
 		local mdl = ent:GetModel()
 		if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
 			local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)
-			local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+			local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 			if F then
 				if !pcall(ReadGibFile, F) then
 					print("ReadGibFile: corrupt file '"..path.."' deleting!")
@@ -672,7 +672,7 @@ if SERVER then
 			local mdl = ent:GetModel()
 			if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
 				local path = "gibsplat2/sv_gib_cache/"..util.CRC(mdl)
-				local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+				local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 				if F then
 					if !pcall(ReadGibFile, F) then
 						print("ReadGibFile: corrupt file '"..path.."' deleting!")

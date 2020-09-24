@@ -79,7 +79,7 @@ end
 local function LoadRagdollPose(mdl)
 	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)
 	
-	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
 	if !F then return end
 

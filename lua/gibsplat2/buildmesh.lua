@@ -104,7 +104,7 @@ end
 local function LoadBonePositions(mdl)
 	local path = "gibsplat2/bone_cache/"..util.CRC(mdl)
 	
-	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
 	if !F then return end
 	
@@ -235,7 +235,7 @@ end
 local function LoadBoneMeshes(mdl, bg_mask)
 	local path = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)
 	
-	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
 	if !F then
 		return false
