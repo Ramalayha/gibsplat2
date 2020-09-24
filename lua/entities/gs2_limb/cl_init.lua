@@ -193,7 +193,7 @@ function ENT:UpdateRenderInfo()
 		end
 	end
 		
-	if is_lonely then		
+	if is_lonely then
 		--If no other parts are attached generate a mesh to optimize
 		local meshes = GetBoneMeshes(body, self_phys_bone)
 		if (#meshes > 0) then

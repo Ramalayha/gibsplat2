@@ -21,6 +21,9 @@ function FILE:ReadVector()
 end
 
 local function WriteGibCache(mdl)
+	if CLIENT then 
+		game.CleanUpMap() --Prevents freezes
+	end
 	local gib_data = PHYS_GIB_CACHE[mdl]
 	local prefix = SERVER and "gibsplat2/sv_gib_cache/" or "gibsplat2/cl_gib_cache/"
 	
@@ -37,14 +40,14 @@ local function WriteGibCache(mdl)
 	F:WriteShort(#mdl)
 	F:Write(mdl)
 	
-	F:WriteShort(#gib_data)
+	F:WriteShort(table.Count(gib_data))
 	for phys_bone, data in pairs(gib_data) do
 		F:WriteShort(phys_bone)
-		F:WriteShort(#data)	
-		for _, entry in ipairs(data) do
+		F:WriteShort(table.Count(data))
+		for _, entry in pairs(data) do
 			F:WriteVector(entry.center)
-			F:WriteShort(#entry.conns)
-			for _, conn in ipairs(entry.conns) do
+			F:WriteShort(table.Count(entry.conns))
+			for _, conn in pairs(entry.conns) do
 				F:WriteShort(conn)
 			end
 			if SERVER then
@@ -88,26 +91,52 @@ local function ReadGibFile(F)
 	
 	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
 
-	for i = 0, F:ReadShort() do
+	local num_gibs = F:ReadShort()
+
+	if num_gibs > 100 then
+		print("ReadGibFile: too many gibs! "..mdl.." ("..num_gibs..")")
+		F:Close()
+		return
+	end
+
+	for i = 1, num_gibs do 
 		local phys_bone = F:ReadShort()
 		local data = {}
-		for j = 1, F:ReadShort() do
+		local num_entries = F:ReadShort()
+		if num_entries > 100 then
+			print("ReadGibFile: too many entries! "..mdl.." ("..num_entries..")")
+			F:Close()
+			return
+		end
+		for j = 1, num_entries do
 			local entry = {}
 			entry.center = F:ReadVector()
 			entry.conns = {}
 			for k = 1, F:ReadShort() do
-				entry.conns[k] = F:ReadShort()
+				entry.conns[k] = F:ReadShort()				
 			end
 			entry.triangles = {}
 			if SERVER then
-				for k = 1, F:ReadLong() do
+				local num_verts = F:ReadLong()
+				if num_verts > 1000 then
+					print("ReadGibFile: too many vertices! "..mdl.." ("..num_verts..")",F:Tell(),phys_bone,j)
+					F:Close()
+					return
+				end
+				for k = 1, num_verts do 
 					entry.triangles[k] = F:ReadVector()
 				end
 			else
 				local VERTEX_BUFFER = {}
 				local min = Vector(math.huge, math.huge, math.huge)
 				local max = -min
-				for k = 1, F:ReadLong() do
+				local num_verts = F:ReadLong()
+				if num_verts > 1000 then
+					print("ReadGibFile: too many vertices! "..mdl.." ("..num_verts..")")
+					F:Close()
+					return
+				end
+				for k = 1, num_verts do
 					local pos = F:ReadVector()
 					min.x = math.min(min.x, pos.x)
 					min.y = math.min(min.y, pos.y)
@@ -122,12 +151,12 @@ local function ReadGibFile(F)
 
 				local size = max - min
 
-				for _, vert in ipairs(VERTEX_BUFFER) do
+				for _, vert in ipairs(VERTEX_BUFFER) do 
 					vert.u = vert.pos.x / size.x + vert.pos.z / size.z
 					vert.v = vert.pos.y / size.y + vert.pos.z / size.z
 					vert.normal = (vert.pos - entry.center):GetNormal()
 				end
-
+ 	
 				for k = 1, F:ReadLong() do
 					entry.triangles[k] = VERTEX_BUFFER[F:ReadLong()]
 				end
@@ -138,37 +167,9 @@ local function ReadGibFile(F)
 		end
 		PHYS_GIB_CACHE[mdl][phys_bone] = data
 	end
-	
+
 	return true
 end
-
-local function ReadGibCache()
-	local prefix = SERVER and "gibsplat2/sv_gib_cache/" or "gibsplat2/cl_gib_cache/"
-	
-	local files = file.Find(prefix.."*.txt", "DATA")
-
-	for _, file_name in ipairs(files) do
-		local F = file.Open(prefix..file_name, "rb", "DATA")
- 		
- 		if (F:ReadByte() != GIB_VERSION) then
-			F:Close()
-			file.Delete(prefix..file_name)		
-			continue
-		end
-
-		local mdl = F:Read(F:ReadShort())
-
-		local succ, err = pcall(ReadGibFile, F, mdl)
-		F:Close()
-
-		if !succ then
-			print("Failed to load gib mesh for "..mdl.." ("..file_name..") Deleting!")
-			file.Delete(prefix..file_name)
-		end	
-	end
-end
-
---ReadGibCache()
 
 function GetPhysGibMeshes(mdl, phys_bone)
 	if (PHYS_GIB_CACHE[mdl] and PHYS_GIB_CACHE[mdl][phys_bone]) then
@@ -184,6 +185,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 		temp:Spawn()
 	else
 		temp = ClientsideRagdoll(mdl)
+		temp:SetupBones()
 	end
 	
 	if !IsValid(temp) then
@@ -213,11 +215,19 @@ function GetPhysGibMeshes(mdl, phys_bone)
 
 	temp:PhysicsInitConvex(points)
 
-	local convex = temp:GetPhysicsObject():GetMeshConvexes()[1]
+	local phys = temp:GetPhysicsObject()
+
+	if !IsValid(phys) then
+		temp:Remove()
+		return
+	end
+
+	local convex = phys:GetMeshConvexes()[1]
 
 	temp:Remove()
 
 	local min, max = phys:GetAABB()
+	local center = (min + max) / 2
 	local size = max - min
 
 	local points = {}
@@ -227,6 +237,8 @@ function GetPhysGibMeshes(mdl, phys_bone)
 		point.x = math.Rand(min.x, max.x)
 		point.y = math.Rand(min.y, max.y)
 		point.z = math.Rand(min.z, max.z)
+
+		point = center + (point - center) * 0.9
 
 		for vert_index = 1, #convex - 2, 3 do
 			local v1 = convex[vert_index]
@@ -282,7 +294,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 	PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
 	PHYS_GIB_CACHE[mdl][phys_bone] = meshes
 
-	--WriteGibCache(mdl, phys_bone, meshes)
+	WriteGibCache(mdl, phys_bone, meshes)
 
 	return meshes
 end
@@ -626,35 +638,29 @@ function CreateGibs(ent, phys_bone)
 end
 
 if CLIENT then
-hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
-	local mdl = ent:GetModel()
-	if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
-		local should_write = false
-		local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)..".txt"
-		if file.Exists(path, "DATA") then
-			local F = file.Open(path, "rb", "DATA")
-			if !pcall(ReadGibFile, F) then
-				print("ReadGibFile: corrupt file '"..path.."' deleting!")
-				file.Delete(path)	
-				should_write = true		
+	hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
+		local mdl = ent:GetModel()
+		if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
+			local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)
+			local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+			if F then
+				if !pcall(ReadGibFile, F) then
+					print("ReadGibFile: corrupt file '"..path.."' deleting!")
+					file.Delete(path)					
+				end
+				F:Close()			
 			end
-			F:Close()			
-		end
-		PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
-		for phys_bone = 0, 23 do
-			if (phys_bone != 0 and ent:TranslatePhysBoneToBone(phys_bone) == 0) then
-				break 
-			end
-			if !PHYS_GIB_CACHE[mdl][phys_bone] then
-				GetPhysGibMeshes(mdl, phys_bone)
-				should_write = true
-			end	
-		end
-		if should_write then	
-			WriteGibCache(mdl)			
-		end 
-	end
-end)
+			PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
+			for phys_bone = 0, 23 do
+				if (phys_bone != 0 and ent:TranslatePhysBoneToBone(phys_bone) == 0) then
+					break 
+				end
+				if !PHYS_GIB_CACHE[mdl][phys_bone] then
+					GetPhysGibMeshes(mdl, phys_bone)					
+				end	
+			end			
+		end		
+	end)
 end
 
 if SERVER then
@@ -665,16 +671,15 @@ if SERVER then
 			end
 			local mdl = ent:GetModel()
 			if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
-				local should_write = false
-				local path = "gibsplat2/sv_gib_cache/"..util.CRC(mdl)..".txt"
-				if file.Exists(path, "DATA") then
-					local F = file.Open(path, "rb", "DATA")
+				local path = "gibsplat2/sv_gib_cache/"..util.CRC(mdl)
+				local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+				if F then
 					if !pcall(ReadGibFile, F) then
 						print("ReadGibFile: corrupt file '"..path.."' deleting!")
 						file.Delete(path)
 						should_write = true
 					end
-					F:Close()					
+					F:Close()
 				end
 				PHYS_GIB_CACHE[mdl] = PHYS_GIB_CACHE[mdl] or {}
 				for phys_bone = 0, 23 do
@@ -682,13 +687,9 @@ if SERVER then
 						break 
 					end
 					if !PHYS_GIB_CACHE[mdl][phys_bone] then
-						GetPhysGibMeshes(mdl, phys_bone)
-						should_write = true
+						GetPhysGibMeshes(mdl, phys_bone)						
 					end			
-				end
-				if should_write then
-					WriteGibCache(mdl)
-				end
+				end				
 			end
 		end)
 	end)

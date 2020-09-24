@@ -153,7 +153,7 @@ function VoronoiSplit(mesh, points)
 	end
 
 	local temp = SERVER and ents.Create("prop_physics") or ents.CreateClientProp()
-
+temp.yeet = true
 	for key, mesh in pairs(new_meshes) do
 		for key2, vert in ipairs(mesh) do
 			mesh[key2] = vert.pos

@@ -8,11 +8,8 @@ if SERVER then
 util.AddNetworkString(MSG_REQ_POSE)
 
 net.Receive(MSG_REQ_POSE, function(len, ply)
-	local ent = net.ReadEntity()
-	if !IsValid(ent) then
-		return
-	end
-	local mdl = ent:GetModel()
+	local mdl = net.ReadString()
+	
 	local temp = ents.Create("prop_physics")
 	temp:SetModel(mdl)	
 	temp:Spawn()
@@ -26,6 +23,12 @@ net.Receive(MSG_REQ_POSE, function(len, ply)
 			temp:SetPoseParameter(name, (min + max) / 2)
 		end
 	end
+
+	--Forces temp to setup its bones
+	local meme = ents.Create("prop_physics")
+	meme:Spawn()
+	meme:FollowBone(temp, 0)
+	meme:Remove()
 
 	local bone_count = temp:GetBoneCount()
 
@@ -82,9 +85,7 @@ local function WriteBonePositions(mdl)
 
 	local F = file.Open(file_name, "wb", "DATA")
 
-	if !F then
-		return
-	end
+	if !F then return end
 
 	F:WriteByte(VERSION)
 	F:WriteShort(#mdl)
@@ -101,62 +102,30 @@ local function WriteBonePositions(mdl)
 end
 
 local function LoadBonePositions(mdl)
-	local path = "gibsplat2/bone_cache/"..util.CRC(mdl)..".txt"
-	if file.Exists(path, "DATA") then
-		local F = file.Open(path, "rb", "DATA")
+	local path = "gibsplat2/bone_cache/"..util.CRC(mdl)
+	
+	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
-		if (F:ReadByte() != VERSION) then
-			F:Close()			
-		end
+	if !F then return end
+	
+	if (F:ReadByte() != VERSION) then
+		F:Close()
+		return
+	end
 
-		local mdl = F:Read(F:ReadShort())
+	local mdl = F:Read(F:ReadShort())
 
-		BONE_CACHE[mdl] = {}
+	BONE_CACHE[mdl] = {}
 
-		local num_entries = F:ReadShort()
+	local num_entries = F:ReadShort()
 
-		for entry_index = 0, num_entries - 1 do
-			local matrix = Matrix()
-			matrix:Translate(ReadVector(F))
-			matrix:Rotate(ReadAngle(F))
-			BONE_CACHE[mdl][entry_index] = matrix
-		end
+	for entry_index = 0, num_entries - 1 do
+		local matrix = Matrix()
+		matrix:Translate(ReadVector(F))
+		matrix:Rotate(ReadAngle(F))
+		BONE_CACHE[mdl][entry_index] = matrix
 	end
 end
-
-local cur_file = ""
-
-local function LoadAllBonePositions()
-	for _, file_name in pairs(file.Find("gibsplat2/bone_cache/*.txt", "DATA")) do
-		local F = file.Open("gibsplat2/bone_cache/"..file_name, "rb", "DATA")
-
-		cur_file = "gibsplat2/bone_cache/"..file_name
-
-		if (F:ReadByte() != VERSION) then
-			F:Close()
-			continue
-		end
-
-		local mdl = F:Read(F:ReadShort())
-
-		BONE_CACHE[mdl] = {}
-
-		local num_entries = F:ReadShort()
-
-		for entry_index = 0, num_entries - 1 do
-			local matrix = Matrix()
-			matrix:Translate(ReadVector(F))
-			matrix:Rotate(ReadAngle(F))
-			BONE_CACHE[mdl][entry_index] = matrix
-		end
-	end
-end
-
---[[local err, msg = pcall(LoadAllBonePositions)
-if err then
-	print("LoadBonePositions: '"..cur_file.."' is corrupt, deleting!")
-	file.Delete(cur_file)
-end]]
 
 net.Receive(MSG_REQ_POSE, function()
 	local mdl = net.ReadString()
@@ -228,10 +197,10 @@ local function WriteBoneMeshes(ent, bg_mask)
 	F:Write(mdl)
 	F:WriteLong(bg_mask)
 
-	F:WriteShort(#MESH_CACHE[mdl][bg_mask])
+	F:WriteShort(table.Count(MESH_CACHE[mdl][bg_mask]))
 	for phys_bone, meshes in pairs(MESH_CACHE[mdl][bg_mask]) do
 		F:WriteByte(phys_bone)
-		F:WriteShort(#meshes)
+		F:WriteShort(table.Count(meshes))
 		for _, mesh in pairs(meshes) do
 			local mat = mesh.Material:GetName()
 			F:WriteShort(#mat)
@@ -264,11 +233,13 @@ local function WriteBoneMeshes(ent, bg_mask)
 end
 
 local function LoadBoneMeshes(mdl, bg_mask)
-	local path = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)..".txt"
-	if !file.Exists(path, "DATA") then
+	local path = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)
+	
+	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
+
+	if !F then
 		return false
 	end
-	local F = file.Open(path, "rb", "DATA")
 
 	local version = F:ReadByte()
 	
@@ -325,70 +296,6 @@ local function LoadBoneMeshes(mdl, bg_mask)
 	return true
 end
 
-local function LoadAllBoneMeshes()
-	for _, file_name in pairs(file.Find("gibsplat2/mesh_cache/*.txt", "DATA")) do
-		local F = file.Open("gibsplat2/mesh_cache/"..file_name, "rb", "DATA")
-
-		cur_file = "gibsplat2/mesh_cache/"..file_name
-
-		local version = F:ReadByte()
-		
-		if (version != VERSION) then
-			F:Close()
-			file.Delete("gibsplat2/mesh_cache/"..file_name)
-			continue
-		end
-
-		local mdl 			= F:Read(F:ReadShort())
-		local bg_mask 		= F:ReadLong()
-		local num_entries 	= F:ReadShort()
-
-		MESH_CACHE[mdl] = MESH_CACHE[mdl] or {}
-		MESH_CACHE[mdl][bg_mask] = {}
-
-		for entry_index = 1, num_entries do
-			local phys_bone = F:ReadByte()
-			local meshes = {}
-			for mesh_index = 1, F:ReadShort() do
-				local mat = F:Read(F:ReadShort())
-				MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
-				mat = MATERIAL_CACHE[mat]
-				local lfm = F:ReadByte() == 1
-				local VERTEX_BUFFER = {}
-				for vert_index = 1, F:ReadLong() do
-					local vert = {}
-					vert.pos 	= ReadVector(F)
-					vert.normal = ReadVector(F)
-					vert.u 		= F:ReadFloat()
-					vert.v 		= F:ReadFloat()
-					table.insert(VERTEX_BUFFER, vert)
-				end
-				local tris = {}
-				for index = 1, F:ReadLong() do
-					table.insert(tris, VERTEX_BUFFER[F:ReadLong()])
-				end
-				local MESH = Mesh()
-				MESH:BuildFromTriangles(tris)
-				table.insert(meshes, {
-					Mesh = MESH,
-					Material = mat,
-					look_for_material = lfm or nil,
-					tris = tris
-				})
-			end
-			MESH_CACHE[mdl][bg_mask][phys_bone] = meshes
-		end
-
-		F:Close()
-	end
-end
-
---[[local err, msg = pcall(LoadBoneMeshes)
-if err then
-	print("LoadBoneMeshes: '"..cur_file.."' is corrupt, deleting!")
-	file.Delete(cur_file)
-end]]
-
 function GetBoneMeshes(ent, phys_bone, norec)
 	local mdl = ent:GetModel()
 
@@ -417,7 +324,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	if (!BONE_CACHE[mdl] or !BONE_CACHE[mdl][bone]) then
 		temp:Remove()
 		net.Start(MSG_REQ_POSE)
-		net.WriteEntity(ent)
+		net.WriteString(ent:GetModel())
 		net.SendToServer()
 		MESH_CACHE[mdl] = {}
 		return MESH_CACHE[mdl]

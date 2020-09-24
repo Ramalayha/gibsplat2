@@ -60,9 +60,7 @@ local function WriteRagdollPose(mdl)
 
 	local F = file.Open(file_name, "wb", "DATA")
 
-	if !F then		
-		return
-	end
+	if !F then return end
 
 	F:WriteByte(VERSION)
 	F:WriteShort(#mdl)
@@ -79,12 +77,11 @@ local function WriteRagdollPose(mdl)
 end
 
 local function LoadRagdollPose(mdl)
-	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)..".txt"
-	if !file.Exists(path, "DATA") then
-		return false
-	end
+	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)
+	
+	local F = file.Open(path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
-	local F = file.Open(path, "rb", "DATA")
+	if !F then return end
 
 	if (F:ReadByte() != VERSION) then
 		F:Close()
@@ -112,34 +109,6 @@ local function LoadRagdollPose(mdl)
 	return true
 end
 
-local function LoadAllRagdollPoses()
-	for _, file_name in pairs(file.Find("gibsplat2/pose_cache/*.txt", "DATA")) do
-		local F = file.Open("gibsplat2/pose_cache/"..file_name, "rb", "DATA")
-
-		if (F:ReadByte() != VERSION) then
-			continue
-		end
-
-		local mdl = F:Read(F:ReadShort())
-
-		RAGDOLL_POSE[mdl] = {}
-
-		local num_entries = F:ReadShort()
-
-		for entry_index = 0, num_entries do
-			local phys_bone = F:ReadShort()
-			local pos = ReadVector(F)
-			local ang = ReadAngle(F)
-			RAGDOLL_POSE[mdl][phys_bone] = {
-				pos = pos,
-				ang = ang
-			}
-		end
-	end
-end
-
---LoadAllRagdollPoses()
-
 local RESTORE_POSE = {}
 
 function PutInRagdollPose(self)
@@ -147,25 +116,16 @@ function PutInRagdollPose(self)
 	local pose = RAGDOLL_POSE[mdl]
 	if !pose then
 		pose = {}
-		local seq = self:LookupSequence("ragdoll")
-		local temp
-		--Ugly hack because not all ragdoll spawn in the correct pose
-		if (seq == 0) then
-			temp = ents.Create("prop_ragdoll")
-			temp:SetModel(mdl)
-			temp:Spawn()
-		else
-			temp = ents.Create("prop_physics")
-			temp:SetModel(mdl)	
-			temp:Spawn()
-			temp:ResetSequence(-2)
-			temp:SetCycle(0)
+		local temp = ents.Create("prop_physics")
+		temp:SetModel(mdl)	
+		temp:Spawn()
+		temp:ResetSequence(-2)
+		temp:SetCycle(0)
 
-			for pose_param = 0, temp:GetNumPoseParameters() - 1 do
-				local min, max = temp:GetPoseParameterRange(pose_param)
-				--temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
-			end
-		end
+		for pose_param = 0, temp:GetNumPoseParameters() - 1 do
+			local min, max = temp:GetPoseParameterRange(pose_param)
+			temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
+		end		
 
 		--This forces temp to setup its bone
 		local meme = ents.Create("prop_physics")
