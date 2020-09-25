@@ -6,7 +6,6 @@ include("gibsplat2/buildmesh.lua")
 
 AddCSLuaFile("gibsplat2/constraintinfo.lua")
 AddCSLuaFile("gibsplat2/buildmesh.lua")
-AddCSLuaFile("gibsplat2/getmodelgender.lua")
 AddCSLuaFile("gibsplat2/gibs.lua")
 AddCSLuaFile("gibsplat2/clipmesh.lua")
 
