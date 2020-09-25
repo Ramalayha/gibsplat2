@@ -76,10 +76,10 @@ local function ReadAngle(F, ang)
 end
 
 local function WriteBonePositions(mdl)
-	local file_name = "gibsplat2_data/bone_cache/"..util.CRC(mdl)..".txt"
+	local file_name = "gibsplat2/bone_cache/"..util.CRC(mdl)..".txt"
 
-	file.CreateDir("gibsplat2_data")
-	file.CreateDir("gibsplat2_data/bone_cache")
+	file.CreateDir("gibsplat2")
+	file.CreateDir("gibsplat2/bone_cache")
 
 	file.Write(file_name, "") --creates file
 
@@ -102,7 +102,7 @@ local function WriteBonePositions(mdl)
 end
 
 local function LoadBonePositions(mdl)
-	local path = "gibsplat2_data/bone_cache/"..util.CRC(mdl)
+	local path = "gibsplat2/bone_cache/"..util.CRC(mdl)
 	
 	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
@@ -183,10 +183,10 @@ end
 
 local function WriteBoneMeshes(ent, bg_mask)
 	local mdl = ent:GetModel()
-	local file_name = "gibsplat2_data/mesh_cache/"..util.CRC(mdl..bg_mask)..".txt"
+	local file_name = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)..".txt"
 
-	file.CreateDir("gibsplat2_data")
-	file.CreateDir("gibsplat2_data/mesh_cache")
+	file.CreateDir("gibsplat2")
+	file.CreateDir("gibsplat2/mesh_cache")
 
 	file.Write(file_name, "") --creates file
 
@@ -233,7 +233,7 @@ local function WriteBoneMeshes(ent, bg_mask)
 end
 
 local function LoadBoneMeshes(mdl, bg_mask)
-	local path = "gibsplat2_data/mesh_cache/"..util.CRC(mdl..bg_mask)
+	local path = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)
 	
 	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
 
@@ -313,7 +313,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 	local phys_mat = KVs and KVs:match('solid {.-"index" "'..phys_bone..'".-"surfaceprop" "([^"]-)"')
 
-	if phys_mat and Material("models/gibsplat2_data/overlays/"..phys_mat):IsError() then
+	if phys_mat and Material("models/gibsplat2/overlays/"..phys_mat):IsError() then
 		phys_mat = nil
 	end
 
@@ -382,7 +382,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 				mat = Material(MESH.material)
 				if phys_mat then
 					local mat_bloody = CreateMaterial(MESH.material.."_bloody", "VertexLitGeneric", {
-						["$detail"] = "models/gibsplat2_data/overlays/"..phys_mat						
+						["$detail"] = "models/gibsplat2/overlays/"..phys_mat						
 					})		
 					for key, value in pairs(mat:GetKeyValues()) do
 						if (type(value) == "string") then
