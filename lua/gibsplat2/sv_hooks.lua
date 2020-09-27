@@ -219,12 +219,12 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			local phys = ent:GetPhysicsObjectNum(phys_bone)
 			local lpos, lang = WorldToLocal(dmginfo:GetDamagePosition(), ang_zero, phys:GetPos(), phys:GetAngles())
 
-			--[[local hole = ents.Create("gs2_bullethole")
+			local hole = ents.Create("gs2_bullethole")
 			hole:SetBody(ent)
 			hole:SetTargetBone(phys_bone)
 			hole:SetLocalPos(lpos)
 			hole:SetLocalAng(lang)
-			hole:Spawn()]]
+			hole:Spawn()
 			
 			if ShouldGib(dmginfo) then
 				ent:GS2Gib(phys_bone)
@@ -290,6 +290,18 @@ local function CreateRagdoll(self)
 	self:Spectate(OBS_MODE_CHASE)
 
 	dolls[self] = ragdoll
+end
+
+if enabled:GetBool() then
+	if player_ragdolls:GetBool() then
+		PLAYER.CreateRagdoll = CreateRagdoll
+	end
+	if default_ragdolls:GetBool() then
+		hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
+		hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
+	end
+	hook.Add("SetupPlayerVisibility", HOOK_NAME, GS2SetupPlayerVisibility)
+	hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 end
 
 cvars.AddChangeCallback("gs2_enabled", function(_, _, new)

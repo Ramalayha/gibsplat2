@@ -249,7 +249,7 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
 
 	local target_bone = target_phys_bone and self:TranslatePhysBoneToBone(target_phys_bone)
 
-	for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
+	for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do		
 		local bone = self:TranslatePhysBoneToBone(phys_bone)
 		local is_conn = target_phys_bone == nil and true
 		if !is_conn then			
@@ -272,7 +272,9 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
 		end	
 
 		if is_conn then	
-			local bone_pos = self:GetBoneMatrix(bone):GetTranslation()
+			local phys = self:GetPhysicsObjectNum(phys_bone)
+			local min, max = phys:GetAABB()
+			local bone_pos = phys:LocalToWorld((min + max) * 0.5)--self:GetBoneMatrix(bone):GetTranslation()
 			local d = bone_pos:DistToSqr(pos)
 			if d < dist then
 				dist = d
@@ -302,7 +304,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			return
 		end
 		mask = bit.bor(mask, phys_mask)
-		if mask == bit.lshift(1, self:GetPhysicsObjectCount())-1 then
+		if mask == bit.lshift(1, self:GetPhysicsObjectCount()) - 1 then
 			if self.GS2Gibs then
 				for _, gib in pairs(self.GS2Gibs) do
 					if IsValid(gib) then
@@ -337,27 +339,19 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				SafeRemoveEntity(const.Constraint)
 			end
 		end
-
-		self.GS2Limbs = self.GS2Limbs or {}
-
-		if self.GS2Limbs[phys_bone] then
-			SafeRemoveEntity(self.GS2Limbs[phys_bone])
-			self.GS2Limbs[phys_bone] = nil
-		end
-
-		if !IsValid(self.GS2Limbs[0]) then
-			local limb = ents.Create("gs2_limb")
-			limb:SetBody(self)					
-			limb:SetTargetBone(0)			
-			limb:Spawn() 
-
-			self:DeleteOnRemove(limb)
-			self.GS2Limbs[0] = limb
-		end
-
+ 
+		SafeRemoveEntity(self.GS2Limbs[phys_bone])
+		self.GS2Limbs[phys_bone] = nil
+		
 		for _, limb in pairs(self.GS2Limbs) do
 			if IsValid(limb) then
 				limb:SetGibMask(mask)
+			end
+		end
+
+		if (self.GS2BulletHoles and self.GS2BulletHoles[phys_bone]) then
+			for _, hole in pairs(self.GS2BulletHoles[phys_bone]) do
+				SafeRemoveEntity(hole)
 			end
 		end
 
@@ -512,19 +506,7 @@ function ENTITY:MakeCustomRagdoll()
 
 				self:DeleteOnRemove(limb)
 
-				self.GS2Limbs = self.GS2Limbs or {}
 				self.GS2Limbs[part_info.child] = limb
-			end
-
-			if !IsValid(self.GS2Limbs[0]) then
-				local limb = ents.Create("gs2_limb")
-				limb:SetBody(self)					
-				limb:SetTargetBone(0)			
-				limb:Spawn()
-
-				self:DeleteOnRemove(limb)
-
-				self.GS2Limbs[0] = limb
 			end
 
 			for _, limb in pairs(self.GS2Limbs) do
@@ -540,6 +522,14 @@ function ENTITY:MakeCustomRagdoll()
 		self.GS2Joints[part_info.parent] = self.GS2Joints[part_info.parent] or {}
 		table.insert(self.GS2Joints[part_info.parent], const_bs)
 	end
+
+	local limb = ents.Create("gs2_limb")
+	limb:SetBody(self)					
+	limb:SetTargetBone(0)			
+	limb:Spawn()
+
+	self:DeleteOnRemove(limb)	
+	self.GS2Limbs = {[0] = limb}
 
 	SetPhysConstraintSystem(NULL)
 

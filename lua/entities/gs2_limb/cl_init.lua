@@ -45,8 +45,6 @@ function ENT:Initialize()
 	self:DrawShadow(false)
 	self:DestroyShadow()
 
-	self._LastDisMask = 0
-	self._LastGibMask = 0
 	self.Created = CurTime()
 
 	self.GS2BoneList = {}
@@ -232,7 +230,7 @@ function ENT:Draw()
 					local mod = 1 - min(1, CurTime() - start)
 					SetColorModulation(mod, mod, mod)
 				end
-			end		
+			end	
 									
 			--self:SnatchModelInstance(body) --Transfers decals
 
@@ -272,6 +270,75 @@ function ENT:Draw()
 				self:DrawModel()	
 				MaterialOverride()
 
+
+				--Draw bulletholes into stencil buffer
+				if body.GS2BulletHoles then
+					render.SetStencilEnable(true)
+					render.ClearStencil()
+
+					render.SetStencilReferenceValue(0xFF)
+
+					render.SetStencilFailOperation(STENCIL_KEEP)		
+					render.SetStencilWriteMask(1)
+
+					render.OverrideDepthEnable(true, false)
+					render.OverrideColorWriteEnable(true, false)
+
+					for phys_bone, bullet_holes in pairs(body.GS2BulletHoles) do
+						local bone = body:TranslatePhysBoneToBone(phys_bone)
+						local parent = bone
+						repeat
+							if (parent == self_bone) then
+								break
+							end
+							parent = self:GetBoneParent(parent)
+						until (parent == -1)
+						
+						if (parent != -1) then
+							for key, hole in pairs(bullet_holes) do
+								if !IsValid(hole) then
+									bullet_holes[key] = nil
+									continue
+								end			
+								local lpos = hole:GetLocalPos()
+								local lang = hole:GetLocalAng()
+
+								local pos, ang = LocalToWorld(lpos, lang, body:GetBonePosition(bone))
+								
+								hole:SetRenderOrigin(pos)
+								hole:SetRenderAngles(ang)
+								
+								render.SetStencilCompareFunction(STENCIL_ALWAYS)
+								render.SetStencilPassOperation(STENCIL_KEEP)
+								render.SetStencilZFailOperation(STENCIL_REPLACE)
+								render.SetStencilWriteMask(1)
+
+								render.CullMode(MATERIAL_CULLMODE_CW)
+								hole:DrawModel()
+								render.CullMode(MATERIAL_CULLMODE_CCW)
+
+								render.SetStencilCompareFunction(STENCIL_EQUAL)
+								render.SetStencilPassOperation(STENCIL_REPLACE)
+								render.SetStencilZFailOperation(STENCIL_KEEP)
+
+								render.SetStencilTestMask(1)
+								render.SetStencilWriteMask(2)	
+								
+								hole:DrawModel()	
+								
+								hole:SetNoDraw(true)
+							end
+						end
+					end
+					
+					render.OverrideDepthEnable(false)
+					render.OverrideColorWriteEnable(false)
+
+					render.SetStencilCompareFunction(STENCIL_NOTEQUAL)
+					render.SetStencilZFailOperation(STENCIL_KEEP)
+					render.SetStencilTestMask(2)
+				end				
+
 				--Draw skin
 				self:SetupBones()
 				for bone = 0, self:GetBoneCount()-1 do
@@ -286,6 +353,8 @@ function ENT:Draw()
 					end
 				end			
 				self:DrawModel()
+
+				render.SetStencilEnable(false)
 			end
 
 			SetColorModulation(1, 1, 1)
