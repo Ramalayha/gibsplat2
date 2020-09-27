@@ -112,7 +112,7 @@ function ENT:Draw()
 	local gib_mask = body:GetNWInt("GS2GibMask", 0)
 
 	for phys_bone = 0, MAX_RAGDOLL_PARTS do
-		if band(dis_mask, lshift(1, phys_bone)) != 0 then
+		if IsValid(body.GS2Limbs[phys_bone]) then
 			local bone = body:TranslatePhysBoneToBone(phys_bone)
 			if (bone == 0 and phys_bone != 0) then
 				break
