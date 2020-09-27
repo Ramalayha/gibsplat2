@@ -534,28 +534,6 @@ function CreateGibs(ent, phys_bone)
 					gib:SetAngles(ang)
 					gib:Spawn()
 
-					if !data.convex then
-						local points = {}
-						local phys = gib:GetPhysicsObject()
-						for _, convex in ipairs(phys:GetMeshConvexes()) do
-							for _, vert in ipairs(convex) do
-								points[vert.pos] = true
-							end
-						end
-						data.convex = {}
-						for point in ipairs(points) do
-							if data.vec_offset then
-								point:Add(data.vec_offset)
-							end
-							if data.ang_offset then
-								point:Rotate(data.ang_offset)
-							end
-							table.insert(data.convex, point)
-						end
-					end
-
-					gib.convex = data.convex
-
 					ent:DeleteOnRemove(gib)
 
 					table.insert(custom_gibs, gib)
@@ -580,6 +558,20 @@ function CreateGibs(ent, phys_bone)
 
 	local chance = gib_merge_chance:GetFloat()
 
+	if custom_gibs then
+		for _, custom_gib in ipairs(custom_gibs) do
+			for _, gib in ipairs(gibs) do
+				if (gib:IsTouching(custom_gib)) then					
+					custom_gib:SetParent(gib)					
+					break			
+				end	
+			end
+			if !IsValid(custom_gib:GetParent()) then
+				table.insert(G_GIBS, custom_gib)
+			end
+		end
+	end
+
 	--Merge gibs into larger ones
 	for _, gib in ipairs(gibs) do
 		if !IsValid(gib:GetParent()) then		
@@ -602,20 +594,6 @@ function CreateGibs(ent, phys_bone)
 						end
 					end
 				end
-			end
-		end
-	end
-
-	if custom_gibs then
-		for _, custom_gib in ipairs(custom_gibs) do
-			for _, gib in ipairs(ents.FindInBox(custom_gib:WorldSpaceAABB())) do
-				if (gib.GS2GibInfo and math.random() < chance) then
-					custom_gib:SetParent(gib)
-					break				
-				end	
-			end
-			if !IsValid(custom_gib:GetParent()) then
-				table.insert(G_GIBS, custom_gib)
 			end
 		end
 	end

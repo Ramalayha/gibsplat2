@@ -21,6 +21,8 @@ function ENT:Initialize()
 	self.GS2_dummy = true --default to this
 
 	self.Created = CurTime()
+
+	self:PhysicsInitConvex(self.GS2GibInfo.triangles)
 end
 
 function ENT:InitPhysics()
@@ -30,14 +32,19 @@ function ENT:InitPhysics()
 	local phys = body:GetPhysicsObjectNum(phys_bone)
 	
 	local phys_self = self:GetPhysicsObject()
-	if IsValid(phys_self) then	
-		self:SetMoveType(MOVETYPE_VPHYSICS)
-		self:SetSolid(SOLID_VPHYSICS)
-		self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
-		self:EnableCustomCollisions(true)
-		phys_self:SetVelocity(phys:GetVelocity())
-		phys_self:AddAngleVelocity(phys:GetAngleVelocity())
-		self.GS2_dummy = false
+	if IsValid(phys_self) then
+		if IsValid(self:GetParent()) then
+			self:PhysicsDestroy()
+			self:SetNotSolid(true)
+		else
+			self:SetMoveType(MOVETYPE_VPHYSICS)
+			self:SetSolid(SOLID_VPHYSICS)
+			self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
+			self:EnableCustomCollisions(true)
+			phys_self:SetVelocity(phys:GetVelocity())
+			phys_self:AddAngleVelocity(phys:GetAngleVelocity())
+			self.GS2_dummy = false
+		end
 	end
 end
 
@@ -57,6 +64,55 @@ function ENT:PhysicsCollide(data, phys)
 		EF:SetOrigin(self:GetPos())
 		util.Effect("BloodImpact", EF)
 		self:Remove()
+	end
+end
+
+local VERT_CACHE = {}
+
+function ENT:IsTouching(other)
+	local phys = self:GetPhysicsObject()
+
+	if !IsValid(phys) then
+		return
+	end
+
+	local mdl = other:GetModel()
+	local verts = VERT_CACHE[mdl]
+	if !verts then
+		VERT_CACHE[mdl] = {}
+		verts = VERT_CACHE[mdl]
+		local phys = other:GetPhysicsObject()
+		for _, convex in ipairs(phys:GetMeshConvexes()) do
+			for _, vert in pairs(convex) do
+				if !table.HasValue(verts, vert.pos) then
+					table.insert(verts, vert.pos)
+				end
+			end
+		end
+	end
+
+	local convex = phys:GetMeshConvexes()[1]
+	
+	for _, vert in ipairs(verts) do
+		local wpos = other:LocalToWorld(vert)
+		local lpos = self:WorldToLocal(wpos)
+		local is_inside = true
+		for vert_index = 1, #convex - 2, 3 do
+			local p1 = convex[vert_index].pos
+			local p2 = convex[vert_index + 1].pos
+			local p3 = convex[vert_index + 2].pos
+
+			local n = (p3 - p1):Cross(p2 - p1)
+			n:Normalize()
+			local d = n:Dot(p1)				
+			if (n:Dot(lpos) > d) then
+				is_inside = false
+				break
+			end
+		end
+		if is_inside then
+			return true
+		end
 	end
 end
 
