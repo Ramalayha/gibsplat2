@@ -52,6 +52,11 @@ end
 function ENT:Think()
 	local body = self:GetBody()
 
+	local min, max = body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
+	min = body:LocalToWorld(min)
+	max = body:LocalToWorld(max)
+	self:SetRenderBoundsWS(min, max)
+	
 	local dis_mask = body:GetNWInt("GS2DisMask", 0)
 	local gib_mask = body:GetNWInt("GS2GibMask", 0)
 
