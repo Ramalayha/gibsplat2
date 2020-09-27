@@ -90,7 +90,11 @@ function ENT:Draw()
 		render.OverrideDepthEnable(true, false)
 		render.OverrideColorWriteEnable(true, false)
 
-		for _, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do			
+		for key, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do
+			if !IsValid(hole) then
+				body.GS2BulletHoles[self.PhysBone][key] = nil
+				continue
+			end
 			local lpos = hole:GetLocalPos()
 			local lang = hole:GetLocalAng()
 
