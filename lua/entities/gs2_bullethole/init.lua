@@ -15,6 +15,8 @@ function ENT:Initialize()
 	body.GS2BulletHoles[phys_bone] = body.GS2BulletHoles[phys_bone] or {}
 
 	table.insert(body.GS2BulletHoles[phys_bone], self)
+
+	self:SetNoDraw(true)
 end
 
 function ENT:UpdateTransmitState()
