@@ -39,6 +39,8 @@ function EFFECT:Init(data)
 		return
 	end
 
+	self.PhysBone = self.Body:TranslateBoneToPhysBone(self.Bone)
+
 	local matrix = self.Body:GetBoneMatrix(self.Bone)
 	
 	if !matrix then
@@ -64,7 +66,7 @@ function EFFECT:Think()
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) or !IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
-	 	bit_band(self.Body:GetNWInt("GS2GibMask", 0), bit_lshift(1, self.Bone)) != 0 then
+	 	!self.Body.GS2Limbs or !IsValid(self.Body.GS2Limbs[self.PhysBone]) then
 		return false
 	end
 
@@ -77,14 +79,14 @@ function EFFECT:Think()
 	local right = bone_dir:Cross(Vector(0, 0, 1))
 	local up = right:Cross(bone_dir)
 
-	for i = 1, 14 do
+	for i = 1, 7 do --14
 		local pos = bone_pos
 		 + right * math.Rand(-0.5, 0.5)
 		 + up * math.Rand(0.5, 0.5)
 
 		local dir = bone_dir + VectorRand(-0.3, 0.3)
 
-		local vel = dir * math.Rand(4, 40) * 10 * (self.Created + self.DieTime - cur_time) / self.DieTime
+		local vel = dir * math.Rand(4, 40) * 10 * (0.5 + 0.5 * math.sin((cur_time - self.Created) * 3)) * (self.Created + self.DieTime - cur_time) / self.DieTime
 		
 		--vel = vel * (0.5 + math.sin(self.Created - cur_time) * 0.5)
 
@@ -110,7 +112,7 @@ function EFFECT:Think()
 		end
 	end
 
-	for i = 1, 24 do
+	for i = 1, 12 do --24
 		local pos = bone_pos
 		 + right * math.Rand(-0.5, 0.5)
 		 + up * math.Rand(0.5, 0.5)
@@ -144,7 +146,7 @@ function EFFECT:Think()
 		end
 	end
 
-	for i = 1, 6 do
+	for i = 1, 3 do --6
 		local pos = bone_pos + bone_dir
 		 + right * math.Rand(-1, 1)
 		 + up * math.Rand(-1, 1)

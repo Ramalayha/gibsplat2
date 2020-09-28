@@ -17,10 +17,41 @@ local decals = {
 	alienflesh = "YellowBlood"
 }
 
+local CreateGibs = CreateGibs
+local SetPhysConstraintSystem = SetPhysConstraintSystem
+local SafeRemoveEntity = SafeRemoveEntity
+local SafeRemoveEntityDelayed = SafeRemoveEntityDelayed
+local WorldToLocal = WorldToLocal
+local CurTime = CurTime
 local GetModelConstraintInfo = GetModelConstraintInfo
+local IsValid = IsValid
+local EffectData = EffectData
+local pairs = pairs
+local LocalToWorld = LocalToWorld
+
+local ents_Create = ents.Create
+
+local constraint_GetTable = constraint.GetTable
+
+local math_min = math.min
+local math_max = math.max
+local math_random = math.random
+local math_acos = math.acos
+
+local table_insert = table.insert
+
+local player_GetHumans = player.GetHumans
+
+local bit_lshift = bit.lshift
+local bit_bor = bit.bor
+local bit_band = bit.band
+
+local sound_Play = sound.Play
+
 local timer_Simple = timer.Simple
-local min = math.min
-local max = math.max
+
+local ang_zero = Angle(0, 0, 0)
+local ang_180 = Angle(180, 0, 0)
 
 local RAGDOLL_POSE = {}
 
@@ -116,7 +147,7 @@ function PutInRagdollPose(self)
 	local pose = RAGDOLL_POSE[mdl]
 	if !pose then
 		pose = {}
-		local temp = ents.Create("prop_physics")
+		local temp = ents_Create("prop_physics")
 		temp:SetModel(mdl)	
 		temp:Spawn()
 		temp:ResetSequence(-2)
@@ -128,7 +159,7 @@ function PutInRagdollPose(self)
 		end		
 
 		--This forces temp to setup its bone
-		local meme = ents.Create("prop_physics")
+		local meme = ents_Create("prop_physics")
 		meme:FollowBone(temp, 0)
 		meme:Remove()
 						
@@ -178,7 +209,7 @@ end
 
 local function GetClosestPhys(self, pos, target_phys_bone)
 	local bone = 0
-	local dist = math.huge
+	local dist = math_huge
 
 	local target_bone = target_phys_bone and self:TranslatePhysBoneToBone(target_phys_bone)
 
@@ -236,11 +267,11 @@ end
 local ENTITY = FindMetaTable("Entity")
 
 function ENTITY:GS2IsDismembered(phys_bone)
-	return bit.band(self:GetNWInt("GS2DisMask", 0), bit.lshift(1, phys_bone)) != 0
+	return bit_band(self:GetNWInt("GS2DisMask", 0), bit_lshift(1, phys_bone)) != 0
 end
 
 function ENTITY:GS2IsGibbed(phys_bone)
-	return bit.band(self:GetNWInt("GS2GibMask", 0), bit.lshift(1, phys_bone)) != 0
+	return bit_band(self:GetNWInt("GS2GibMask", 0), bit_lshift(1, phys_bone)) != 0
 end
 
 function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
@@ -299,12 +330,12 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		if !IsValid(self) then return end
 
 		local mask = self:GetNWInt("GS2GibMask", 0)
-		local phys_mask = bit.lshift(1, phys_bone)
-		if (bit.band(mask, phys_mask) != 0) then --Called twice, do nothing
+		local phys_mask = bit_lshift(1, phys_bone)
+		if (bit_band(mask, phys_mask) != 0) then --Called twice, do nothing
 			return
 		end
-		mask = bit.bor(mask, phys_mask)
-		if mask == bit.lshift(1, self:GetPhysicsObjectCount()) - 1 then
+		mask = bit_bor(mask, phys_mask)
+		if mask == bit_lshift(1, self:GetPhysicsObjectCount()) - 1 then
 			if self.GS2Gibs then
 				for _, gib in pairs(self.GS2Gibs) do
 					if IsValid(gib) then
@@ -325,14 +356,14 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		
 		--Detach any spectators
 		if (phys_bone == 0) then
-			for _, ply in pairs(player.GetHumans()) do
+			for _, ply in pairs(player_GetHumans()) do
 				if (ply:GetObserverTarget() == self) then
 					ply:SpectateEntity()
 				end
 			end
 		end
 
-		for _, const in pairs(constraint.GetTable(self)) do
+		for _, const in pairs(constraint_GetTable(self)) do
 			if (const.Ent1 == self and const.Bone1 == phys_bone) then
 				SafeRemoveEntity(const.Constraint)
 			elseif (const.Ent2 == self and const.Bone2 == phys_bone) then
@@ -364,7 +395,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		if IsValid(self) and IsValid(phys) then
 			self._GS2LastGibSound = self._GS2LastGibSound or 0
 			if self._GS2LastGibSound + 1 < CurTime() then
-				sound.Play(snd_gib, phys:GetPos(), 100, 100, 1)
+				sound_Play(snd_gib, phys:GetPos(), 100, 100, 1)
 				self._GS2LastGibSound = CurTime()
 			end
 
@@ -414,7 +445,7 @@ function ENTITY:MakeCustomRagdoll()
 	--Damaging ragdolls behaves wierdly when they're picked apart so use these instead
 	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
 		local phys = self:GetPhysicsObjectNum(phys_bone)
-		local relay = ents.Create("gs2_limb_relay")	
+		local relay = ents_Create("gs2_limb_relay")	
 		relay:SetTarget(self, phys_bone)
 		relay:Spawn()
 		self.GS2LimbRelays[phys_bone] = relay		
@@ -427,7 +458,7 @@ function ENTITY:MakeCustomRagdoll()
 	local const_system = self.GS2ConstraintSystem
 
 	if !const_system then
-		const_system = ents.Create("phys_constraintsystem")
+		const_system = ents_Create("phys_constraintsystem")
 		const_system:SetKeyValue("additionaliterations", 4)
 		const_system:Spawn()
 		const_system:Activate()
@@ -444,14 +475,14 @@ function ENTITY:MakeCustomRagdoll()
 		local phys_parent = self:GetPhysicsObjectNum(part_info.parent)
 		local phys_child  = self:GetPhysicsObjectNum(part_info.child)
 		
-		local const_bs = ents.Create("phys_ballsocket")
+		local const_bs = ents_Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", min(max_strength:GetFloat(), max(min_strength:GetFloat(), strength_mul:GetFloat() * max(phys_parent:GetMass(), phys_child:GetMass()))))
+		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
 		const_bs:Activate()
 
-		local const_rc = ents.Create("phys_ragdollconstraint")
+		local const_rc = ents_Create("phys_ragdollconstraint")
 		const_rc:SetPos(phys_child:GetPos())
 		const_rc:SetAngles(phys_child:GetAngles())
 		const_rc:SetPhysConstraintObjects(phys_parent, phys_child)
@@ -462,12 +493,12 @@ function ENTITY:MakeCustomRagdoll()
 		const_rc:Spawn()
 		const_rc:Activate()
 
-		const_bs:CallOnRemove("GS2Dismember", function() self:SetCustomCollisionCheck(true)
+		const_bs:CallOnRemove("GS2Dismember", function()
 			SafeRemoveEntity(const_rc)
 			if !IsValid(phys_child) then return end
 
 			if !const_bs.__nosound then
-				sound.Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
+				sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
 			end
 
 			local phys_pos = phys_child:GetPos()
@@ -487,26 +518,89 @@ function ENTITY:MakeCustomRagdoll()
 			end
 			
 			if !IsValid(self.GS2Skeleton) then
-				local skel = ents.Create("gs2_skeleton")
+				local skel = ents_Create("gs2_skeleton")
 				skel:SetBody(self)
 				skel:Spawn()
 				self.GS2Skeleton = skel
 			end
 
 			local mask = self:GetNWInt("GS2DisMask", 0)
-			mask = bit.bor(mask, bit.lshift(1, part_info.child))
+			mask = bit_bor(mask, bit_lshift(1, part_info.child))
 			self:SetNWInt("GS2DisMask", mask)		
 
+			local dissolve
+
 			if !self:GS2IsGibbed(part_info.child) then
-				local limb = ents.Create("gs2_limb")
+				local limb = ents_Create("gs2_limb")
 				limb:SetBody(self)					
-				limb:SetTargetBone(part_info.child)	
+				limb:SetTargetBone(part_info.child)
 				limb:Spawn()
 				limb:SetLightingOriginEntity(self.GS2LimbRelays[part_info.child])
 
 				self:DeleteOnRemove(limb)
 
 				self.GS2Limbs[part_info.child] = limb
+
+				local bone = self:TranslatePhysBoneToBone(part_info.child)
+				local parent = self:TranslatePhysBoneToBone(part_info.parent)
+
+				repeat
+					local phys_bone_parent = self:TranslateBoneToPhysBone(parent)
+					local parent_limb = self.GS2Limbs[phys_bone_parent]
+					if IsValid(parent_limb) then
+						dissolve = parent_limb.dissolving
+						break
+					end
+					parent = self:GetBoneParent(parent)
+				until (parent == -1)
+
+				if dissolve then
+					limb.dissolving = dissolve
+					local name = "gs2_memename"..limb:EntIndex()
+					limb:SetName(name)
+					local diss = ents_Create("env_entity_dissolver")
+					diss:Spawn()			
+					diss:Fire("Dissolve", name)
+					diss:SetParent(limb)
+
+					net.Start("GS2Dissolve")
+					net.WriteEntity(ent)
+					net.WriteFloat(dissolve)
+					net.WriteUInt(bit_lshift(1, part_info.child), 32)
+					net.Broadcast()
+
+					SafeRemoveEntityDelayed(limb, dissolve + 2 - CurTime())
+				else
+					local EF = EffectData()
+					EF:SetEntity(self)
+					EF:SetOrigin(vector_origin)				
+					EF:SetAngles(ang_zero)
+					EF:SetHitBox(bone)
+					EF:SetColor(self.__gs2bloodcolor or 0)
+					--util.Effect("gs2_bloodspray", EF)
+				end
+			end
+
+			if !self:GS2IsGibbed(part_info.parent) then				
+				local bone = self:TranslatePhysBoneToBone(part_info.child)
+				local parent = self:GetBoneParent(bone)
+
+				--PutInRagdollPose(self)
+
+				local bone_pos, bone_ang = self:GetBonePosition(bone)
+				local lpos, lang = WorldToLocal(bone_pos, bone_ang, self:GetBonePosition(parent))
+				
+				lang.p = lang.p + 180
+
+				local EF = EffectData()
+				EF:SetEntity(self)
+				EF:SetOrigin(lpos)				
+				EF:SetAngles(lang)
+				EF:SetHitBox(parent)
+				EF:SetColor(self.__gs2bloodcolor or 0)
+				--util.Effect("gs2_bloodspray", EF)
+
+				--RestorePose(self)
 			end
 
 			for _, limb in pairs(self.GS2Limbs) do
@@ -517,13 +611,13 @@ function ENTITY:MakeCustomRagdoll()
 		end)
 
 		self.GS2Joints[part_info.child] = self.GS2Joints[part_info.child] or {}
-		table.insert(self.GS2Joints[part_info.child], const_bs)
+		table_insert(self.GS2Joints[part_info.child], const_bs)
 
 		self.GS2Joints[part_info.parent] = self.GS2Joints[part_info.parent] or {}
-		table.insert(self.GS2Joints[part_info.parent], const_bs)
+		table_insert(self.GS2Joints[part_info.parent], const_bs)
 	end
 
-	local limb = ents.Create("gs2_limb")
+	local limb = ents_Create("gs2_limb")
 	limb:SetBody(self)					
 	limb:SetTargetBone(0)			
 	limb:Spawn()
@@ -547,12 +641,12 @@ function ENTITY:MakeCustomRagdoll()
 
 		if data.Speed > 1000 then
 			local mask = self:GetNWInt("GS2GibMask", 0)
-			if bit.band(mask, bit.lshift(1, phys_bone)) == 0 then
+			if bit_band(mask, bit_lshift(1, phys_bone)) == 0 then
 				--self:GS2Gib(phys_bone)
 			end		
 		elseif data.Speed > 100 then			
 			local mask = self:GetNWInt("GS2DisMask", 0)
-			if bit.band(mask, bit.lshift(1, phys_bone)) != 0 then			
+			if bit_band(mask, bit_lshift(1, phys_bone)) != 0 then			
 				util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 				local EF = EffectData()
 				EF:SetOrigin(data.HitPos)
@@ -560,7 +654,7 @@ function ENTITY:MakeCustomRagdoll()
 				--util.Effect("BloodImpact", EF)	
 			else			
 				for _, part_info in pairs(CONST_INFO) do
-					if part_info.parent == phys_bone and bit.band(mask, bit.lshift(1, part_info.child)) != 0 then
+					if part_info.parent == phys_bone and bit_band(mask, bit_lshift(1, part_info.child)) != 0 then
 						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
@@ -597,9 +691,9 @@ function ENTITY:MakeCustomRagdoll()
 
 			local post_speed = vel:Length()
 
-			local ang_offset = math.acos(post_speed / pre_speed)
+			local ang_offset = math_acos(post_speed / pre_speed)
 
-			if (ang_offset < 0.25 and math.random() > 0.5) then -- 0.25 ~= 15 degrees
+			if (ang_offset < 0.25 and math_random() > 0.5) then -- 0.25 ~= 15 degrees
 				local closest = self:GS2GetClosestPhysBone(data.HitPos, phys_bone)
 				if closest then
 					self:GS2Dismember(closest)	

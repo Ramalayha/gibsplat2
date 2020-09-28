@@ -1,5 +1,27 @@
 include("clipmesh.lua")
 
+local SafeRemoveEntity = SafeRemoveEntity
+local WorldToLocal = WorldToLocal
+local ipairs = ipairs
+local ClientsideRagdoll = ClientsideRagdoll
+local pairs = pairs
+local VoronoiSplit = VoronoiSplit
+local LocalToWorld = LocalToWorld
+local IsValid = IsValid
+
+local math_max = math.max
+local math_randomseed = math.randomseed
+local math_floor = math.floor
+local math_random = math.random
+local math_Rand = math.Rand
+
+local table_Empty = table.Empty
+local table_remove = table.remove
+local table_Count = table.Count
+local table_Add = table.Add
+local table_insert = table.insert
+local table_KeyFromValue = table.KeyFromValue
+
 local NUM_PARTS = 10
 
 local PHYS_GIB_CACHE = {}
@@ -40,13 +62,13 @@ local function WriteGibCache(mdl)
 	F:WriteShort(#mdl)
 	F:Write(mdl)
 	
-	F:WriteShort(table.Count(gib_data))
+	F:WriteShort(table_Count(gib_data))
 	for phys_bone, data in pairs(gib_data) do
 		F:WriteShort(phys_bone)
-		F:WriteShort(table.Count(data))
+		F:WriteShort(table_Count(data))
 		for _, entry in pairs(data) do
 			F:WriteVector(entry.center)
-			F:WriteShort(table.Count(entry.conns))
+			F:WriteShort(table_Count(entry.conns))
 			for _, conn in pairs(entry.conns) do
 				F:WriteShort(conn)
 			end
@@ -59,11 +81,11 @@ local function WriteGibCache(mdl)
 				local VERTEX_BUFFER = {}
 				local INDEX_BUFFER = {}
 				for _, vert in ipairs(entry.triangles) do
-					local index = table.KeyFromValue(VERTEX_BUFFER, vert)
+					local index = table_KeyFromValue(VERTEX_BUFFER, vert)
 					if !index then
-						index = table.insert(VERTEX_BUFFER, vert)		
+						index = table_insert(VERTEX_BUFFER, vert)		
 					end
-					table.insert(INDEX_BUFFER, index)
+					table_insert(INDEX_BUFFER, index)
 				end
 				F:WriteLong(#VERTEX_BUFFER)
 				for _, vert in ipairs(VERTEX_BUFFER) do
@@ -128,7 +150,7 @@ local function ReadGibFile(F)
 				end
 			else
 				local VERTEX_BUFFER = {}
-				local min = Vector(math.huge, math.huge, math.huge)
+				local min = Vector(math_huge, math_huge, math_huge)
 				local max = -min
 				local num_verts = F:ReadLong()
 				if num_verts > 1000 then
@@ -138,13 +160,13 @@ local function ReadGibFile(F)
 				end
 				for k = 1, num_verts do
 					local pos = F:ReadVector()
-					min.x = math.min(min.x, pos.x)
-					min.y = math.min(min.y, pos.y)
-					min.z = math.min(min.z, pos.z)
+					min.x = math_min(min.x, pos.x)
+					min.y = math_min(min.y, pos.y)
+					min.z = math_min(min.z, pos.z)
 
-					max.x = math.max(max.x, pos.x)
-					max.y = math.max(max.y, pos.y)
-					max.z = math.max(max.z, pos.z)
+					max.x = math_max(max.x, pos.x)
+					max.y = math_max(max.y, pos.y)
+					max.z = math_max(max.z, pos.z)
 
 					VERTEX_BUFFER[k] = {pos = pos}
 				end
@@ -176,7 +198,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 		return PHYS_GIB_CACHE[mdl][phys_bone]
 	end
 	
-	math.randomseed(util.CRC(mdl) + phys_bone)
+	math_randomseed(util.CRC(mdl) + phys_bone)
 
 	local temp
 	if SERVER then
@@ -207,7 +229,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 
 	for _, convex in pairs(convexes) do
 		for _, vert in pairs(convex) do
-			table.insert(points, vert.pos)
+			table_insert(points, vert.pos)
 		end
 	end
 
@@ -234,9 +256,9 @@ function GetPhysGibMeshes(mdl, phys_bone)
 
 	for i = 1, NUM_PARTS do
 		local point = Vector()
-		point.x = math.Rand(min.x, max.x)
-		point.y = math.Rand(min.y, max.y)
-		point.z = math.Rand(min.z, max.z)
+		point.x = math_Rand(min.x, max.x)
+		point.y = math_Rand(min.y, max.y)
+		point.z = math_Rand(min.z, max.z)
 
 		point = center + (point - center) * 0.9
 
@@ -261,7 +283,7 @@ function GetPhysGibMeshes(mdl, phys_bone)
 			end
 		end
 		
-		table.insert(points, point)		
+		table_insert(points, point)		
 	end
 
 	local meshes = VoronoiSplit(convex, points)
@@ -284,9 +306,9 @@ function GetPhysGibMeshes(mdl, phys_bone)
 			for _, vert in pairs(mesh.triangles) do
 				vertex_buffer[vert.pos] = true
 			end
-			table.Empty(mesh.triangles)
+			table_Empty(mesh.triangles)
 			for vert in pairs(vertex_buffer) do
-				table.insert(mesh.triangles, vert)
+				table_insert(mesh.triangles, vert)
 			end
 		end
 	end
@@ -378,9 +400,9 @@ local function GenerateConnData(ent, phys_bone)
 
 	local gib_index = 0
 
-	local num_x = math.max(1, math.floor(phys_size.x / 4))
-	local num_y = math.max(1, math.floor(phys_size.y / 4))
-	local num_z = math.max(1, math.floor(phys_size.z / 4))
+	local num_x = math_max(1, math_floor(phys_size.x / 4))
+	local num_y = math_max(1, math_floor(phys_size.y / 4))
+	local num_z = math_max(1, math_floor(phys_size.z / 4))
 
 	local gibs = {}
 
@@ -394,7 +416,7 @@ local function GenerateConnData(ent, phys_bone)
 				gib:SetOffsetFactor(Vector(x / (num_x + 1), y / (num_y + 1), z / (num_z + 1)))									
 				gib:Spawn()
 
-				table.insert(gibs, gib)
+				table_insert(gibs, gib)
 							
 				gib_index = gib_index + 1
 			end
@@ -443,7 +465,7 @@ local function GenerateConnData(ent, phys_bone)
 			end
 
 			if is_conn then
-				table.insert(GIB_CONN_DATA[mdl][phys_bone][gib_index1], gib_index2)
+				table_insert(GIB_CONN_DATA[mdl][phys_bone][gib_index1], gib_index2)
 			end
 		end
 	end
@@ -476,9 +498,9 @@ local PHYS_MAT_CACHE = {}
 
 local function GetChildMeshRec(ent, output)
 	if ent.GS2GibInfo then
-		table.Add(output, ent.GS2GibInfo.triangles)
+		table_Add(output, ent.GS2GibInfo.triangles)
 	else		
-		table.Add(output, ent.convex)
+		table_Add(output, ent.convex)
 		ent:PhysicsDestroy()
 		ent.GS2_dummy = true
 	end
@@ -513,7 +535,7 @@ function CreateGibs(ent, phys_bone)
 
 		if (gib_custom:GetBool() and custom_gib_data) then
 			for mdl, data in pairs(custom_gib_data) do
-				if (math.random() < factor) then
+				if (math_random() < factor) then
 					local gib = ents.Create("gs2_gib_custom")
 					gib:SetModel(mdl)
 
@@ -536,14 +558,14 @@ function CreateGibs(ent, phys_bone)
 
 					ent:DeleteOnRemove(gib)
 
-					table.insert(custom_gibs, gib)
+					table_insert(custom_gibs, gib)
 				end
 			end
 		end
 	end
 
 	for key, mesh in ipairs(meshes) do
-		if (math.random() < factor) then
+		if (math_random() < factor) then
 			local gib = ents.Create("gs2_gib")
 			gib:SetBody(ent)
 			gib:SetTargetBone(phys_bone)
@@ -552,7 +574,7 @@ function CreateGibs(ent, phys_bone)
 
 			ent:DeleteOnRemove(gib)
 
-			table.insert(gibs, gib)			
+			table_insert(gibs, gib)			
 		end
 	end
 
@@ -567,7 +589,7 @@ function CreateGibs(ent, phys_bone)
 				end	
 			end
 			if !IsValid(custom_gib:GetParent()) then
-				table.insert(G_GIBS, custom_gib)
+				table_insert(G_GIBS, custom_gib)
 			end
 		end
 	end
@@ -576,7 +598,7 @@ function CreateGibs(ent, phys_bone)
 	for _, gib in ipairs(gibs) do
 		if !IsValid(gib:GetParent()) then		
 			for _, gib2 in ipairs(gibs) do
-				if (gib != gib2 and math.random() < chance and !IsValid(gib2:GetParent())) then
+				if (gib != gib2 and math_random() < chance and !IsValid(gib2:GetParent())) then
 					for _, conn in ipairs(gib.GS2GibInfo.conns) do
 						if (gib2:GetGibIndex() == conn) then
 							gib2:SetNotSolid(true)	
@@ -606,12 +628,12 @@ function CreateGibs(ent, phys_bone)
 			gib:PhysicsInitConvex(convex)
 			gib:InitPhysics()
 
-			table.insert(G_GIBS, gib)
+			table_insert(G_GIBS, gib)
 		end
 	end
 
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
-		SafeRemoveEntity(table.remove(G_GIBS, 1))
+		SafeRemoveEntity(table_remove(G_GIBS, 1))
 	end
 end
 

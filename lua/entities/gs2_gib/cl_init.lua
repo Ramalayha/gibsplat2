@@ -1,5 +1,7 @@
 include("shared.lua")
 
+local IsValid = IsValid
+
 local dummy_mesh = Mesh()
 
 local mat_default = Material("models/flesh")

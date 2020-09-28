@@ -1,9 +1,43 @@
 include("shared.lua")
 
-local SetColorModulation = render.SetColorModulation
+local CurTime = CurTime
+local pairs = pairs
+local SafeRemoveEntity = SafeRemoveEntity
+local IsValid = IsValid
+local LocalToWorld = LocalToWorld
 
-local CurTime 	= CurTime
-local min 		= math.min
+local bit_band = bit.band
+local bit_lshift = bit.lshift
+
+local render_SetColorModulation = render.SetColorModulation
+local render_SetStencilEnable = render.SetStencilEnable
+local render_ClearStencil = render.ClearStencil
+local render_SetStencilReferenceValue = render.SetStencilReferenceValue
+local render_SetStencilFailOperation = render.SetStencilFailOperation
+local render_SetStencilWriteMask = render.SetStencilWriteMask
+local render_OverrideDepthEnable = render.OverrideDepthEnable
+local render_OverrideColorWriteEnable = render.OverrideColorWriteEnable
+local render_SetStencilCompareFunction = render.SetStencilCompareFunction
+local render_SetStencilPassOperation = render.SetStencilPassOperation
+local render_SetStencilZFailOperation = render.SetStencilZFailOperation
+local render_SetStencilWriteMask = render.SetStencilWriteMask
+local render_CullMode = render.CullMode
+local render_CullMode = render.CullMode
+local render_SetStencilCompareFunction = render.SetStencilCompareFunction
+local render_SetStencilPassOperation = render.SetStencilPassOperation
+local render_SetStencilZFailOperation = render.SetStencilZFailOperation
+local render_SetStencilTestMask = render.SetStencilTestMask
+local render_SetStencilWriteMask = render.SetStencilWriteMask
+local render_OverrideDepthEnable = render.OverrideDepthEnable
+local render_OverrideColorWriteEnable = render.OverrideColorWriteEnable
+local render_SetStencilZFailOperation = render.SetStencilZFailOperation
+local render_SetStencilTestMask = render.SetStencilTestMask
+local render_MaterialOverride = render.MaterialOverride
+local render_MaterialOverride = render.MaterialOverride
+local render_SetStencilEnable = render.SetStencilEnable
+local render_SetColorModulation = render.SetColorModulation
+
+local math_min 		= math.min
 
 local MAT_CACHE = {}
 
@@ -41,7 +75,7 @@ function ENT:Think()
 		end
 		local mask = self.GS2ParentLimb:GetGibMask()
 
-		if (bit.band(mask, bit.lshift(1, self.PhysBone)) != 0) then
+		if (bit_band(mask, bit_lshift(1, self.PhysBone)) != 0) then
 			self:Remove()
 			return
 		end
@@ -72,29 +106,25 @@ function ENT:Draw()
 	if body.GS2Dissolving then
 		local start = body.GS2Dissolving[self.PhysBone]
 		if start then
-			local mod = 1 - min(1, CurTime() - start)
-			SetColorModulation(mod, mod, mod)
+			local mod = 1 - math_min(1, CurTime() - start)
+			render_SetColorModulation(mod, mod, mod)
 		end
 	end
 	self:DrawModel()	
 	if !self.is_flesh and self.FleshMat and !self.FleshMat:IsError() and body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone] then
 		--The stencil stuff looks weird from some angles but what can you do ¯\_(ツ)_/¯
-		render.SetStencilEnable(true)
-		render.ClearStencil()
+		render_SetStencilEnable(true)
+		render_ClearStencil()
 
-		render.SetStencilReferenceValue(0xFF)
+		render_SetStencilReferenceValue(0xFF)
 
-		render.SetStencilFailOperation(STENCIL_KEEP)		
-		render.SetStencilWriteMask(1)
+		render_SetStencilFailOperation(STENCIL_KEEP)		
+		render_SetStencilWriteMask(1)
 
-		render.OverrideDepthEnable(true, false)
-		render.OverrideColorWriteEnable(true, false)
+		render_OverrideDepthEnable(true, false)
+		render_OverrideColorWriteEnable(true, false)
 
-		for key, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do
-			if !IsValid(hole) then
-				body.GS2BulletHoles[self.PhysBone][key] = nil
-				continue
-			end
+		for _, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do			
 			local lpos = hole:GetLocalPos()
 			local lang = hole:GetLocalAng()
 
@@ -103,43 +133,43 @@ function ENT:Draw()
 			hole:SetRenderOrigin(pos)
 			hole:SetRenderAngles(ang)
 			
-			render.SetStencilCompareFunction(STENCIL_ALWAYS)
-			render.SetStencilPassOperation(STENCIL_KEEP)
-			render.SetStencilZFailOperation(STENCIL_REPLACE)
-			render.SetStencilWriteMask(1)
+			render_SetStencilCompareFunction(STENCIL_ALWAYS)
+			render_SetStencilPassOperation(STENCIL_KEEP)
+			render_SetStencilZFailOperation(STENCIL_REPLACE)
+			render_SetStencilWriteMask(1)
 
-			render.CullMode(MATERIAL_CULLMODE_CW)
+			render_CullMode(MATERIAL_CULLMODE_CW)
 			hole:DrawModel()
-			render.CullMode(MATERIAL_CULLMODE_CCW)
+			render_CullMode(MATERIAL_CULLMODE_CCW)
 
-			render.SetStencilCompareFunction(STENCIL_EQUAL)
-			render.SetStencilPassOperation(STENCIL_REPLACE)
-			render.SetStencilZFailOperation(STENCIL_KEEP)
+			render_SetStencilCompareFunction(STENCIL_EQUAL)
+			render_SetStencilPassOperation(STENCIL_REPLACE)
+			render_SetStencilZFailOperation(STENCIL_KEEP)
 
-			render.SetStencilTestMask(1)
-			render.SetStencilWriteMask(2)	
+			render_SetStencilTestMask(1)
+			render_SetStencilWriteMask(2)	
 			
 			hole:DrawModel()	
 			
 			hole:SetNoDraw(true)
 		end
 		
-		render.OverrideDepthEnable(false)
-		render.OverrideColorWriteEnable(false)
+		render_OverrideDepthEnable(false)
+		render_OverrideColorWriteEnable(false)
 
-		render.SetStencilZFailOperation(STENCIL_KEEP)
-		render.SetStencilTestMask(2)
+		render_SetStencilZFailOperation(STENCIL_KEEP)
+		render_SetStencilTestMask(2)
 
-		render.MaterialOverride(self.FleshMat)
+		render_MaterialOverride(self.FleshMat)
 
 		self:DrawModel()
 
-		render.MaterialOverride()
+		render_MaterialOverride()
 
-		render.SetStencilEnable(false)
+		render_SetStencilEnable(false)
 	end
 
-	SetColorModulation(1, 1, 1)
+	render_SetColorModulation(1, 1, 1)
 end
 
 function ENT:GetRenderMesh()

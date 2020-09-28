@@ -103,51 +103,68 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			ent:GS2Gib(phys_bone)
 		elseif dmginfo:IsExplosionDamage() then
 			return true	--Let relay deal with this instead
-		elseif dmginfo:IsDamageType(DMG_DISSOLVE) then
-			--TODO: particle effects
+		elseif dmginfo:IsDamageType(DMG_DISSOLVE) then			
 			ent:SetCollisionGroup(COLLISION_GROUP_NONE)
-
-			local pbones = {}
 
 			local bone = ent:TranslatePhysBoneToBone(phys_bone)
 
-			repeat
-				table.insert(pbones, bone)
-				local phys_bone = ent:TranslateBoneToPhysBone(bone)
-				local mask = ent:GetNWInt("GS2DisMask")
-				if (bit.band(mask, bit.lshift(1, phys_bone)) != 0) then
-					break
-				end				
-				bone = ent:GetBoneParent(bone)
-			until (bone == -1)
+			local mask = ent:GetNWInt("GS2DisMask")
 			
 			local to_dissolve = {}
 
+			local parent = bone
+
+			repeat				
+				local phys_bone_parent = ent:TranslateBoneToPhysBone(parent)
+				table.insert(to_dissolve, phys_bone_parent)
+				if (bit.band(mask, bit.lshift(1, phys_bone_parent)) != 0) then
+					break
+				end
+				parent = ent:GetBoneParent(parent)
+			until (parent == -1)
+
 			for phys_bone2 = 0, ent:GetPhysicsObjectCount() - 1 do
 				local phys2 = ent:GetPhysicsObjectNum(phys_bone2)
-				local bone2 = ent:TranslatePhysBoneToBone(phys_bone2)
-				local parent = bone2
-				repeat
-					if table.HasValue(pbones, parent) then
-						break
-					end
-					parent = ent:GetBoneParent(parent)
-				until (parent == -1)
+				if (phys_bone2 != phys_bone) then
+					local bone2 = ent:TranslatePhysBoneToBone(phys_bone2)
+					local parent = bone2
+					repeat					
+						local phys_bone_parent = ent:TranslateBoneToPhysBone(parent)
+						if (phys_bone_parent == phys_bone or table.HasValue(to_dissolve, phys_bone_parent)) then
+							break
+						elseif (bit.band(mask, bit.lshift(1, phys_bone_parent)) != 0) then
+							parent = -1
+							break
+						end				
+						parent = ent:GetBoneParent(parent)			
+					until (parent == -1)
 
-				if (parent == -1) then					
-					phys2:EnableGravity(true)
-					phys2:SetDragCoefficient(0)
-				else					
-					phys2:EnableGravity(false)
-					phys2:SetDragCoefficient(100)
-					table.insert(to_dissolve, phys_bone2)
-				end
+					if (parent == -1) then				
+						phys2:EnableGravity(true)
+						phys2:SetDragCoefficient(0)
+						continue
+					end
+				end	
+
+				phys2:EnableGravity(false)
+				phys2:SetDragCoefficient(100)
+				table.insert(to_dissolve, phys_bone2)				
 			end
 
 			local mask = 0
 
 			for _, phys_bone in pairs(to_dissolve) do
 				mask = bit.bor(mask, bit.lshift(1, phys_bone))
+				local limb = ent.GS2Limbs[phys_bone]
+				if IsValid(limb) then
+					limb.dissolving = CurTime()
+					local name = "gs2_memename"..limb:EntIndex()
+					limb:SetName(name)
+					local diss = ents.Create("env_entity_dissolver")
+					diss:Spawn()			
+					diss:Fire("Dissolve", name)
+					diss:SetParent(limb)
+				end
 			end
 
 			net.Start("GS2Dissolve")

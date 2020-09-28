@@ -3,15 +3,20 @@ include("gibsplat2/gibs.lua")
 
 local MAX_RAGDOLL_PARTS = 23
 
-local SetColorModulation = render.SetColorModulation
+local LocalToWorld = LocalToWorld
+local CurTime = CurTime
+local IsValid = IsValid
 
-local CurTime 	= CurTime
-local min 		= math.min
+local render_SetColorModulation = render.SetColorModulation
+local render_SetLightingOrigin = render.SetLightingOrigin
+local render_SetLightingOrigin = render.SetLightingOrigin
+local render_SetColorModulation = render.SetColorModulation
 
-local bor 		= bit.bor
-local band 		= bit.band
-local lshift 	= bit.lshift
-local bnot 		= bit.bnot
+local math_min 		= math.min
+
+local bit_bor 		= bit.bor
+local bit_band 		= bit.band
+local bit_lshift 	= bit.lshift
 
 local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
 
@@ -60,12 +65,12 @@ function ENT:Think()
 	local dis_mask = body:GetNWInt("GS2DisMask", 0)
 	local gib_mask = body:GetNWInt("GS2GibMask", 0)
 
-	local mask = bor(dis_mask, gib_mask)
+	local mask = bit_bor(dis_mask, gib_mask)
 
 	if (self.LastMask != mask) then
 		self.LastMask = mask
 		for phys_bone = 0, MAX_RAGDOLL_PARTS do
-			if band(mask, lshift(1, phys_bone)) != 0 then
+			if (bit_band(mask, bit_lshift(1, phys_bone)) != 0) then
 				local bone = body:TranslatePhysBoneToBone(phys_bone)
 				if (bone == 0 and phys_bone != 0) then
 					break
@@ -84,7 +89,7 @@ function ENT:Think()
 					end
 				end
 
-				if (band(gib_mask, lshift(1, parent_phys_bone)) == 0) then
+				if (bit_band(gib_mask, bit_lshift(1, parent_phys_bone)) == 0) then
 					local part = self.bone_trans[parent_bone] or GetOrCreateSkel(body, parent_bone)
 					
 					self.bone_trans[parent_bone] = part
@@ -112,7 +117,7 @@ function ENT:Draw()
 	local gib_mask = body:GetNWInt("GS2GibMask", 0)
 
 	for phys_bone = 0, MAX_RAGDOLL_PARTS do
-		if IsValid(body.GS2Limbs[phys_bone]) then
+		if (bit_band(dis_mask, bit_lshift(1, phys_bone)) != 0) then
 			local bone = body:TranslatePhysBoneToBone(phys_bone)
 			if (bone == 0 and phys_bone != 0) then
 				break
@@ -121,12 +126,16 @@ function ENT:Draw()
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[phys_bone]
 				if start then
-					local mod = 1 - min(1, CurTime() - start)
-					SetColorModulation(mod, mod, mod)
+					local time = CurTime() - start
+					if (time > 1) then
+						continue
+					end
+					local mod = 1 - math_min(1, time)
+					render.SetColorModulation(mod, mod, mod)
 				end
 			end
 
-			if band(gib_mask, lshift(1, phys_bone)) == 0 then
+			if (bit_band(gib_mask, bit_lshift(1, phys_bone)) == 0) then
 				local part = self.bone_trans[bone]
 				if !part then
 					part = GetOrCreateSkel(body, bone)
@@ -150,7 +159,7 @@ function ENT:Draw()
 			local parent_phys_bone = body:TranslateBoneToPhysBone(parent_bone)
 			parent_bone = body:TranslatePhysBoneToBone(parent_phys_bone)
 
-			if (band(gib_mask, lshift(1, parent_phys_bone)) == 0) then
+			if (bit_band(gib_mask, bit_lshift(1, parent_phys_bone)) == 0) then
 				local part = self.bone_trans[parent_bone]
 				if !part then
 					part = GetOrCreateSkel(body, parent_bone)
@@ -170,7 +179,7 @@ function ENT:Draw()
 				end
 			end
 
-			SetColorModulation(1, 1, 1)
+			render.SetColorModulation(1, 1, 1)
 		end
 	end	
 end
