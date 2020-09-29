@@ -10,6 +10,7 @@ local LocalToWorld = LocalToWorld
 local IsValid = IsValid
 
 local math_max = math.max
+local math_min = math.min
 local math_randomseed = math.randomseed
 local math_floor = math.floor
 local math_random = math.random
