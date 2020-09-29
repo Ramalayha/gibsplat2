@@ -192,7 +192,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 					return true
 				end
 			end
-		elseif dmginfo:IsDamageType(DMG_CRUSH) then
+		elseif dmginfo:IsDamageType(DMG_CRUSH) then			
 			local att = dmginfo:GetAttacker()
 			local axis = IsSharp(att)
 			if axis then
@@ -255,6 +255,10 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			end
 		--end
 	elseif ent:IsNPC() then
+		if (dmginfo:IsDamageType(5) and dmginfo:GetDamage() > ent:Health()) then --5 = DMG_CRUSH | DMG_SLASH
+			local dmg_type = dmginfo:GetDamageType() --Prevents zombie from cutting in half
+			dmginfo:SetDamageType(bit.band(dmg_type, bit.bnot(DMG_SLASH)))			
+		end
 		if dmginfo:IsExplosionDamage() then
 			ent.__lastdmgpos = dmginfo:GetDamagePosition()
 			ent.__lastdmgforce = dmginfo:GetDamageForce()
@@ -367,28 +371,3 @@ if game.SinglePlayer() then
 	enabled:SetBool(true)
 	default_ragdolls:SetBool(true)
 end
-
-/*hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
-	if !enabled:GetBool() then return end
-	if (ent1:GetClass() == "gs2_gib") then
-		if (ent2:GetClass() == "gs2_gib") then
-			return false
-		end
-		if ent2:IsRagdoll() then
-			return false
-		end
-		if ent2:IsPlayer() then
-			--return false
-		end
-	elseif (ent2:GetClass() == "gs2_gib") then
-		if (ent1:GetClass() == "gs2_gib") then
-			return false
-		end
-		if ent1:IsRagdoll() then
-			return false
-		end
-		if ent1:IsPlayer() then
-			--return false
-		end
-	end
-end)*/

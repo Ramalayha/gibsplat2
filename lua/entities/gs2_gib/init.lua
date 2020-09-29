@@ -39,8 +39,9 @@ function ENT:InitPhysics()
 		else
 			self:SetMoveType(MOVETYPE_VPHYSICS)
 			self:SetSolid(SOLID_VPHYSICS)
-			self:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
+			self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 			self:EnableCustomCollisions(true)
+			self:SetCustomCollisionCheck(true)
 			phys_self:SetVelocity(phys:GetVelocity())
 			phys_self:AddAngleVelocity(phys:GetAngleVelocity())
 			self.GS2_dummy = false
@@ -61,8 +62,14 @@ function ENT:PhysicsCollide(data, phys)
 	end
 	if (data.Speed > 1000) then
 		local EF = EffectData()
-		EF:SetOrigin(self:GetPos())
+		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
 		util.Effect("BloodImpact", EF)
+		for _, child in ipairs(self:GetChildren()) do
+			if child.GS2_dummy then
+				EF:SetOrigin(child:LocalToWorld(child:OBBCenter()))
+				util.Effect("BloodImpact", EF)
+			end
+		end
 		self:Remove()
 	end
 end

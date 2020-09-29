@@ -49,6 +49,9 @@ local vec_zero = Vector(0,0,0)
 local matrix_inf = Matrix()
 matrix_inf:Translate(Vector(math.huge))
 
+local dummy = ClientsideModel("models/error.mdl")
+dummy:SetNoDraw(true)
+
 net.Receive("GS2Dissolve", function()
 	local ent = net.ReadEntity()
 	if !IsValid(ent) then
@@ -91,11 +94,9 @@ local function BuildBones(self, num_bones)
 				else
 					matrix = body:GetBoneMatrix(info.parent) * info.matrix
 					matrix:Scale(vec_zero)
-				end						
-			else
-				matrix = self_matrix					
+				end							
 			end
-			self:SetBoneMatrix(bone, matrix)
+			self:SetBoneMatrix(bone, matrix or self_matrix)
 		end
 	end	
 end
@@ -107,7 +108,7 @@ function ENT:Initialize()
 
 	self.GS2BoneList = {}
 
-	self:AddCallback("BuildBonePositions", BuildBones)
+	self.BBID = self:AddCallback("BuildBonePositions", BuildBones)
 end
 
 function ENT:OnRemove()
@@ -120,9 +121,14 @@ end
 
 function ENT:Think()
 	local body = self:GetBody()
+	local dis_mask = self:GetDisMask()
+	local gib_mask = self:GetGibMask()
+
+	local self_phys_bone = self:GetTargetBone()
+	
 	if IsValid(body) then
 		body.GS2Limbs = body.GS2Limbs or {}
-		body.GS2Limbs[self:GetTargetBone()] = self
+		body.GS2Limbs[self_phys_bone] = self
 		
 		self:SetParent(body)
 		if (self:GetModel() != body:GetModel()) then
@@ -145,24 +151,26 @@ function ENT:Think()
 		min = body:LocalToWorld(min)
 		max = body:LocalToWorld(max)
 		self:SetRenderBoundsWS(min, max)
-	end
-	
-	local dis_mask = self:GetDisMask()
-	local gib_mask = self:GetGibMask()
-	if self._LastDisMask != dis_mask or self._LastGibMask != gib_mask then
-		self._LastDisMask = dis_mask
-		self._LastGibMask = gib_mask
-		self:UpdateRenderInfo()
-	end
-	local body = self:GetBody()
-	if IsValid(body) then		
-		local pos = body:GetBonePosition(body:TranslatePhysBoneToBone(self:GetTargetBone() or 0))
+
+		local pos = body:GetBonePosition(body:TranslatePhysBoneToBone(self_phys_bone or 0))
 		if pos then
 			self:SetPos(pos)
 			self:SetRenderOrigin(pos)
 			self:SetupBones()
 		end
+
+		if (!self.BBID and body.GS2Dissolving and body.GS2Dissolving[self_phys_bone]) then
+			self.BBID = self:AddCallback("BuildBonePositions", BuildBones)
+			table_Empty(self.GS2BoneList)		
+			self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bit_bor(dis_mask, gib_mask))	
+		end
 	end
+	
+	if self._LastDisMask != dis_mask or self._LastGibMask != gib_mask then
+		self._LastDisMask = dis_mask
+		self._LastGibMask = gib_mask
+		self:UpdateRenderInfo()
+	end	
 end
 
 local dummy_tbl = {}
@@ -172,6 +180,9 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 	
 	if !IsValid(body) then return end
 	
+	dummy:SetModel(self:GetModel())
+	dummy:SetupBones()
+
 	if bone_override then
 		local parent_bone = bone
 		repeat
@@ -182,11 +193,11 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 		until (parent_bone == -1)
 
 		if (parent_bone != -1) then
-			local bone_matrix = self:GetBoneMatrix(parent_bone)
+			local bone_matrix = dummy:GetBoneMatrix(parent_bone)
 
 			local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
 
-			local bone_override_matrix = self:GetBoneMatrix(bone_override)
+			local bone_override_matrix = dummy:GetBoneMatrix(bone_override)
 
 			local bone_override_pos, bone_override_ang = bone_override_matrix:GetTranslation(), bone_override_matrix:GetAngles()
 
@@ -265,13 +276,16 @@ function ENT:UpdateRenderInfo()
 				M.GS2ParentLimb = self
 				self.GS2RenderMeshes[key] = M
 			end
-		end		
+		end	
+		self:RemoveCallback("BuildBonePositions", self.BBID)
+		self.BBID = nil
+		self:SetNoDraw(true)
+	else		
+		body:SetupBones()
+		--Update bone info
+		table_Empty(self.GS2BoneList)		
+		self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bit_bor(dis_mask, gib_mask))	
 	end
-	self:SetupBones()
-	body:SetupBones()
-	--Update bone info
-	table_Empty(self.GS2BoneList)		
-	self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bit_bor(dis_mask, gib_mask))	
 end
 
 local function null() end

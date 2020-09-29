@@ -4,9 +4,10 @@ local VERSION = 3
 
 local HOOK_NAME = "GibSplat2"
 
-local min_strength = CreateConVar("gs2_min_constraint_strength", 4000)
-local max_strength = CreateConVar("gs2_max_constraint_strength", 15000)
-local strength_mul = CreateConVar("gs2_constraint_strength_multiplier", 250)
+local min_strength 	= CreateConVar("gs2_min_constraint_strength", 4000)
+local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000)
+local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250)
+local less_limbs	= CreateConVar("gs2_less_limbs", 0)
 
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -497,6 +498,8 @@ function ENTITY:MakeCustomRagdoll()
 			SafeRemoveEntity(const_rc)
 			if !IsValid(phys_child) then return end
 
+			local less = less_limbs:GetBool()
+
 			if !const_bs.__nosound then
 				sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
 			end
@@ -526,11 +529,25 @@ function ENTITY:MakeCustomRagdoll()
 
 			local mask = self:GetNWInt("GS2DisMask", 0)
 			mask = bit_bor(mask, bit_lshift(1, part_info.child))
-			self:SetNWInt("GS2DisMask", mask)		
+			self:SetNWInt("GS2DisMask", mask)	
 
 			local dissolve
 
-			if !self:GS2IsGibbed(part_info.child) then
+			local is_lonely = less
+
+			if (less and !self:GS2IsGibbed(part_info.child)) then								
+				for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
+					local bone = self:TranslatePhysBoneToBone(phys_bone)
+					if (!self:GS2IsDismembered(phys_bone) and self:TranslateBoneToPhysBone(self:GetBoneParent(bone)) == part_info.child) then
+						is_lonely = false
+						break
+					end
+				end
+				if is_lonely then
+					self:GS2Gib(part_info.child)
+				end
+			end			
+			if (!is_lonely and !self:GS2IsGibbed(part_info.child)) then
 				local limb = ents_Create("gs2_limb")
 				limb:SetBody(self)					
 				limb:SetTargetBone(part_info.child)
@@ -577,11 +594,25 @@ function ENTITY:MakeCustomRagdoll()
 					EF:SetAngles(ang_zero)
 					EF:SetHitBox(bone)
 					EF:SetColor(self.__gs2bloodcolor or 0)
-					--util.Effect("gs2_bloodspray", EF)
+					util.Effect("gs2_bloodspray", EF)
 				end
 			end
 
-			if !self:GS2IsGibbed(part_info.parent) then				
+			if (less and !self:GS2IsGibbed(part_info.parent)) then				
+				if (part_info.parent == 0 or self:GS2IsDismembered(part_info.parent)) then
+					is_lonely = true									
+					for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
+						local bone = self:TranslatePhysBoneToBone(phys_bone)
+						if (!self:GS2IsDismembered(phys_bone) and self:TranslateBoneToPhysBone(self:GetBoneParent(bone)) == part_info.parent) then
+							is_lonely = false
+							break
+						end
+					end
+					if is_lonely then
+						self:GS2Gib(part_info.parent)
+					end
+				end			
+			elseif !self:GS2IsGibbed(part_info.parent) then				
 				local bone = self:TranslatePhysBoneToBone(part_info.child)
 				local parent = self:GetBoneParent(bone)
 
@@ -598,7 +629,7 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetAngles(lang)
 				EF:SetHitBox(parent)
 				EF:SetColor(self.__gs2bloodcolor or 0)
-				--util.Effect("gs2_bloodspray", EF)
+				util.Effect("gs2_bloodspray", EF)
 
 				--RestorePose(self)
 			end

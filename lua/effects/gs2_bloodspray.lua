@@ -59,14 +59,16 @@ local function OnCollide(self, pos, norm)
 	else
 		util.Decal("YellowBlood", pos, norm)
 	end
+
 	self:SetDieTime(0)
 end
 
-function EFFECT:Think()
+function EFFECT:Think() do return false end
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) or !IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
 	 	!self.Body.GS2Limbs or !IsValid(self.Body.GS2Limbs[self.PhysBone]) then
+	 	self.Emitter:Finish()
 		return false
 	end
 
