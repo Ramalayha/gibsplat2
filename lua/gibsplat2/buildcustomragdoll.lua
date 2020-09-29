@@ -525,6 +525,7 @@ function ENTITY:MakeCustomRagdoll()
 				skel:SetBody(self)
 				skel:Spawn()
 				self.GS2Skeleton = skel
+				self:DeleteOnRemove(skel)
 			end
 
 			local mask = self:GetNWInt("GS2DisMask", 0)
