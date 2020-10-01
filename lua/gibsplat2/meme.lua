@@ -1,4 +1,4 @@
-local path = "lua/gibsplat2/constraintinfo.lua"
+local path = "lua/entities/gs2_limb_mesh/cl_init.lua"
 
 local str = file.Read(path, "GAME")
 

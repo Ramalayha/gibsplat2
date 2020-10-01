@@ -395,7 +395,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		
 		if IsValid(self) and IsValid(phys) then
 			self._GS2LastGibSound = self._GS2LastGibSound or 0
-			if self._GS2LastGibSound + 1 < CurTime() then
+			if (!no_gibs and self._GS2LastGibSound + 1 < CurTime()) then
 				sound_Play(snd_gib, phys:GetPos(), 100, 100, 1)
 				self._GS2LastGibSound = CurTime()
 			end

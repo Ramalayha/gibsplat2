@@ -75,6 +75,22 @@ local function BuildBones(self, num_bones)
 	if !IsValid(body) then
 		return
 	end
+
+	if self.SkinPass then
+		for bone = 0, num_bones - 1 do
+			if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
+				local info = self.GS2BoneList[bone]
+				
+				if (!info or info.parent != bone) then
+					self:SetBoneMatrix(bone, matrix_inf)
+				else
+					self:SetBoneMatrix(bone, body:GetBoneMatrix(bone))
+				end				
+			end
+		end	
+		return
+	end
+
 	local self_phys_bone = self:GetTargetBone()
 		
 	local self_bone = self:TranslatePhysBoneToBone(self_phys_bone)
@@ -96,6 +112,7 @@ local function BuildBones(self, num_bones)
 					matrix:Scale(vec_zero)
 				end							
 			end
+			
 			self:SetBoneMatrix(bone, matrix or self_matrix)
 		end
 	end	
@@ -126,18 +143,18 @@ function ENT:Think()
 
 	local self_phys_bone = self:GetTargetBone()
 	
-	if IsValid(body) then
-		body.GS2Limbs = body.GS2Limbs or {}
-		body.GS2Limbs[self_phys_bone] = self
-		
-		self:SetParent(body)
-		if (self:GetModel() != body:GetModel()) then
-			self:SetModel(body:GetModel())
-			for _, bg in ipairs(body:GetBodyGroups()) do
-				self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
-			end
-		end
+	if IsValid(body) then		
 		if !self.flesh_mat then
+			body.GS2Limbs = body.GS2Limbs or {}
+			body.GS2Limbs[self_phys_bone] = self
+			
+			self:SetParent(body)
+			if (self:GetModel() != body:GetModel()) then
+				self:SetModel(body:GetModel())
+				for _, bg in ipairs(body:GetBodyGroups()) do
+					self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
+				end
+			end
 			local phys_mat = body:GetNWString("GS2PhysMat", "")
 			if phys_mat != "" then
 				if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
@@ -154,8 +171,8 @@ function ENT:Think()
 
 		local pos = body:GetBonePosition(body:TranslatePhysBoneToBone(self_phys_bone or 0))
 		if pos then
-			self:SetPos(pos)
-			self:SetRenderOrigin(pos)
+			--self:SetPos(pos)
+			--self:SetRenderOrigin(pos)
 			self:SetupBones()
 		end
 
@@ -294,11 +311,7 @@ function ENT:Draw()
 	local body = self:GetBody()
 	if IsValid(body) then
 		body.RenderOverride = null --Hide actual ragdoll
-		if !self.GS2RenderMeshes and self.GS2BoneList then			
-			--Draw flesh
-			body:SetupBones()
-			self:SetupBones()
-			
+		if !self.GS2RenderMeshes and self.GS2BoneList then						
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self:GetTargetBone()]
 				if start then
@@ -307,6 +320,7 @@ function ENT:Draw()
 				end
 			end
 
+			--Draw flesh
 			if !self.flesh_mat or self.flesh_mat == NULL then --Only 1 draw call with no overlay if theres no flesh texture
 				self:DrawModel()	
 			else
@@ -385,18 +399,11 @@ function ENT:Draw()
 				end				
 
 				--Draw skin
+				self.SkinPass = true
 				self:SetupBones()
-				for bone = 0, self:GetBoneCount()-1 do
-					if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
-						local info = self.GS2BoneList[bone]
-						
-						if (!info or info.parent != bone) then						
-							self:SetBoneMatrix(bone, matrix_inf)				
-						end
-					end
-				end			
 				self:DrawModel()
-
+				self.SkinPass = false
+					
 				render_SetStencilEnable(false)
 			end
 

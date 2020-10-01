@@ -57,10 +57,6 @@ end
 function ENT:Think()
 	local body = self:GetBody()
 
-	if !IsValid(body) then
-		return
-	end
-
 	local min, max = body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
 	min = body:LocalToWorld(min)
 	max = body:LocalToWorld(max)
@@ -121,12 +117,11 @@ function ENT:Draw()
 	local gib_mask = body:GetNWInt("GS2GibMask", 0)
 
 	for phys_bone = 0, MAX_RAGDOLL_PARTS do
+		local bone = body:TranslatePhysBoneToBone(phys_bone)
+		if (bone == 0 and phys_bone != 0) then
+			break
+		end
 		if (bit_band(dis_mask, bit_lshift(1, phys_bone)) != 0) then
-			local bone = body:TranslatePhysBoneToBone(phys_bone)
-			if (bone == 0 and phys_bone != 0) then
-				break
-			end
-
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[phys_bone]
 				if start then
@@ -135,7 +130,7 @@ function ENT:Draw()
 						continue
 					end
 					local mod = 1 - math_min(1, time)
-					render.SetColorModulation(mod, mod, mod)
+					render_SetColorModulation(mod, mod, mod)
 				end
 			end
 
@@ -152,8 +147,8 @@ function ENT:Draw()
 						local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
 						part:SetRenderOrigin(pos)
 						part:SetRenderAngles(ang)	
-						render.SetLightingOrigin(pos)				
-						part:SetupBones()					
+						render_SetLightingOrigin(pos)				
+						--part:SetupBones()					
 						part:DrawModel()
 					end					
 				end
@@ -176,14 +171,14 @@ function ENT:Draw()
 						local pos, ang = matrix:GetTranslation(), matrix:GetAngles()			
 						part:SetRenderOrigin(pos)
 						part:SetRenderAngles(ang)	
-						render.SetLightingOrigin(pos)	
-						part:SetupBones()
+						render_SetLightingOrigin(pos)	
+						--part:SetupBones()
 						part:DrawModel()
 					end					
 				end
 			end
 
-			render.SetColorModulation(1, 1, 1)
+			render_SetColorModulation(1, 1, 1)
 		end
 	end	
 end

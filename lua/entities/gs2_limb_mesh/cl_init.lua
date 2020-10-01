@@ -194,7 +194,7 @@ function ENT:GetRenderMesh()
 
 			lhack_matrix:Translate(-bone_pos)
 
-			self.Mesh.Matrix = lhack_matrix * self.Body:GetBoneMatrix(self.Bone)
+			self.Mesh.Matrix = lhack_matrix * matrix
 			return self.Mesh
 		end
 	end

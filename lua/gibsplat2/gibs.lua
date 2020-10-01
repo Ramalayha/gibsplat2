@@ -23,6 +23,8 @@ local table_Add = table.Add
 local table_insert = table.insert
 local table_KeyFromValue = table.KeyFromValue
 
+local ang_zero = Angle(0, 0, 0)
+
 local NUM_PARTS = 10
 
 local PHYS_GIB_CACHE = {}
@@ -497,16 +499,34 @@ end
 
 local PHYS_MAT_CACHE = {}
 
-local function GetChildMeshRec(ent, output)
+local function GetChildMeshRec(ent, output, parent)
 	if ent.GS2GibInfo then
 		table_Add(output, ent.GS2GibInfo.triangles)
-	else		
-		table_Add(output, ent.convex)
+	else	
+		if ent.convex then
+			table_Add(output, ent.convex)
+		else
+			local phys = ent:GetPhysicsObject()
+			if phys then
+				local pos = ent:GetPos()
+				local ang = ent:GetAngles()
+				local convexes = phys:GetMeshConvexes()
+				for _, convex in pairs(convexes) do
+					for key, vert in pairs(convex) do
+						convex[key] = parent:WorldToLocal(ent:LocalToWorld(vert.pos))
+					end
+					table_Add(output, convex)
+				end
+				ent:PhysicsDestroy()
+				ent:SetNotSolid(true)
+			end
+		end	
+		
 		ent:PhysicsDestroy()
 		ent.GS2_dummy = true
 	end
 	for _, child in ipairs(ent:GetChildren()) do
-		GetChildMeshRec(child, output)
+		GetChildMeshRec(child, output, parent)
 	end
 end
 
@@ -524,6 +544,8 @@ function CreateGibs(ent, phys_bone)
 
 	local custom_gibs
 
+	local phys = ent:GetPhysicsObjectNum(phys_bone)
+
 	if gib_data then
 		local bone = ent:TranslatePhysBoneToBone(phys_bone)
 		local bone_name = ent:GetBoneName(bone):lower()
@@ -540,22 +562,19 @@ function CreateGibs(ent, phys_bone)
 					local gib = ents.Create("gs2_gib_custom")
 					gib:SetModel(mdl)
 
-					local pos = bone_pos
-					local ang = bone_ang
+					gib.vec_offset = data.vec_offset or vector_origin
+					gib.ang_offset = data.ang_offset or ang_zero
 
-					if data.vec_offset then
-						pos = pos + data.vec_offset
-						gib.vec_offset = data.vec_offset
-					end
-
-					if data.ang_offset then
-						ang = ang + data.ang_offset
-						gib.ang_offset = data.ang_offset
-					end
+					local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
 
 					gib:SetPos(pos)
 					gib:SetAngles(ang)
 					gib:Spawn()
+
+					local phys_gib = gib:GetPhysicsObject()
+
+					--phys_gib:SetVelocity(phys:GetVelocity())
+					--phys_gib:AddAngleVelocity(phys:GetAngleVelocity())
 
 					ent:DeleteOnRemove(gib)
 
@@ -581,10 +600,27 @@ function CreateGibs(ent, phys_bone)
 
 	local chance = gib_merge_chance:GetFloat()
 
+	--Merge gibs into larger ones
+	for _, gib in ipairs(gibs) do
+		if !IsValid(gib:GetParent()) then		
+			for _, gib2 in ipairs(gibs) do
+				if (gib != gib2 and math_random() < chance and !IsValid(gib2:GetParent())) then
+					for _, conn in ipairs(gib.GS2GibInfo.conns) do
+						if (gib2:GetGibIndex() == conn) then
+							gib2:SetNotSolid(true)							
+							gib2:SetParent(gib)
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+
 	if custom_gibs then
 		for _, custom_gib in ipairs(custom_gibs) do
-			for _, gib in ipairs(gibs) do
-				if (gib:IsTouching(custom_gib)) then					
+			for _, gib in ipairs(gibs) do				
+				if (gib:IsTouching(custom_gib)) then												
 					custom_gib:SetParent(gib)					
 					break			
 				end	
@@ -595,40 +631,14 @@ function CreateGibs(ent, phys_bone)
 		end
 	end
 
-	--Merge gibs into larger ones
-	for _, gib in ipairs(gibs) do
-		if !IsValid(gib:GetParent()) then		
-			for _, gib2 in ipairs(gibs) do
-				if (gib != gib2 and math_random() < chance and !IsValid(gib2:GetParent())) then
-					for _, conn in ipairs(gib.GS2GibInfo.conns) do
-						if (gib2:GetGibIndex() == conn) then
-							gib2:SetNotSolid(true)	
-							local parent = gib
-							repeat
-								local next_parent = parent:GetParent()
-								if (next_parent == NULL) then
-									break
-								end
-								parent = next_parent
-							until (parent == NULL)
-							gib2:SetParent(parent)	
-
-							break
-						end
-					end
-				end
-			end
-		end
-	end
-
 	for _, gib in ipairs(gibs) do
 		if !IsValid(gib:GetParent()) then
 			local convex = {}
-			GetChildMeshRec(gib, convex)
+			GetChildMeshRec(gib, convex, gib)
 			
 			gib:PhysicsInitConvex(convex)
 			gib:InitPhysics()
-
+			
 			table_insert(G_GIBS, gib)
 		end
 	end

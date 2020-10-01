@@ -3,6 +3,8 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+local ang_zero = Angle(0, 0, 0)
+
 function ENT:Initialize()
 	local body = self:GetBody()
 	local phys_bone = self:GetTargetBone()
@@ -21,8 +23,6 @@ function ENT:Initialize()
 	self.GS2_dummy = true --default to this
 
 	self.Created = CurTime()
-
-	self:PhysicsInitConvex(self.GS2GibInfo.triangles)
 end
 
 function ENT:InitPhysics()
@@ -44,6 +44,7 @@ function ENT:InitPhysics()
 			self:SetCustomCollisionCheck(true)
 			phys_self:SetVelocity(phys:GetVelocity())
 			phys_self:AddAngleVelocity(phys:GetAngleVelocity())
+			phys_self:SetMaterial("watermelon")
 			self.GS2_dummy = false
 		end
 	end
@@ -75,14 +76,9 @@ function ENT:PhysicsCollide(data, phys)
 end
 
 local VERT_CACHE = {}
+local CONVEX_CACHE = {}
 
 function ENT:IsTouching(other)
-	local phys = self:GetPhysicsObject()
-
-	if !IsValid(phys) then
-		return
-	end
-
 	local mdl = other:GetModel()
 	local verts = VERT_CACHE[mdl]
 	if !verts then
@@ -98,8 +94,22 @@ function ENT:IsTouching(other)
 		end
 	end
 
-	local convex = phys:GetMeshConvexes()[1]
+	local body = self:GetBody()
+	local mdl = body:GetModel()
+	local phys_bone = self:GetTargetBone()
+	local gib_index = self:GetGibIndex()
+
+	CONVEX_CACHE[mdl] = CONVEX_CACHE[mdl] or {}
+	CONVEX_CACHE[mdl][phys_bone] = CONVEX_CACHE[mdl][phys_bone] or {}
+	if !CONVEX_CACHE[mdl][phys_bone][gib_index] then
+		self:PhysicsInitConvex(self.GS2GibInfo.triangles)
+		local phys = self:GetPhysicsObject()
+		CONVEX_CACHE[mdl][phys_bone][gib_index] = phys:GetMeshConvexes()[1]
+		self:PhysicsDestroy()
+	end
 	
+	local convex = CONVEX_CACHE[mdl][phys_bone][gib_index]
+
 	for _, vert in ipairs(verts) do
 		local wpos = other:LocalToWorld(vert)
 		local lpos = self:WorldToLocal(wpos)
