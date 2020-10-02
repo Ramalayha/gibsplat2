@@ -297,8 +297,10 @@ function ENT:UpdateRenderInfo()
 				self.GS2RenderMeshes[key] = M
 			end
 		end	
-		self:RemoveCallback("BuildBonePositions", self.BBID)
-		self.BBID = nil
+		if self.BBID then
+			self:RemoveCallback("BuildBonePositions", self.BBID)
+			self.BBID = nil			
+		end
 		self:SetNoDraw(true)
 	else		
 		body:SetupBones()
