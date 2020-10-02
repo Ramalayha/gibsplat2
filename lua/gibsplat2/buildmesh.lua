@@ -558,7 +558,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	return new_meshes
 end
 
-local enabled = GetConVar("gs2_enabled")
+local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
 
 hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadLimbMeshes", function(ent)
 	if !enabled:GetBool() then return end

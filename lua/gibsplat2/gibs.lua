@@ -648,7 +648,7 @@ function CreateGibs(ent, phys_bone)
 	end
 end
 
-local enabled = GetConVar("gs2_enabled")
+local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
 
 if CLIENT then
 	hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
