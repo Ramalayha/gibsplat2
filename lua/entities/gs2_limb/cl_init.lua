@@ -111,8 +111,11 @@ local function BuildBones(self, num_bones)
 				if (info.parent == bone) then
 					matrix = body:GetBoneMatrix(bone)
 				else
-					matrix = body:GetBoneMatrix(info.parent) * info.matrix
-					matrix:Scale(vec_zero)
+					local matrix = body:GetBoneMatrix(bone)
+					if matrix then
+						matrix = matrix * info.matrix
+						matrix:Scale(vec_zero)
+					end					
 				end							
 			end
 			
