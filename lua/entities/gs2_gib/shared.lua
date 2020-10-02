@@ -11,7 +11,7 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "Body")
 end
 
-local enabled = GetConVar("gs2_enabled")
+local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
 
 local function ShouldGibCollide(ent1, ent2)
 	if !enabled:GetBool() then return end 
