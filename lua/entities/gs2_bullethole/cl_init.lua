@@ -2,6 +2,9 @@ include("shared.lua")
 
 function ENT:Initialize()
 	local body = self:GetBody()
+	if !IsValid(body) then
+		return
+	end
 	local phys_bone = self:GetTargetBone()
 
 	body.GS2BulletHoles = body.GS2BulletHoles or {}
