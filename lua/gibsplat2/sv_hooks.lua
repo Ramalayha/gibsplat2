@@ -1,6 +1,6 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 			= CreateConVar("gs2_enabled", 0)
+local enabled 			= CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
 local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 1)
 local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1)
 local gib_chance 		= CreateConVar("gs2_gib_chance", 0.3)

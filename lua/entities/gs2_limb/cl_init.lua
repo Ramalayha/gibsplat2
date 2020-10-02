@@ -84,7 +84,10 @@ local function BuildBones(self, num_bones)
 				if (!info or info.parent != bone) then
 					self:SetBoneMatrix(bone, matrix_inf)
 				else
-					self:SetBoneMatrix(bone, body:GetBoneMatrix(bone))
+					local matrix = body:GetBoneMatrix(bone)
+					if matrix then
+						self:SetBoneMatrix(bone, matrix)
+					end
 				end				
 			end
 		end	

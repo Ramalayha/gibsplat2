@@ -558,8 +558,10 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	return new_meshes
 end
 
+local enabled = GetConVar("gs2_enabled")
 
 hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadLimbMeshes", function(ent)
+	if !enabled:GetBool() then return end
 	local mdl = ent:GetModel()
 	if (mdl and !BONE_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
 		LoadBonePositions(mdl)

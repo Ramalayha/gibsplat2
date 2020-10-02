@@ -648,8 +648,11 @@ function CreateGibs(ent, phys_bone)
 	end
 end
 
+local enabled = GetConVar("gs2_enabled")
+
 if CLIENT then
 	hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
+		if !enabled:GetBool() then return end
 		local mdl = ent:GetModel()
 		if (mdl and !PHYS_GIB_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
 			local path = "gibsplat2/cl_gib_cache/"..util.CRC(mdl)
@@ -676,6 +679,7 @@ end
 
 if SERVER then
 	hook.Add("OnEntityCreated", HOOK_NAME.."_LoadGibMeshes", function(ent)
+		if !enabled:GetBool() then return end
 		timer.Simple(0, function()
 			if !IsValid(ent) then
 				return

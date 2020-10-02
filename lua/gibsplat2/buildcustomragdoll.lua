@@ -737,7 +737,10 @@ function ENTITY:MakeCustomRagdoll()
 	self.__gs2custom = true
 end
 
+local enabled = GetConVar("gs2_enabled")
+
 hook.Add("OnEntityCreated", HOOK_NAME.."_LoadRagdollPoses", function(ent)
+	if !enabled:GetBool() then return end
 	timer.Simple(0, function()
 		if IsValid(ent) then
 			local mdl = ent:GetModel()
