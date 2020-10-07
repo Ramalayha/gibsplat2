@@ -1,153 +1,8 @@
+include("filesystem.lua")
+
 local VERSION = 6
 
-local MSG_REQ_POSE = "GS2ReqRagdollPose"
-
-local HOOK_NAME = "GibSplat2"
-
-if SERVER then
-util.AddNetworkString(MSG_REQ_POSE)
-
-net.Receive(MSG_REQ_POSE, function(len, ply)
-	local mdl = net.ReadString()
-	
-	local temp = ents.Create("prop_physics")
-	temp:SetModel(mdl)	
-	temp:Spawn()
-	temp:ResetSequence(-2)
-	temp:SetCycle(0)
-
-	for pose_param = 0, temp:GetNumPoseParameters() - 1 do
-		local name = temp:GetPoseParameterName(pose_param)
-		local min, max = temp:GetPoseParameterRange(pose_param)
-		if !name:find("^body_") then
-			temp:SetPoseParameter(name, (min + max) / 2)
-		end
-	end
-
-	--Forces temp to setup its bones
-	local meme = ents.Create("prop_physics")
-	meme:Spawn()
-	meme:FollowBone(temp, 0)
-	meme:Remove()
-
-	local bone_count = temp:GetBoneCount()
-
-	net.Start(MSG_REQ_POSE)
-	net.WriteString(temp:GetModel())
-	local bone_count = temp:GetBoneCount()
-	net.WriteUInt(bone_count, 16)
-	for bone = 0, bone_count - 1 do
-		net.WriteMatrix(temp:GetBoneMatrix(bone) or Matrix())
-	end
-	net.Send(ply)
-	
-	temp:Remove()
-end)
-end
-
-if CLIENT then
-
 local BONE_CACHE = {}
-
-local function WriteVector(F, vec)
-	F:WriteFloat(vec.x)
-	F:WriteFloat(vec.y)
-	F:WriteFloat(vec.z)
-end
-
-local function WriteAngle(F, ang)
-	F:WriteFloat(ang.p)
-	F:WriteFloat(ang.y)
-	F:WriteFloat(ang.r)
-end
-
-local function ReadVector(F)
-	local x = F:ReadFloat()
-	local y = F:ReadFloat()
-	local z = F:ReadFloat()
-	return Vector(x, y, z)
-end
-
-local function ReadAngle(F, ang)
-	local p = F:ReadFloat()
-	local y = F:ReadFloat()
-	local r = F:ReadFloat()
-	return Angle(p, y, r)
-end
-
-local function WriteBonePositions(mdl)
-	local file_name = "gibsplat2/bone_cache/"..util.CRC(mdl)..".txt"
-
-	file.CreateDir("gibsplat2")
-	file.CreateDir("gibsplat2/bone_cache")
-
-	file.Write(file_name, "") --creates file
-
-	local F = file.Open(file_name, "wb", "DATA")
-
-	if !F then return end
-
-	F:WriteByte(VERSION)
-	F:WriteShort(#mdl)
-	F:Write(mdl)
-
-	F:WriteShort(#BONE_CACHE[mdl] + 1)
-	for bone = 0, #BONE_CACHE[mdl] do
-		local matrix = BONE_CACHE[mdl][bone]
-		WriteVector(F, matrix:GetTranslation())
-		WriteAngle(F, matrix:GetAngles())
-	end
-
-	F:Close()
-end
-
-local function LoadBonePositions(mdl)
-	local path = "gibsplat2/bone_cache/"..util.CRC(mdl)
-	
-	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
-
-	if !F then return end
-	
-	if (F:ReadByte() != VERSION) then
-		F:Close()
-		return
-	end
-
-	local mdl = F:Read(F:ReadShort())
-
-	BONE_CACHE[mdl] = {}
-
-	local num_entries = F:ReadShort()
-
-	for entry_index = 0, num_entries - 1 do
-		local matrix = Matrix()
-		matrix:Translate(ReadVector(F))
-		matrix:Rotate(ReadAngle(F))
-		BONE_CACHE[mdl][entry_index] = matrix
-	end
-end
-
-net.Receive(MSG_REQ_POSE, function()
-	local mdl = net.ReadString()
-	
-	BONE_CACHE[mdl] = {}
-	for bone = 0, net.ReadUInt(16) - 1 do			
-		BONE_CACHE[mdl][bone] = net.ReadMatrix()
-	end
-	
-	WriteBonePositions(mdl)
-	local temp = ClientsideModel(mdl)
-	temp:SetupBones()
-	GetBoneMeshes(temp, 0)
-	temp:Remove()
-
-	--Update all limbs
-	for _, limb in ipairs(ents.FindByClass("gs2_limb")) do
-		if (IsValid(limb) and limb:GetModel() == mdl and limb.RenderInfo) then
-			limb:UpdateRenderInfo()
-		end
-	end
-end)
 
 function util.GetBodygroupMask(ent)
 	local mask = 0
@@ -165,148 +20,48 @@ end
 local vec_zero = Vector(0,0,0)
 local ang_zero = Angle(0,0,0)
 
+local MDL_INDEX = {}
+
 local MESH_CACHE = {}
 local MATERIAL_CACHE = {}
-
-local function WriteVector(F, vec)
-	F:WriteFloat(vec.x)
-	F:WriteFloat(vec.y)
-	F:WriteFloat(vec.z)
-end
-
-local function ReadVector(F)
-	local x = F:ReadFloat()
-	local y = F:ReadFloat()
-	local z = F:ReadFloat()
-	return Vector(x, y, z)
-end
-
-local function WriteBoneMeshes(ent, bg_mask)
-	local mdl = ent:GetModel()
-	local file_name = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)..".txt"
-
-	file.CreateDir("gibsplat2")
-	file.CreateDir("gibsplat2/mesh_cache")
-
-	file.Write(file_name, "") --creates file
-
-	local F = file.Open(file_name, "wb", "DATA")
-
-	F:WriteByte(VERSION)
-	F:WriteShort(#mdl)
-	F:Write(mdl)
-	F:WriteLong(bg_mask)
-
-	F:WriteShort(table.Count(MESH_CACHE[mdl][bg_mask]))
-	for phys_bone, meshes in pairs(MESH_CACHE[mdl][bg_mask]) do
-		F:WriteByte(phys_bone)
-		F:WriteShort(table.Count(meshes))
-		for _, mesh in pairs(meshes) do
-			local mat = mesh.Material:GetName()
-			F:WriteShort(#mat)
-			F:Write(mat)
-			F:WriteByte(mesh.look_for_material and 1 or 0)
-			local VERTEX_BUFFER = {}
-			local INDEX_BUFFER 	= {}
-			for _, vert in ipairs(mesh.tris) do
-				local index = table.KeyFromValue(VERTEX_BUFFER, vert)
-				if !index then
-					index = table.insert(VERTEX_BUFFER, vert)
-				end
-				table.insert(INDEX_BUFFER, index)
-			end
-			F:WriteLong(#VERTEX_BUFFER)
-			for _, vert in ipairs(VERTEX_BUFFER) do
-				WriteVector(F, vert.pos)
-				WriteVector(F, vert.normal)
-				F:WriteFloat(vert.u)
-				F:WriteFloat(vert.v)
-			end
-			F:WriteLong(#INDEX_BUFFER)
-			for _, index in ipairs(INDEX_BUFFER) do
-				F:WriteLong(index)
-			end
-		end
-	end
-
-	F:Close()
-end
-
-local function LoadBoneMeshes(mdl, bg_mask)
-	local path = "gibsplat2/mesh_cache/"..util.CRC(mdl..bg_mask)
-	
-	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
-
-	if !F then
-		return false
-	end
-
-	local version = F:ReadByte()
-	
-	if (version != VERSION) then
-		F:Close()
-		file.Delete(path)
-		print("LoadBoneMeshes: corrupt file '"..path.."' deleting!")
-		return false
-	end
-
-	local mdl 			= F:Read(F:ReadShort())
-	local bg_mask 		= F:ReadLong()
-	local num_entries 	= F:ReadShort()
-
-	MESH_CACHE[mdl] = MESH_CACHE[mdl] or {}
-	MESH_CACHE[mdl][bg_mask] = {}
-
-	for entry_index = 1, num_entries do
-		local phys_bone = F:ReadByte()
-		local meshes = {}
-		for mesh_index = 1, F:ReadShort() do
-			local mat = F:Read(F:ReadShort())
-			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
-			mat = MATERIAL_CACHE[mat]
-			
-			local lfm = F:ReadByte() == 1
-			local VERTEX_BUFFER = {}
-			for vert_index = 1, F:ReadLong() do
-				local vert = {}
-				vert.pos 	= ReadVector(F)
-				vert.normal = ReadVector(F)
-				vert.u 		= F:ReadFloat()
-				vert.v 		= F:ReadFloat()
-				table.insert(VERTEX_BUFFER, vert)
-			end
-			local tris = {}
-			for index = 1, F:ReadLong() do
-				table.insert(tris, VERTEX_BUFFER[F:ReadLong()])
-			end
-			local MESH = Mesh()
-			MESH:BuildFromTriangles(tris)
-			table.insert(meshes, {
-				Mesh = MESH,
-				Material = mat,
-				look_for_material = lfm or nil,
-				tris = tris
-			})
-		end
-		MESH_CACHE[mdl][bg_mask][phys_bone] = meshes
-	end
-
-	F:Close()
-
-	return true
-end
 
 function GetBoneMeshes(ent, phys_bone, norec)
 	local mdl = ent:GetModel()
 
-	MESH_CACHE[mdl] = MESH_CACHE[mdl] or {}
-
 	local bg_mask = util.GetBodygroupMask(ent)
 
-	MESH_CACHE[mdl][bg_mask] = MESH_CACHE[mdl][bg_mask] or {}
+	MDL_INDEX[mdl] = MDL_INDEX[mdl] or {}
+	MDL_INDEX[mdl][bg_mask] = MDL_INDEX[mdl][bg_mask] or {}
 
-	if MESH_CACHE[mdl][bg_mask][phys_bone] then
-		return MESH_CACHE[mdl][bg_mask][phys_bone] 
+	if MDL_INDEX[mdl][bg_mask][phys_bone] then
+		return MDL_INDEX[mdl][bg_mask][phys_bone]
+	end
+
+	local mdl_info = GS2ReadModelData(mdl)
+
+	if (mdl_info and mdl_info.mesh_data) then
+		for bg_mask, data in pairs(mdl_info.mesh_data) do
+			MDL_INDEX[mdl][bg_mask] = MDL_INDEX[mdl][bg_mask] or {}
+			for phys_bone, hash in pairs(data) do
+				MDL_INDEX[mdl][bg_mask][phys_bone] = MESH_CACHE[hash]
+			end
+		end
+		if MDL_INDEX[mdl][bg_mask][phys_bone] then
+			return MDL_INDEX[mdl][bg_mask][phys_bone]
+		end
+	end
+
+	--Generate for all bones of model
+	if !norec then
+		for pbone = 0, 23 do --23 = max ragdoll parts
+			if (pbone != phys_bone) then
+				if (pbone != 0 and ent:TranslatePhysBoneToBone(pbone) == 0) then
+					break
+				end
+				GetBoneMeshes(ent, pbone, true)
+			end
+		end
+		GS2LinkModelInfo(mdl, "mesh_data", MDL_INDEX[mdl])	
 	end
 
 	local KVs = util.GetModelInfo(mdl).KeyValues
@@ -321,13 +76,27 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	temp:SetupBones()
 	local bone = temp:TranslatePhysBoneToBone(phys_bone)
 
-	if (!BONE_CACHE[mdl] or !BONE_CACHE[mdl][bone]) then
-		temp:Remove()
-		net.Start(MSG_REQ_POSE)
-		net.WriteString(ent:GetModel())
-		net.SendToServer()
-		MESH_CACHE[mdl] = {}
-		return MESH_CACHE[mdl]
+	if !BONE_CACHE[mdl] then
+		BONE_CACHE[mdl] = {}
+		local poser = ents.CreateClientProp(mdl)
+		poser:ResetSequence(-2)
+		poser:SetCycle(0)
+
+		for pose_param = 0, poser:GetNumPoseParameters() - 1 do
+			local name = poser:GetPoseParameterName(pose_param)
+			local min, max = poser:GetPoseParameterRange(pose_param)
+			if !name:find("^body_") then
+				poser:SetPoseParameter(name, (min + max) / 2)
+			end
+		end
+
+		poser:SetupBones()
+
+		for bone = 0, poser:GetBoneCount() - 1 do
+			BONE_CACHE[mdl][bone] = poser:GetBoneMatrix(bone)
+		end
+
+		poser:Remove()
 	end
 
 	local bone_matrix = BONE_CACHE[mdl][bone]
@@ -345,7 +114,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	for _, MESH in pairs(MESHES) do	
 		for _, vert in pairs(MESH.verticies) do
 			vert.pos = WorldToLocal(vert.pos, ang_zero, bone_pos, bone_ang)
-		end		
+		end
 		local new_tris = {}
 		local TRIS = MESH.triangles			
 		for tri_idx = 1, #TRIS-2, 3 do
@@ -408,6 +177,26 @@ function GetBoneMeshes(ent, phys_bone, norec)
 				tris = new_tris				
 			})
 		end	
+	end
+
+	local mesh_tbl = {}
+
+	for _, mesh in ipairs(new_meshes) do
+		for _, vert in ipairs(mesh.tris) do
+			table.insert(mesh_tbl, VEC2STR(vert.pos))
+		end
+	end
+
+	local hash = TBL2HASH(mesh_tbl)
+
+	if !MESH_CACHE[hash] then
+		GS2ReadMeshData(hash, MESH_CACHE) --try read from file
+	end
+
+	if MESH_CACHE[hash] then
+		temp:Remove()
+		MDL_INDEX[mdl][bg_mask][phys_bone] = MESH_CACHE[hash]
+		return MESH_CACHE[hash]
 	end
 
 	--Add fleshy stump meshes
@@ -541,36 +330,14 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 	temp:Remove()
 
-	MESH_CACHE[mdl][bg_mask][phys_bone] = new_meshes
+	GS2WriteMeshData(hash, new_meshes)
 
-	if !norec then
-		for pbone = 0, 23 do --23 = max ragdoll parts
-			if (pbone != phys_bone) then
-				if (pbone != 0 and ent:TranslatePhysBoneToBone(pbone) == 0) then
-					break
-				end
-				GetBoneMeshes(ent, pbone, true)
-			end
-		end
-		WriteBoneMeshes(ent, bg_mask) --write to file
-	end
+	new_meshes.hash = hash
+
+	MESH_CACHE[hash] = new_meshes
+	MDL_INDEX[mdl][bg_mask][phys_bone] = new_meshes
+
+	GS2LinkModelInfo(mdl, "mesh_data", MDL_INDEX[mdl])
 
 	return new_meshes
-end
-
-local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
-
-hook.Add("NetworkEntityCreated", HOOK_NAME.."_LoadLimbMeshes", function(ent)
-	if !enabled:GetBool() then return end
-	local mdl = ent:GetModel()
-	if (mdl and !BONE_CACHE[mdl] and util.IsValidRagdoll(mdl)) then
-		LoadBonePositions(mdl)
-		if !MESH_CACHE[mdl] then
-			local bg_mask = util.GetBodygroupMask(ent)
-			LoadBoneMeshes(mdl, bg_mask)
-			GetBoneMeshes(ent, 0)			
-		end
-	end
-end)
-
 end

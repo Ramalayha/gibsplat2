@@ -223,7 +223,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 				end
 			else
 				if (dmg >= 100) then
-					ent:GS2Gib(phys_bone, dmginfo)
+					ent:GS2Gib(phys_bone)--, dmginfo)
 				end
 			end
 		elseif dmginfo:IsDamageType(DMG_SLASH) then

@@ -102,7 +102,7 @@ function ENT:IsTouching(other)
 	CONVEX_CACHE[mdl] = CONVEX_CACHE[mdl] or {}
 	CONVEX_CACHE[mdl][phys_bone] = CONVEX_CACHE[mdl][phys_bone] or {}
 	if !CONVEX_CACHE[mdl][phys_bone][gib_index] then
-		self:PhysicsInitConvex(self.GS2GibInfo.triangles)
+		self:PhysicsInitConvex(self.GS2GibInfo.vertex_buffer)
 		local phys = self:GetPhysicsObject()
 		CONVEX_CACHE[mdl][phys_bone][gib_index] = phys:GetMeshConvexes()[1]
 		self:PhysicsDestroy()

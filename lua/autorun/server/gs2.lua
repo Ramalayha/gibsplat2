@@ -1,7 +1,7 @@
+include("gibsplat2/sv_hooks.lua")
 include("gibsplat2/constraintinfo.lua")
 include("gibsplat2/gibs.lua")
 include("gibsplat2/buildcustomragdoll.lua")
-include("gibsplat2/sv_hooks.lua")
 include("gibsplat2/buildmesh.lua")
 
 AddCSLuaFile("gibsplat2/constraintinfo.lua")

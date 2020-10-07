@@ -109,14 +109,11 @@ local function BuildBones(self, num_bones)
 			local matrix
 			if info then
 				if (info.parent == bone) then
-					matrix = body:GetBoneMatrix(bone)
+					matrix = body:GetBoneMatrix(info.parent)					
 				else
-					local matrix = body:GetBoneMatrix(bone)
-					if matrix then
-						matrix = matrix * info.matrix
-						matrix:Scale(vec_zero)
-					end					
-				end							
+					matrix = body:GetBoneMatrix(info.parent) * info.matrix
+					matrix:Scale(vec_zero)
+				end				
 			end
 			
 			self:SetBoneMatrix(bone, matrix or self_matrix)
@@ -149,17 +146,14 @@ function ENT:Think()
 
 	local self_phys_bone = self:GetTargetBone()
 	
-	if IsValid(body) then		
+	if IsValid(body) then
 		if !self.flesh_mat then
 			body.GS2Limbs = body.GS2Limbs or {}
 			body.GS2Limbs[self_phys_bone] = self
 			
 			self:SetParent(body)
 			if (self:GetModel() != body:GetModel()) then
-				self:SetModel(body:GetModel())
-				for _, bg in ipairs(body:GetBodyGroups()) do
-					self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
-				end
+				self:SetModel(body:GetModel())				
 			end
 			local phys_mat = body:GetNWString("GS2PhysMat", "")
 			if phys_mat != "" then
@@ -170,6 +164,11 @@ function ENT:Think()
 				end
 			end
 		end
+
+		for _, bg in pairs(body:GetBodyGroups()) do
+			self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
+		end
+		
 		local min, max = body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
 		min = body:LocalToWorld(min)
 		max = body:LocalToWorld(max)
@@ -319,7 +318,8 @@ function ENT:Draw()
 	local body = self:GetBody()
 	if IsValid(body) then
 		body.RenderOverride = null --Hide actual ragdoll
-		if !self.GS2RenderMeshes and self.GS2BoneList then						
+		if !self.GS2RenderMeshes and self.GS2BoneList then
+			self:SetupBones()						
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self:GetTargetBone()]
 				if start then

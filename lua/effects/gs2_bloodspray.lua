@@ -63,7 +63,7 @@ local function OnCollide(self, pos, norm)
 	self:SetDieTime(0)
 end
 
-function EFFECT:Think() do return false end
+function EFFECT:Think() --do return false end
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) or !IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or

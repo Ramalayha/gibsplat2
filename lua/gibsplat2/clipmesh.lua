@@ -159,9 +159,13 @@ function VoronoiSplit(mesh, points)
 			mesh[key2] = vert.pos
 		end
 		temp:PhysicsInitConvex(mesh)
+		local phys = temp:GetPhysicsObject()
+		local min, max 	= phys:GetAABB()
 		new_meshes[key] = {
-			triangles 	= temp:GetPhysicsObject():GetMeshConvexes()[1], 
+			triangles 	= phys:GetMeshConvexes()[1], 
 			center 		= temp:OBBCenter(),
+			min 		= min,
+			max 		= max,
 			conns 		= conns[key]
 		}
 	end

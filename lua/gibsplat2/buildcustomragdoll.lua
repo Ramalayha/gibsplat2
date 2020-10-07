@@ -56,91 +56,6 @@ local ang_180 = Angle(180, 0, 0)
 
 local RAGDOLL_POSE = {}
 
-local function WriteVector(F, vec)
-	F:WriteFloat(vec.x)
-	F:WriteFloat(vec.y)
-	F:WriteFloat(vec.z)
-end
-
-local function WriteAngle(F, ang)
-	F:WriteFloat(ang.p)
-	F:WriteFloat(ang.y)
-	F:WriteFloat(ang.r)
-end
-
-local function ReadVector(F)
-	local x = F:ReadFloat()
-	local y = F:ReadFloat()
-	local z = F:ReadFloat()
-	return Vector(x, y, z)
-end
-
-local function ReadAngle(F, ang)
-	local p = F:ReadFloat()
-	local y = F:ReadFloat()
-	local r = F:ReadFloat()
-	return Angle(p, y, r)
-end
-
-local function WriteRagdollPose(mdl)
-	local file_name = "gibsplat2/pose_cache/"..util.CRC(mdl)..".txt"
-
-	file.CreateDir("gibsplat2")
-	file.CreateDir("gibsplat2/pose_cache")
-
-	file.Write(file_name, "") --creates file
-
-	local F = file.Open(file_name, "wb", "DATA")
-
-	if !F then return end
-
-	F:WriteByte(VERSION)
-	F:WriteShort(#mdl)
-	F:Write(mdl)
-
-	F:WriteShort(#RAGDOLL_POSE[mdl])
-	for phys_bone, posang in pairs(RAGDOLL_POSE[mdl]) do
-		F:WriteShort(phys_bone)
-		WriteVector(F, posang.pos)
-		WriteAngle(F, posang.ang)
-	end
-
-	F:Close()
-end
-
-local function LoadRagdollPose(mdl)
-	local path = "gibsplat2/pose_cache/"..util.CRC(mdl)
-	
-	local F = file.Open("materials/"..path..".vmt", "rb", "GAME") or file.Open(path..".txt", "rb", "DATA")
-
-	if !F then return end
-
-	if (F:ReadByte() != VERSION) then
-		F:Close()
-		return false
-	end
-
-	local mdl = F:Read(F:ReadShort())
-
-	RAGDOLL_POSE[mdl] = {}
-
-	local num_entries = F:ReadShort()
-
-	for entry_index = 0, num_entries do
-		local phys_bone = F:ReadShort()
-		local pos = ReadVector(F)
-		local ang = ReadAngle(F)
-		RAGDOLL_POSE[mdl][phys_bone] = {
-			pos = pos,
-			ang = ang
-		}
-	end
-
-	F:Close()
-
-	return true
-end
-
 local RESTORE_POSE = {}
 
 function PutInRagdollPose(self)
@@ -177,7 +92,6 @@ function PutInRagdollPose(self)
 
 		temp:Remove()
 		RAGDOLL_POSE[mdl] = pose
-		WriteRagdollPose(mdl)
 	end
 
 	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
@@ -671,14 +585,12 @@ function ENTITY:MakeCustomRagdoll()
 			end
 		end
 
-		if data.Speed > 1000 then
-			local mask = self:GetNWInt("GS2GibMask", 0)
-			if bit_band(mask, bit_lshift(1, phys_bone)) == 0 then
-				--self:GS2Gib(phys_bone)
+		if data.Speed > 1000 then			
+			if !self:GS2IsGibbed(phys_bone) then
+				self:GS2Gib(phys_bone)
 			end		
 		elseif data.Speed > 100 then			
-			local mask = self:GetNWInt("GS2DisMask", 0)
-			if bit_band(mask, bit_lshift(1, phys_bone)) != 0 then			
+			if self:GS2IsDismembered(phys_bone) then			
 				util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 				local EF = EffectData()
 				EF:SetOrigin(data.HitPos)
@@ -686,7 +598,7 @@ function ENTITY:MakeCustomRagdoll()
 				--util.Effect("BloodImpact", EF)	
 			else			
 				for _, part_info in pairs(CONST_INFO) do
-					if part_info.parent == phys_bone and bit_band(mask, bit_lshift(1, part_info.child)) != 0 then
+					if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
 						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
@@ -736,17 +648,3 @@ function ENTITY:MakeCustomRagdoll()
 
 	self.__gs2custom = true
 end
-
-local enabled = GetConVar("gs2_enabled")
-
-hook.Add("OnEntityCreated", HOOK_NAME.."_LoadRagdollPoses", function(ent)
-	if !enabled:GetBool() then return end
-	timer.Simple(0, function()
-		if IsValid(ent) then
-			local mdl = ent:GetModel()
-			if (mdl and !RAGDOLL_POSE[mdl] and util.IsValidRagdoll(mdl)) then
-				LoadRagdollPose(mdl)
-			end
-		end
-	end)
-end)

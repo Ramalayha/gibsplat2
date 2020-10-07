@@ -76,43 +76,44 @@ function Process()
 	end
 	game.CleanUpMap(true)
 	if SERVER then
-		temp = ents.Create("prop_ragdoll")
+		temp = ents.Create("prop_dynamic")
 		temp:SetModel(mdl)
-		temp:Spawn()
-		PutInRagdollPose(temp)
+		temp:Spawn() --loads the model			
 	else
 		temp = ClientsideRagdoll(mdl)		
-		gamemode.Call("NetworkEntityCreated",temp)
+		--gamemode.Call("NetworkEntityCreated",temp)
 		GetBoneMeshes(temp, 0)
-	end
-	for phys_bone = 0, temp:GetPhysicsObjectCount() - 1 do		
-		GetPhysGibMeshes(mdl, phys_bone)				
+		for phys_bone = 0, temp:GetPhysicsObjectCount() - 1 do		
+			GetPhysGibMeshes(mdl, phys_bone)				
+		end
 	end
 	temp:Remove()
 	print(key..": "..mdl)
 	F:Write(mdl.."\n")
 	F:Flush()
 	key = key + 1
-	timer.Simple(0.1, Process)
+	timer.Simple(0.5, Process)
 end
 
 if CLIENT then
 	hook.Add("HUDPaint", "h", function()
-		if !models[key] then
+		if key > 1 and !models[key] then
 			hook.Remove("HUDPaint", "h")
 			return
 		end
+
 		surface.SetTextColor(255, 0, 0)
 		surface.SetTextPos(ScrW()/2, ScrH()/2)
 		surface.SetFont("Default")
-		surface.DrawText("Current model: "..key.."/"..#models.." ("..models[key]..")")
+		surface.DrawText("Current model: "..key.."/"..#models.." ("..(models[key] or "NULL")..")")
 	end)
+	--timer.Simple(1,Process)
 else
-	timer.Simple(1, function()
+	/*timer.Simple(1, function()
 		for _, path in ipairs(list) do
 			PreGenerate(path)
 		end
 		BroadcastLua("Process()")
-	end)
-	--timer.Simple(1, Process)
+	end)*/
+	timer.Simple(1, Process)
 end
