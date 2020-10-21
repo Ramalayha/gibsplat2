@@ -3,6 +3,7 @@
 ]]
 
 local COLLIDE_CHANCE = 0.005
+local ATTACH_CHANCE = 0.01
 
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
@@ -50,7 +51,15 @@ function EFFECT:Init(data)
 	local bone_pos = matrix:GetTranslation()
 	local bone_ang = matrix:GetAngles()
 
+	--self:SetRenderBounds(Vector(-1, -1, -1), Vector(1, 1, 1))
+	self:SetPos(bone_pos)
+
+	self:SetParent(self.Body)
+	self:SetParentPhysNum(self.Body:TranslateBoneToPhysBone(self.Bone))
+
 	self.Emitter = ParticleEmitter(bone_pos, false)
+
+	self.Particles = {}
 end
 
 local function OnCollide(self, pos, norm)
@@ -58,6 +67,29 @@ local function OnCollide(self, pos, norm)
 		util.Decal("BloodSmall", pos, norm)
 	else
 		util.Decal("YellowBlood", pos, norm)
+	end
+
+	if IsValid(self.Emitter) then
+		for i = 1, 5 do
+			local particle = self.Emitter:Add("effects/blood_puff", pos)
+
+			local size = math.Rand(2, 4)
+			particle:SetStartSize(size)	
+			particle:SetEndSize(size * 2)
+
+			particle:SetStartAlpha(255)
+			particle:SetEndAlpha(0)
+			particle:SetRoll(math.random(0, 360))
+			
+			particle:SetLifeTime(0)
+			particle:SetDieTime(math.Rand(0.05, 0.1))
+
+			if (self.BloodColor == BLOOD_COLOR_RED) then
+				particle:SetColor(72, 0, 0)
+			else
+				particle:SetColor(195, 195, 0)
+			end
+		end
 	end
 
 	self:SetDieTime(0)
@@ -94,6 +126,8 @@ function EFFECT:Think() --do return false end
 
 		local particle = self.Emitter:Add("effects/blood_drop", pos)
 
+		table.insert(self.Particles, particle)
+
 		particle:SetGravity(Vector(0, 0, -600))
 		particle:SetVelocity(vel)
 		particle:SetStartSize(math.Rand(0.2, 0.3) * 5)
@@ -110,7 +144,12 @@ function EFFECT:Think() --do return false end
 
 		if math.random() < COLLIDE_CHANCE then
 			particle.BloodColor = self.BloodColor
+			particle.Emitter = self.Emitter
 			particle:SetCollideCallback(OnCollide)
+		end
+
+		if (math.random() < ATTACH_CHANCE) then
+			particle.Attach = true
 		end
 	end
 
@@ -128,6 +167,8 @@ function EFFECT:Think() --do return false end
 
 		local particle = self.Emitter:Add("effects/blood_drop", pos)
 
+		table.insert(self.Particles, particle)
+
 		particle:SetGravity(Vector(0, 0, -600))
 		particle:SetVelocity(vel)
 		particle:SetStartSize(math.Rand(0.025, 0.05))
@@ -144,7 +185,12 @@ function EFFECT:Think() --do return false end
 
 		if math.random() < COLLIDE_CHANCE then
 			particle.BloodColor = self.BloodColor
+			particle.Emitter = self.Emitter
 			particle:SetCollideCallback(OnCollide)
+		end
+
+		if (math.random() < ATTACH_CHANCE) then
+			particle.Attach = true
 		end
 	end
 
@@ -184,6 +230,7 @@ function EFFECT:Think() --do return false end
 
 		if math.random() < COLLIDE_CHANCE then
 			particle.BloodColor = self.BloodColor
+			particle.Emitter = self.Emitter
 			particle:SetCollideCallback(OnCollide)
 		end
 	end
@@ -192,6 +239,8 @@ function EFFECT:Think() --do return false end
 
  	return true
 end
+
+local mat = Material("models/flesh")
 
 function EFFECT:Render()
 	

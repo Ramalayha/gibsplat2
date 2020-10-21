@@ -74,7 +74,7 @@ if SERVER then
 			return
 		end
 		
-		game.CleanUpMap() --SafeRemoveEntity(temp)
+		SafeRemoveEntity(temp)
 
 		temp = ents.Create("prop_ragdoll")
 		temp:SetModel(mdl)
