@@ -586,11 +586,11 @@ function ENTITY:MakeCustomRagdoll()
 			end
 		end
 
-		if data.Speed > 1000 then			
+		if (data.Speed > 1000 or phys:GetEnergy() == 0) then --0 energy = jammed in something			
 			if !self:GS2IsGibbed(phys_bone) then
 				self:GS2Gib(phys_bone)
 			end		
-		elseif data.Speed > 100 then			
+		elseif (data.Speed > 100) then			
 			if self:GS2IsDismembered(phys_bone) then			
 				util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 				local EF = EffectData()

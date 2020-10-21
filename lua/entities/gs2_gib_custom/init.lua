@@ -31,13 +31,21 @@ function ENT:OnTakeDamage(dmginfo)
 end
 
 function ENT:PhysicsCollide(data, phys)
-	if (CurTime() - self.Created < 1) then
-		return
+	if (data.Speed > 100) then
+		util.Decal("BloodSmall", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+		util.Decal("BloodSmall", data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 	end
-	if (data.Speed > 1000) then
+	
+	if (phys:GetEnergy() == 0 or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
 		local EF = EffectData()
-		EF:SetOrigin(self:GetPos())
+		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
 		util.Effect("BloodImpact", EF)
+		for _, child in ipairs(self:GetChildren()) do
+			if child.GS2_dummy then
+				EF:SetOrigin(child:LocalToWorld(child:OBBCenter()))
+				util.Effect("BloodImpact", EF)
+			end
+		end
 		self:Remove()
 	end
 end

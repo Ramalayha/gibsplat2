@@ -3,6 +3,22 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+game.AddDecal("BloodSmall", {
+	"decals/flesh/blood1",
+	"decals/flesh/blood2",
+	"decals/flesh/blood3",
+	"decals/flesh/blood4",
+	"decals/flesh/blood5"
+})
+
+game.AddDecal("YellowBloodSmall", {
+	"decals/alienflesh/shot1",
+	"decals/alienflesh/shot2",
+	"decals/alienflesh/shot3",
+	"decals/alienflesh/shot4",
+	"decals/alienflesh/shot5"
+})
+
 local ang_zero = Angle(0, 0, 0)
 
 function ENT:Initialize()
@@ -53,15 +69,17 @@ end
 function ENT:OnTakeDamage(dmginfo)
 	if !self.GS2_dummy then		
 		dmginfo:SetDamageForce(dmginfo:GetDamageForce() / self:GetPhysicsObject():GetMass())
-		self:TakePhysicsDamage(dmginfo)
+		self:TakePhysicsDamage(dmginfo)		
 	end
 end
 
 function ENT:PhysicsCollide(data, phys)
-	if (CurTime() - self.Created < 1) then
-		return
+	if (data.Speed > 100) then
+		util.Decal("BloodSmall", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+		util.Decal("BloodSmall", data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 	end
-	if (data.Speed > 1000) then
+
+	if (phys:GetEnergy() == 0 or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
 		local EF = EffectData()
 		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
 		util.Effect("BloodImpact", EF)

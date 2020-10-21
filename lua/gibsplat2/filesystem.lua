@@ -70,9 +70,9 @@ function GS2WriteGibData(hash, data)
 end
 
 function GS2ReadGibData(hash, out)
-	local file_path = "gibsplat2/gib_data/"..hash..".txt"
+	local file_path = "gibsplat2/gib_data/"..hash
 
-	local F = file.Open(file_path, "rb", "DATA")
+	local F = file.Open("materials/"..file_path..".vmt", "rb", "GAME") or file.Open(file_path..".txt", "rb", "DATA")
 
 	if !F then
 		return
@@ -232,9 +232,9 @@ function GS2ReadMesh(hash)
 		return MESH_CACHE[hash]
 	end
 
-	local file_path = "gibsplat2/mesh_data/"..hash..".txt"
+	local file_path = "gibsplat2/mesh_data/"..hash
 
-	local F = file.Open(file_path, "rb", "DATA")
+	local F = file.Open("materials/"..file_path..".vmt", "rb", "GAME") or file.Open(file_path..".txt", "rb", "DATA")
 
 	if !F then
 		return
@@ -381,9 +381,9 @@ function GS2ReadModelData(mdl)
  
 	local hash = util.CRC(mdl)
 
-	local file_path = "gibsplat2/model_data/"..hash..".txt"
+	local file_path = "gibsplat2/model_data/"..hash
 
-	local F = file.Open(file_path, "rb", "DATA")
+	local F = file.Open("materials/"..file_path..".vmt", "rb", "GAME") or file.Open(file_path..".txt", "rb", "DATA")
 
 	if !F then
 		return
