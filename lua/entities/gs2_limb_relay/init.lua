@@ -12,8 +12,7 @@ function ENT:Initialize()
 	
 	self:SetNotSolid(true)
 	self:SetMoveType(MOVETYPE_NONE)
-	self:SetParent(ent) --Deletes us with ent
-
+	
 	self:DrawShadow(false)
 end
 
@@ -30,7 +29,7 @@ function ENT:Think()
 	local ent = self.TargetEntity
 	local phys_bone = self.TargetPhysBone
 
-	if ent:GS2IsGibbed(phys_bone) then
+	if (!IsValid(ent) or ent:GS2IsGibbed(phys_bone)) then
 		return self:Remove()
 	end
 

@@ -75,7 +75,7 @@ local function BuildBones(self, num_bones)
 	if !IsValid(body) then
 		return
 	end
-
+	body:SetupBones()
 	if self.SkinPass then
 		for bone = 0, num_bones - 1 do
 			if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
@@ -287,9 +287,9 @@ function ENT:UpdateRenderInfo()
 	if is_lonely then
 		--If no other parts are attached generate a mesh to optimize
 		local meshes = GetBoneMeshes(body, self_phys_bone)
-		if (#meshes > 0) then
+		if (table.Count(meshes) > 0) then
 			self.GS2RenderMeshes = {}
-			for key, mesh in ipairs(meshes) do
+			for key, mesh in pairs(meshes) do				
 				local M = ents.CreateClientside("gs2_limb_mesh")
 				M:SetMesh(mesh)
 				M:SetBody(body, self_phys_bone)				

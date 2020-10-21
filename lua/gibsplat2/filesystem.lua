@@ -1,8 +1,4 @@
---[[
-gib files for each physobj
-mesh files for different mesh shapes
-1 file per model pointing to gib and mesh files also holding the ragdoll pose
-]]
+--include("mesh_util.lua")
 
 local GIB_VERSION = 1
 local MESH_VERSION = 1
@@ -34,6 +30,10 @@ function FILE:ReadVector()
 end
 
 function GS2WriteGibData(hash, data)
+	if (SERVER and game.SinglePlayer()) then
+		return
+	end
+	
 	file.CreateDir("gibsplat2")
 	file.CreateDir("gibsplat2/gib_data")
 
@@ -144,51 +144,94 @@ function GS2ReadGibData(hash, out)
 	F:Close()
 end
 
-function GS2WriteMeshData(hash, data)
-	file.CreateDir("gibsplat2")
-	file.CreateDir("gibsplat2/mesh_data")
+local MESH_CACHE = {}
 
+local function WriteTriangles(F, tris)
+	local VERTEX_BUFFER = {}
+	local INDEX_BUFFER = {}
+
+	for key, vert in ipairs(tris) do
+		INDEX_BUFFER[key] = table.KeyFromValue(VERTEX_BUFFER, vert) or table.insert(VERTEX_BUFFER, vert)
+	end
+
+	F:WriteLong(#VERTEX_BUFFER)
+	for _, vert in ipairs(VERTEX_BUFFER) do
+		F:WriteVector(vert.pos)
+		F:WriteVector(vert.normal)
+		F:WriteFloat(vert.u)
+		F:WriteFloat(vert.v)
+	end
+
+	F:WriteLong(#INDEX_BUFFER)
+
+	for _, idx in ipairs(INDEX_BUFFER) do
+		F:WriteLong(idx)
+	end
+end
+
+local function ReadTriangles(F)
+	local tris = {}
+
+	local VERTEX_BUFFER = {}
+	
+	for i = 1, F:ReadLong() do
+		local vert = {}
+		vert.pos = F:ReadVector()
+		vert.normal = F:ReadVector()
+		vert.u = F:ReadFloat()
+		vert.v = F:ReadFloat()
+		VERTEX_BUFFER[i] = vert
+	end
+
+	for i = 1, F:ReadLong() do
+		tris[i] = VERTEX_BUFFER[F:ReadLong()]
+	end
+
+	return tris
+end
+
+local function GS2WriteMesh(hash, mesh)
 	local file_path = "gibsplat2/mesh_data/"..hash..".txt"
 
-	local F = file.Open(file_path, "wb", "DATA")
+	file.Write(file_path, "") --create file
 
+	local F = file.Open(file_path, "wb", "DATA")
+	
 	F:WriteShort(MESH_VERSION)
 
-	F:WriteShort(#data)
+	if !mesh.body then
+		F:WriteShort(0)
+	else
+		local mat = mesh.body.mat_name --mesh.body.Material:GetName()
 
-	for _, mesh in ipairs(data) do
-		local mat = mesh.Material:GetName()
 		F:WriteShort(#mat)
 		F:Write(mat)
 
-		local vertex_buffer = {}
-		local index_buffer = {}
+		WriteTriangles(F, mesh.body.tris)
+	end
 
-		for key, vert in ipairs(mesh.tris) do
-			index_buffer[key] = table.KeyFromValue(vertex_buffer, vert) or table.insert(vertex_buffer, vert)
-		end
+	if !mesh.flesh then
+		F:WriteShort(0)
+	else
+		local mat = mesh.flesh.Material:GetName()
 
-		F:WriteLong(#vertex_buffer)
-		for _, vert in ipairs(vertex_buffer) do
-			F:WriteVector(vert.pos)
-			F:WriteVector(vert.normal)
-			F:WriteFloat(vert.u)
-			F:WriteFloat(vert.v)
-		end
+		F:WriteShort(#mat)
+		F:Write(mat)
 
-		F:WriteLong(#index_buffer)
-		for _, idx in ipairs(index_buffer) do
-			F:WriteLong(idx)
-		end
+		WriteTriangles(F, mesh.flesh.tris)
 	end
 
 	F:Flush()
 	F:Close()
 end
 
-local MAT_CACHE = {}
+local MATERIAL_CACHE = {}
 
-function GS2ReadMeshData(hash, out)
+function GS2ReadMesh(hash)
+	if MESH_CACHE[hash] then
+		return MESH_CACHE[hash]
+	end
+
 	local file_path = "gibsplat2/mesh_data/"..hash..".txt"
 
 	local F = file.Open(file_path, "rb", "DATA")
@@ -197,62 +240,78 @@ function GS2ReadMeshData(hash, out)
 		return
 	end
 
-	local version = F:ReadShort()
-
-	if (version != GIB_VERSION) then
-		F:Close()
-		print("GS2ReadMeshData: File is wrong version ("..version..") should be "..MESH_VERSION.."!",hash)
+	if (F:ReadShort() != MESH_VERSION) then
 		file.Delete(file_path)
 		return
 	end
 
-	local data = {hash = hash}
+	local mesh = {}
 
-	for i = 1, F:ReadShort() do
-		local mat = F:Read(F:ReadShort())
+	local len = F:ReadShort()
 
-		local vertex_buffer = {}
-		local index_buffer = {}
-		local triangles = {}
+	if (len > 0) then
+		mesh.body = {}
 
-		for j = 1, F:ReadLong() do
-			local vert = {}
-			vert.pos = F:ReadVector()
-			vert.normal = F:ReadVector()
-			vert.u = F:ReadFloat()
-			vert.v = F:ReadFloat()
-			vertex_buffer[j] = vert
-		end
+		local mat = F:Read(len)
 
-		for j = 1, F:ReadLong() do
-			local idx = F:ReadLong()
-			index_buffer[j] = idx
+		MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
-			triangles[j] = vertex_buffer[idx]
-		end
+		mesh.body.Material = MATERIAL_CACHE[mat]
 
-		MAT_CACHE[mat] = MAT_CACHE[mat] or Material(mat)
+		mesh.body.tris = ReadTriangles(F)
 
-		data[i] = {
-			Material = MAT_CACHE[mat],
-			tris = triangles
-		}
-
-		local M = Mesh()
-		M:BuildFromTriangles(triangles)
-		data[i].Mesh = M
+		mesh.body.Mesh = Mesh()
+		mesh.body.Mesh:BuildFromTriangles(mesh.body.tris)
 	end
 
-	out[hash] = data
+	len = F:ReadShort()
+
+	if (len > 0) then
+		mesh.flesh = {is_flesh = true}
+
+		local mat = F:Read(len)
+
+		MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
+
+		mesh.flesh.Material = MATERIAL_CACHE[mat]
+
+		mesh.flesh.tris = ReadTriangles(F)
+
+		mesh.flesh.Mesh = Mesh()
+		mesh.flesh.Mesh:BuildFromTriangles(mesh.flesh.tris)
+	end
 
 	F:Close()
+
+	MESH_CACHE[hash] = mesh
+
+	return mesh
 end
+
+function GS2WriteMeshData(data)
+	file.CreateDir("gibsplat2")
+	file.CreateDir("gibsplat2/mesh_data")
+
+	for phys_bone, data in pairs(data) do	
+		for bg_num, data in pairs(data) do			
+			for bg_val, data in pairs(data) do				
+				for hash, data in pairs(data) do
+					if !GS2ReadMesh(hash) then
+						GS2WriteMesh(hash, data)										
+					end
+				end
+			end
+		end
+	end
+end
+
+local MAT_CACHE = {}
 
 local MDL_INFO = {}
 
 function GS2LinkModelInfo(mdl, name, data)
 	MDL_INFO[mdl] = MDL_INFO[mdl] or {}
-	if !MDL_INFO[name] then
+	if !MDL_INFO[mdl][name] then
 		MDL_INFO[mdl][name] = data
 
 		if (table.Count(MDL_INFO[mdl]) == 2) then
@@ -291,13 +350,20 @@ function GS2WriteModelData(mdl)
 	if CLIENT then
 		F:WriteShort(table.Count(mesh_data))
 
-		for bg_mask, data in pairs(mesh_data) do
-			F:WriteLong(bg_mask)
+		for phys_bone, data in pairs(mesh_data) do
+			F:WriteShort(phys_bone)
 			F:WriteShort(table.Count(data))
-			for phys_bone, data2 in pairs(data) do
-				F:WriteShort(phys_bone)
-				F:WriteShort(#data2.hash)
-				F:Write(data2.hash)
+			for bg_num, data in pairs(data) do
+				F:WriteShort(bg_num)
+				F:WriteShort(table.Count(data))
+				for bg_val, data in pairs(data) do
+					F:WriteShort(bg_val)
+					F:WriteShort(table.Count(data))
+					for hash in pairs(data) do
+						F:WriteShort(#hash)
+						F:Write(hash)
+					end
+				end
 			end
 		end
 	end
@@ -345,13 +411,17 @@ function GS2ReadModelData(mdl)
 	if CLIENT then
 		MDL_CACHE[mdl].mesh_data = {}
 
-		for i = 1, F:ReadShort() do
-			local bg_mask = F:ReadLong()
-			MDL_CACHE[mdl].mesh_data[bg_mask] = {}
+		for i = 1, F:ReadShort() do		
+			local phys_bone = F:ReadShort()	
 			for j = 1, F:ReadShort() do
-				local phys_bone = F:ReadShort()
-				local hash = F:Read(F:ReadShort())
-				MDL_CACHE[mdl].mesh_data[bg_mask][phys_bone] = hash
+				local bg_num = F:ReadShort()
+				for k = 1, F:ReadShort() do
+					local bg_val = F:ReadShort()
+					for l = 1, F:ReadShort() do
+						local hash = F:Read(F:ReadShort())
+						InsertMulti(MDL_CACHE[mdl].mesh_data, phys_bone, bg_num, bg_val, GS2ReadMesh(hash))
+					end
+				end
 			end
 		end
 	end

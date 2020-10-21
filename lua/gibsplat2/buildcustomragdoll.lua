@@ -273,7 +273,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		if (phys_bone == 0) then
 			for _, ply in pairs(player_GetHumans()) do
 				if (ply:GetObserverTarget() == self) then
-					ply:SpectateEntity()
+					ply:SpectateEntity(self.GS2LimbRelays[0])
 				end
 			end
 		end
@@ -287,6 +287,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		end
  
 		SafeRemoveEntity(self.GS2Limbs[phys_bone])
+		SafeRemoveEntity(self.GS2LimbRelays[phys_bone])
 		self.GS2Limbs[phys_bone] = nil
 		
 		for _, limb in pairs(self.GS2Limbs) do
@@ -332,13 +333,13 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				
 			phys:SetContents(CONTENTS_EMPTY)
 			phys:EnableGravity(false)		
-			phys:EnableCollisions(false)
-			phys:EnableMotion(false)
+			phys:EnableCollisions(false)			
 			
 			--Wait 1 second
 			timer.Simple(1, function()
 				if IsValid(phys) then
 					phys:SetPos(vector_origin)
+					phys:EnableMotion(false)
 				end
 			end)
 		end
@@ -595,7 +596,7 @@ function ENTITY:MakeCustomRagdoll()
 				local EF = EffectData()
 				EF:SetOrigin(data.HitPos)
 				EF:SetColor(self.__gs2bloodcolor or 0)
-				--util.Effect("BloodImpact", EF)	
+				util.Effect("BloodImpact", EF)	
 			else			
 				for _, part_info in pairs(CONST_INFO) do
 					if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
@@ -603,7 +604,7 @@ function ENTITY:MakeCustomRagdoll()
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
 						EF:SetColor(self.__gs2bloodcolor or 0)
-						--util.Effect("BloodImpact", EF)
+						util.Effect("BloodImpact", EF)
 						break
 					end
 				end

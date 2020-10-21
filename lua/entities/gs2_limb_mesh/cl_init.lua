@@ -62,9 +62,8 @@ function ENT:SetBody(body, phys_bone)
 	end
 end
 
-function ENT:SetMesh(mesh)
-	self.Mesh = mesh
-	self.look_for_material = mesh.look_for_material
+function ENT:SetMesh(meshes)
+	self.meshes = meshes
 end
 
 function ENT:Think()
@@ -84,12 +83,6 @@ function ENT:Think()
 		min = self.Body:LocalToWorld(min)
 		max = self.Body:LocalToWorld(max)
 		self:SetRenderBoundsWS(min, max)
-
-		local phys_mat = self.Body:GetNWString("GS2PhysMat")
-		if !self.is_flesh and phys_mat and !self.FleshMat then				
-			self.FleshMat = Material("models/"..phys_mat)					
-		end
-		self:NextThink(0)
 	elseif (self.Created and CurTime() - self.Created > 1) then
 		self:Remove()
 	end
@@ -110,8 +103,23 @@ function ENT:Draw()
 			render_SetColorModulation(mod, mod, mod)
 		end
 	end
-	self:DrawModel()	
-	if !self.is_flesh and self.FleshMat and !self.FleshMat:IsError() and body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone] then
+	if self.meshes.flesh then
+		self.is_flesh = true
+		self.Mesh = self.meshes.flesh
+		self:DrawModel()
+	end
+
+	if !self.meshes.body then
+		render_SetColorModulation(1, 1, 1)
+		return
+	end
+
+	self.is_flesh = false
+	self.Mesh = self.meshes.body
+
+	self:DrawModel()
+
+	if (body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone]) then
 		--The stencil stuff looks weird from some angles but what can you do ¯\_(ツ)_/¯
 		render_SetStencilEnable(true)
 		render_ClearStencil()
@@ -160,30 +168,22 @@ function ENT:Draw()
 		render_SetStencilZFailOperation(STENCIL_KEEP)
 		render_SetStencilTestMask(2)
 
-		render_MaterialOverride(self.FleshMat)
+		render_MaterialOverride(self.meshes.body.flesh_mat)
 
 		self:DrawModel()
 
 		render_MaterialOverride()
 
 		render_SetStencilEnable(false)
+	else
+		self:DrawModel()
 	end
 
 	render_SetColorModulation(1, 1, 1)
 end
 
 function ENT:GetRenderMesh()
-	if self.Mesh and IsValid(self.Body) then
-		if self.look_for_material then
-			local phys_mat = self.Body:GetNWString("GS2PhysMat")
-			if phys_mat then				
-				if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
-					self.Mesh.Material = Material("models/"..phys_mat)		
-				end
-				self.look_for_material = nil
-				self.is_flesh = true
-			end
-		end
+	if self.Mesh and IsValid(self.Body) then		
 		local matrix = self.Body:GetBoneMatrix(self.Bone)
 		if matrix then
 			local bone_pos = matrix:GetTranslation()

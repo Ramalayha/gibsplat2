@@ -36,9 +36,18 @@ local GIB_VERSION = 3
 
 local HOOK_NAME = "GibSplat2"
 
+local THREADS = {}
+
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
 		return MDL_INDEX[mdl][phys_bone]
+	end
+
+	if (THREADS[mdl] and coroutine.running() != THREADS[mdl]) then
+		while (coroutine.status(THREADS[mdl]) != "dead") do 
+			coroutine.resume(THREADS[mdl]) --force it to finish
+		end
+		THREADS[mdl] = nil
 	end
 	
 	MDL_INDEX[mdl] = MDL_INDEX[mdl] or {}
@@ -53,6 +62,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 			MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
 		end
 		if MDL_INDEX[mdl][phys_bone] then
+			THREADS[mdl] = nil
 			return MDL_INDEX[mdl][phys_bone]
 		end
 	end
@@ -190,6 +200,9 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if !norec then		
 		for phys_bone2 = 0, phys_count - 1 do
 			if (phys_bone2 != phys_bone) then
+				if coroutine.running() then
+					coroutine.yield()
+				end				
 				GetPhysGibMeshes(mdl, phys_bone2, true)
 			end
 		end		
@@ -197,7 +210,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 
 	GS2WriteGibData(hash, PHYS_GIB_CACHE[hash])
 
-	if !mdl_info then
+	if (!norec and !mdl_info) then
 		GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
 	end
 
@@ -270,93 +283,6 @@ local max_gibs			= CreateConVar("gs2_max_gibs", 128)
 local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
 
 local GIB_CONN_DATA = {}
-
-local function GenerateConnData(ent, phys_bone)
-	local mdl = ent:GetModel()
-
-	GIB_CONN_DATA[mdl][phys_bone] = {}
-
-	local phys = ent:GetPhysicsObjectNum(phys_bone)
-
-	local min, max 		= phys:GetAABB()
-	local phys_size 	= max - min	
-
-	local gib_index = 0
-
-	local num_x = math_max(1, math_floor(phys_size.x / 4))
-	local num_y = math_max(1, math_floor(phys_size.y / 4))
-	local num_z = math_max(1, math_floor(phys_size.z / 4))
-
-	local gibs = {}
-
-	for x = 1, num_x do
-		for y = 1, num_y do
-			for z = 1, num_z do				
-				local gib = ents.Create("gs2_gib")
-				gib:SetBody(ent)
-				gib:SetTargetBone(phys_bone)
-				gib:SetGibIndex(gib_index)
-				gib:SetOffsetFactor(Vector(x / (num_x + 1), y / (num_y + 1), z / (num_z + 1)))									
-				gib:Spawn()
-
-				table_insert(gibs, gib)
-							
-				gib_index = gib_index + 1
-			end
-		end
-	end
-
-	--Generate connections
-	for _, gib1 in pairs(gibs) do
-		if (gib1:GetClass() == "gs2_gib_custom") then
-			continue
-		end
-		local gib_index1 = gib1:GetGibIndex()
-		GIB_CONN_DATA[mdl][phys_bone][gib_index1] = {}
-		local mesh1 = gib1:GetPhysicsObject():GetMeshConvexes()[1]
-		for _, gib2 in pairs(gibs) do
-			if (!custom_gibs:GetBool() and gib2:GetClass() == "gs2_gib_custom") then
-				continue
-			end
-			local gib_index2 = gib2:GetGibIndex()
-			local mesh2 = gib2:GetMesh()
-			local is_conn = false
-			for _, vert in pairs(mesh2) do
-				local wpos = gib2:LocalToWorld(vert)
-				local lpos = gib1:WorldToLocal(wpos)
-
-				local is_inside = true
-				for tri_index = 1, #mesh1 - 2, 3 do
-					local p1 = mesh1[tri_index].pos
-					local p2 = mesh1[tri_index + 1].pos
-					local p3 = mesh1[tri_index + 2].pos
-
-					local norm = (p3 - p1):Cross(p2 - p1)
-					norm:Normalize()
-
-					local dist = norm:Dot(p3) * 0.7
-
-					if (norm:Dot(lpos) > dist) then
-						is_inside = false
-						break
-					end
-				end	
-				if is_inside then
-					is_conn = true
-					break
-				end			
-			end
-
-			if is_conn then
-				table_insert(GIB_CONN_DATA[mdl][phys_bone][gib_index1], gib_index2)
-			end
-		end
-	end
-
-	for _, gib in pairs(gibs) do
-		gib:Remove()
-	end
-end
 
 local G_GIBS = {}
 
@@ -496,6 +422,8 @@ function CreateGibs(ent, phys_bone)
 		end
 	end
 
+	ent.GS2Gibs = ent.GS2Gibs or {}
+
 	if custom_gibs then
 		for _, custom_gib in ipairs(custom_gibs) do
 			for _, gib in ipairs(gibs) do				
@@ -507,7 +435,8 @@ function CreateGibs(ent, phys_bone)
 			if !IsValid(custom_gib:GetParent()) then
 				table_insert(G_GIBS, custom_gib)
 			end
-		end
+			table.insert(ent.GS2Gibs, custom_gib)
+		end		
 	end
 
 	for _, gib in ipairs(gibs) do
@@ -520,9 +449,60 @@ function CreateGibs(ent, phys_bone)
 			
 			table_insert(G_GIBS, gib)
 		end
+		table.insert(ent.GS2Gibs, gib)
 	end
 
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
 		SafeRemoveEntity(table_remove(G_GIBS, 1))
 	end
+end
+
+local start
+
+hook.Add("Think", "GS2Gibs", function()
+	local mdl, thread = next(THREADS)
+	if !mdl then
+		return
+	end
+	if !start then
+		start = SysTime()
+	end
+		
+	local bool, err = coroutine.resume(thread)
+
+	if !bool then
+		print(mdl, err)
+	end
+
+	if (coroutine.status(thread) == "dead") then
+		THREADS[mdl] = nil
+		print("Generated gibs for "..mdl.." in "..math.Round(SysTime() - start, 3).." seconds ("..table.Count(THREADS).." models left)")
+		start = nil							
+	end			
+end)
+
+if SERVER then
+	hook.Add("OnEntityCreated", "GS2Gibs", function(ent)
+		timer.Simple(0.1, function()
+			if !IsValid(ent) then return end
+			local mdl = ent:GetModel()
+			if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
+				THREADS[mdl] = coroutine.create(function()			
+					GetPhysGibMeshes(mdl, 0)
+				end)
+				coroutine.resume(THREADS[mdl])
+			end
+		end)
+	end)
+end
+if CLIENT then
+	hook.Add("NetworkEntityCreated", "GS2Gibs", function(ent)
+		local mdl = ent:GetModel()
+		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
+			THREADS[mdl] = coroutine.create(function()			
+				GetPhysGibMeshes(mdl, 0)
+			end)
+			coroutine.resume(THREADS[mdl])
+		end		
+	end)
 end
