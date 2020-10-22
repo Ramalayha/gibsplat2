@@ -269,11 +269,14 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			SafeRemoveEntity(const)			
 		end
 		
+		local spectators = {}
+
 		--Detach any spectators
 		if (phys_bone == 0) then
 			for _, ply in pairs(player_GetHumans()) do
 				if (ply:GetObserverTarget() == self) then
 					ply:SpectateEntity(self.GS2LimbRelays[0])
+					table.insert(spectators, ply)
 				end
 			end
 		end
@@ -319,7 +322,13 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			local bone_name = self:GetBoneName(bone)
 
 			if !no_gibs then
-				CreateGibs(self, phys_bone)
+				local gibs = CreateGibs(self, phys_bone)
+
+				if (gibs and #gibs > 0) then
+					for _, ply in pairs(spectators) do
+						ply:SpectateEntity(table.Random(gibs))
+					end
+				end
 
 				local min, max = phys:GetAABB()
 
@@ -338,7 +347,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			--Wait 1 second
 			timer.Simple(1, function()
 				if IsValid(phys) then
-					phys:SetPos(vector_origin)
+					--phys:SetPos(vector_origin) --this crashes on some maps
 					phys:EnableMotion(false)
 				end
 			end)
@@ -586,7 +595,7 @@ function ENTITY:MakeCustomRagdoll()
 			end
 		end
 
-		if (data.Speed > 1000 or phys:GetEnergy() == 0) then --0 energy = jammed in something			
+		if (data.Speed > 1000 or (phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH)) then --0 energy = jammed in something			
 			if !self:GS2IsGibbed(phys_bone) then
 				self:GS2Gib(phys_bone)
 			end		

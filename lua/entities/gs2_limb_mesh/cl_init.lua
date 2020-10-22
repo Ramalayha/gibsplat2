@@ -119,7 +119,7 @@ function ENT:Draw()
 
 	self:DrawModel()
 
-	if (body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone]) then
+	if (self.meshes.flesh and body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone]) then
 		--The stencil stuff looks weird from some angles but what can you do ¯\_(ツ)_/¯
 		render_SetStencilEnable(true)
 		render_ClearStencil()
@@ -168,7 +168,7 @@ function ENT:Draw()
 		render_SetStencilZFailOperation(STENCIL_KEEP)
 		render_SetStencilTestMask(2)
 
-		render_MaterialOverride(self.meshes.body.flesh_mat)
+		render_MaterialOverride(self.meshes.flesh.Material)
 
 		self:DrawModel()
 

@@ -36,7 +36,7 @@ function ENT:PhysicsCollide(data, phys)
 		util.Decal("BloodSmall", data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 	end
 	
-	if (phys:GetEnergy() == 0 or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
+	if ((phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH) or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
 		local EF = EffectData()
 		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
 		util.Effect("BloodImpact", EF)

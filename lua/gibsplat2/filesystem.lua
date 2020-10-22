@@ -69,7 +69,7 @@ function GS2WriteGibData(hash, data)
 	F:Close()
 end
 
-function GS2ReadGibData(hash, out)
+function GS2ReadGibData(hash, out, size)
 	local file_path = "gibsplat2/gib_data/"..hash
 
 	local F = file.Open("materials/"..file_path..".vmt", "rb", "GAME") or file.Open(file_path..".txt", "rb", "DATA")
@@ -92,7 +92,6 @@ function GS2ReadGibData(hash, out)
 	for i = 1, F:ReadShort() do
 		local min = F:ReadVector()
 		local max = F:ReadVector()
-		local size = max - min
 		local center = (min + max) / 2
 
 		local vertex_buffer = {}

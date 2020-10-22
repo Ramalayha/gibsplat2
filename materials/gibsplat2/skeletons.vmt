@@ -6,9 +6,10 @@
 		{
 			"1"			"/male_shared"
 			"2"			"/m_anm"
-			"3"			"/combine_soldier"
-			"4"			"zombie/poison"
-			"5"			"police.mdl"
+			"3"			"/combine_soldier"			
+			"4"			"police.mdl"
+			"5"			"!zombie"
+			"6"			"!skeleton"
 		}
 
 		"female"

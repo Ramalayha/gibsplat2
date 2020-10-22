@@ -69,26 +69,28 @@ local function OnCollide(self, pos, norm)
 		util.Decal("YellowBlood", pos, norm)
 	end
 
-	if IsValid(self.Emitter) then
-		for i = 1, 5 do
-			local particle = self.Emitter:Add("effects/blood_puff", pos)
+	local emitter = ParticleEmitter(pos, true)
 
-			local size = math.Rand(2, 4)
-			particle:SetStartSize(size)	
-			particle:SetEndSize(size * 2)
+	if IsValid(emitter) then		
+		local particle = emitter:Add("effects/blood_puff", pos + Vector(0,0,10))
 
-			particle:SetStartAlpha(255)
-			particle:SetEndAlpha(0)
-			particle:SetRoll(math.random(0, 360))
-			
-			particle:SetLifeTime(0)
-			particle:SetDieTime(math.Rand(0.05, 0.1))
+		particle:SetAngles(EyeAngles())
 
-			if (self.BloodColor == BLOOD_COLOR_RED) then
-				particle:SetColor(72, 0, 0)
-			else
-				particle:SetColor(195, 195, 0)
-			end
+		local size = math.Rand(2, 4)
+		particle:SetStartSize(size)	
+		particle:SetEndSize(size * 2)
+
+		particle:SetStartAlpha(255)
+		particle:SetEndAlpha(255)
+		--particle:SetRoll(math.random(0, 360))
+		
+		particle:SetLifeTime(10)
+		particle:SetDieTime(10)
+
+		if (self.BloodColor == BLOOD_COLOR_RED) then
+			particle:SetColor(72, 0, 0)
+		else
+			particle:SetColor(195, 195, 0)
 		end
 	end
 

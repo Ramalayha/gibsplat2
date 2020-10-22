@@ -52,23 +52,6 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	
 	MDL_INDEX[mdl] = MDL_INDEX[mdl] or {}
 
-	local mdl_info = GS2ReadModelData(mdl)
-
-	if (mdl_info and mdl_info.gib_data) then
-		for phys_bone, hash in pairs(mdl_info.gib_data) do
-			if !PHYS_GIB_CACHE[hash] then				
-				GS2ReadGibData(hash, PHYS_GIB_CACHE)
-			end
-			MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
-		end
-		if MDL_INDEX[mdl][phys_bone] then
-			THREADS[mdl] = nil
-			return MDL_INDEX[mdl][phys_bone]
-		end
-	end
-
-	math_randomseed(util.CRC(mdl) + phys_bone)
-
 	local temp
 	if SERVER then
 		temp = ents.Create("prop_ragdoll")
@@ -92,6 +75,9 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 		return {}
 	end
 
+	local min, max = phys:GetAABB()
+	local size = max - min
+
 	local convexes = phys:GetMeshConvexes()
 
 	for _, convex in ipairs(convexes) do
@@ -105,6 +91,23 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	local phys_count = temp:GetPhysicsObjectCount()
 
 	temp:Remove()
+
+	local mdl_info = GS2ReadModelData(mdl)
+
+	if (mdl_info and mdl_info.gib_data) then
+		for phys_bone, hash in pairs(mdl_info.gib_data) do
+			if !PHYS_GIB_CACHE[hash] then				
+				GS2ReadGibData(hash, PHYS_GIB_CACHE, size)
+			end
+			MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
+		end
+		if MDL_INDEX[mdl][phys_bone] then
+			THREADS[mdl] = nil
+			return MDL_INDEX[mdl][phys_bone]
+		end
+	end
+
+	math_randomseed(util.CRC(mdl) + phys_bone)
 
 	local points = {}
 
@@ -131,7 +134,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 
 	local min, max = phys:GetAABB()
 	local center = (min + max) / 2
-	local size = max - min
+	--local size = max - min
 
 	local points = {}
 
@@ -254,10 +257,19 @@ function GS2GetBodyType(mdl)
 	str = str:lower()
 
 	for body_type, list in pairs(body_types) do
+		local is_bl
 		for _, find in pairs(list) do
-			if str:find(find) then
-				MDLTYPE_CACHE[mdl] = body_type
-				return body_type
+			if (find:sub(1, 1) == "!" and str:find(find:sub(2))) then
+				is_bl = true
+				break
+			end
+		end
+		if !is_bl then
+			for _, find in pairs(list) do
+				if str:find(find) then
+					MDLTYPE_CACHE[mdl] = body_type
+					return body_type
+				end
 			end
 		end
 	end
@@ -455,6 +467,8 @@ function CreateGibs(ent, phys_bone)
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
 		SafeRemoveEntity(table_remove(G_GIBS, 1))
 	end
+
+	return gibs
 end
 
 local start
