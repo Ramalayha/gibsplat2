@@ -57,7 +57,7 @@ local ang_180 = Angle(180, 0, 0)
 local oob_pos
 
 hook.Add("InitPostEntity", "GS2InitOOBPos", function()
-	oob_pos = ents.FindByClass("info_player_start")[1]:GetPos()
+	oob_pos = ents.GetAll()[2]:GetPos() --1 is world so pick 2
 
 	local offset = Vector(0, 0, 50000)
 
