@@ -346,9 +346,43 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			
 			--Wait 1 second
 			timer.Simple(1, function()
-				if IsValid(phys) then
-					--phys:SetPos(vector_origin) --this crashes on some maps
+				if IsValid(phys) then					
 					phys:EnableMotion(false)
+					
+					local pos = phys:GetPos()
+
+					local offset = Vector(0, 0, 50000)
+
+					local tr = {
+						start = pos,
+						endpos = pos - offset,
+						mask = MASK_NPCWORLDSTATIC
+					}
+
+					tr.output = out
+
+					local _, max = phys:GetAABB()
+					max.z = max.z + 5 --just to be safe
+
+					local res
+
+					while true do												
+						res = util.TraceLine(tr)
+						if !res.Hit then
+							break
+						end
+						
+						res.HitPos.z = res.HitPos.z - 1
+						tr.start = res.HitPos
+						tr.endpos = tr.start - offset
+					end
+
+					tr.start = res.StartPos
+					tr.endpos = tr.start + offset
+
+					res = util.TraceLine(tr)
+					
+					phys:SetPos(res.HitPos - max)
 				end
 			end)
 		end
