@@ -54,6 +54,42 @@ local timer_Simple = timer.Simple
 local ang_zero = Angle(0, 0, 0)
 local ang_180 = Angle(180, 0, 0)
 
+local oob_pos
+
+hook.Add("InitPostEntity", "GS2InitOOBPos", function()
+	oob_pos = ents.FindByClass("info_player_start")[1]:GetPos()
+
+	local offset = Vector(0, 0, 50000)
+
+	local tr = {
+		start = oob_pos,
+		endpos = oob_pos - offset,
+		mask = MASK_NPCWORLDSTATIC
+	}
+
+	local res
+
+	while true do												
+		res = util.TraceLine(tr)
+		if !res.Hit then
+			break
+		end
+		
+		res.HitPos.z = res.HitPos.z - 1
+		tr.start = res.HitPos
+		tr.endpos = tr.start - offset
+	end
+
+	tr.start = res.StartPos
+	tr.endpos = tr.start + offset
+
+	res = util.TraceLine(tr)
+
+	oob_pos = res.HitPos	
+	
+	hook.Remove("InitPostEntity", "GS2InitOOBPos")
+end)
+
 local RAGDOLL_POSE = {}
 
 local RESTORE_POSE = {}
@@ -348,41 +384,9 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			timer.Simple(1, function()
 				if IsValid(phys) then					
 					phys:EnableMotion(false)
-					
-					local pos = phys:GetPos()
-
-					local offset = Vector(0, 0, 50000)
-
-					local tr = {
-						start = pos,
-						endpos = pos - offset,
-						mask = MASK_NPCWORLDSTATIC
-					}
-
-					tr.output = out
-
 					local _, max = phys:GetAABB()
-					max.z = max.z + 5 --just to be safe
-
-					local res
-
-					while true do												
-						res = util.TraceLine(tr)
-						if !res.Hit then
-							break
-						end
-						
-						res.HitPos.z = res.HitPos.z - 1
-						tr.start = res.HitPos
-						tr.endpos = tr.start - offset
-					end
-
-					tr.start = res.StartPos
-					tr.endpos = tr.start + offset
-
-					res = util.TraceLine(tr)
-					
-					phys:SetPos(res.HitPos - max)
+					phys:SetPos(oob_pos - max)
+					phys:SetAngles(ang_zero)
 				end
 			end)
 		end
