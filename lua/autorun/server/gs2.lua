@@ -8,6 +8,8 @@ AddCSLuaFile("gibsplat2/constraintinfo.lua")
 AddCSLuaFile("gibsplat2/buildmesh.lua")
 AddCSLuaFile("gibsplat2/gibs.lua")
 AddCSLuaFile("gibsplat2/clipmesh.lua")
+AddCSLuaFile("gibsplat2/filesystem.lua")
+AddCSLuaFile("gibsplat2/mesh_util.lua")
 
 local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")

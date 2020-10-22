@@ -360,6 +360,7 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 	end
 	if !start then
 		start = SysTime()
+		print("Started generating meshes for "..mdl)
 	end			
 	
 	if (coroutine.status(thread) == "dead") then

@@ -480,6 +480,7 @@ hook.Add("Think", "GS2Gibs", function()
 	end
 	if !start then
 		start = SysTime()
+		print("Started generating gibs for "..mdl)
 	end
 		
 	local bool, err = coroutine.resume(thread)

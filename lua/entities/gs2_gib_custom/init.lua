@@ -37,17 +37,12 @@ function ENT:PhysicsCollide(data, phys)
 	end
 	
 	if ((phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH) or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
-		local EF = EffectData()
-		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
-		util.Effect("BloodImpact", EF)
-		for _, child in ipairs(self:GetChildren()) do
-			if child.GS2_dummy then
-				EF:SetOrigin(child:LocalToWorld(child:OBBCenter()))
-				util.Effect("BloodImpact", EF)
-			end
-		end
 		self:Remove()
 	end
 end
 
---models/props_debris/concrete_spawnplug001a.mdl
+function ENT:OnRemove()
+	local EF = EffectData()
+	EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
+	util.Effect("BloodImpact", EF)
+end

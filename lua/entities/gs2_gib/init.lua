@@ -39,6 +39,8 @@ function ENT:Initialize()
 	self.GS2_dummy = true --default to this
 
 	self.Created = CurTime()
+
+	self:SetUseType(SIMPLE_USE)
 end
 
 function ENT:InitPhysics()
@@ -80,17 +82,14 @@ function ENT:PhysicsCollide(data, phys)
 	end
 
 	if ((phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH) or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
-		local EF = EffectData()
-		EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
-		util.Effect("BloodImpact", EF)
-		for _, child in ipairs(self:GetChildren()) do
-			if child.GS2_dummy then
-				EF:SetOrigin(child:LocalToWorld(child:OBBCenter()))
-				util.Effect("BloodImpact", EF)
-			end
-		end
 		self:Remove()
 	end
+end
+
+function ENT:OnRemove()
+	local EF = EffectData()
+	EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
+	util.Effect("BloodImpact", EF)
 end
 
 local VERT_CACHE = {}
@@ -151,4 +150,13 @@ function ENT:IsTouching(other)
 	end
 end
 
---models/props_debris/concrete_spawnplug001a.mdl
+function ENT:Use(ply)
+	local hp = ply:Health()
+	local max = ply:GetMaxHealth()
+	if (hp < max) then
+		local heal = #self:GetChildren() + 1
+		ply:SetHealth(math.min(hp + heal, max))
+		self:EmitSound("npc/barnacle/barnacle_crunch3.wav")
+		self:Remove()
+	end
+end
