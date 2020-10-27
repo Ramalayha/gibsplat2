@@ -353,7 +353,10 @@ end
 
 local start
 
+local enabled = GetConVar("gs2_enabled")
+
 hook.Add("HUDPaint", "GS2BuildMesh", function()
+	if !enabled:GetBool() then return end
 	local mdl, thread = next(THREADS)
 	if !mdl then
 		return
@@ -377,6 +380,7 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 end)
 
 hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
+	if !enabled:GetBool() then return end
 	local mdl = ent:GetModel()
 	if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
 		THREADS[mdl] = coroutine.create(function()			

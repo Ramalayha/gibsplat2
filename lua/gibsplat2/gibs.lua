@@ -473,7 +473,10 @@ end
 
 local start
 
+local enabled = GetConVar("gs2_enabled")
+
 hook.Add("Think", "GS2Gibs", function()
+	if !enabled:GetBool() then return end
 	local mdl, thread = next(THREADS)
 	if !mdl then
 		return
@@ -498,6 +501,7 @@ end)
 
 if SERVER then
 	hook.Add("OnEntityCreated", "GS2Gibs", function(ent)
+		if !enabled:GetBool() then return end
 		timer.Simple(0.1, function()
 			if !IsValid(ent) then return end
 			local mdl = ent:GetModel()
@@ -512,6 +516,7 @@ if SERVER then
 end
 if CLIENT then
 	hook.Add("NetworkEntityCreated", "GS2Gibs", function(ent)
+		if !enabled:GetBool() then return end
 		local mdl = ent:GetModel()
 		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
 			THREADS[mdl] = coroutine.create(function()			
