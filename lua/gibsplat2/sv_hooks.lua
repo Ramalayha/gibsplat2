@@ -234,13 +234,14 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			end
 		elseif IsKindaBullet(dmginfo) then
 			local phys = ent:GetPhysicsObjectNum(phys_bone)
-			local lpos, lang = WorldToLocal(dmginfo:GetDamagePosition(), ang_zero, phys:GetPos(), phys:GetAngles())
+			local lpos, lang = WorldToLocal(dmg_pos, ang_zero, phys:GetPos(), phys:GetAngles())
 
 			local hole = ents.Create("gs2_bullethole")
 			hole:SetBody(ent)
 			hole:SetTargetBone(phys_bone)
 			hole:SetLocalPos(lpos)
 			hole:SetLocalAng(lang)
+			hole:SetPos(dmg_pos)
 			hole:Spawn()
 			
 			if ShouldGib(dmginfo) then
