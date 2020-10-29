@@ -368,6 +368,11 @@ function ENT:Draw()
 									continue
 								end			
 								
+								local pos, ang = LocalToWorld(hole:GetLPos(), hole:GetLAng(), bone_pos, bone_ang)
+
+								hole:SetRenderOrigin(pos)
+								hole:SetRenderAngles(ang)
+								
 								render_SetStencilCompareFunction(STENCIL_ALWAYS)
 								render_SetStencilPassOperation(STENCIL_KEEP)
 								render_SetStencilZFailOperation(STENCIL_REPLACE)

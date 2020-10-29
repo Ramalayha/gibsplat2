@@ -132,12 +132,19 @@ function ENT:Draw()
 		render_OverrideDepthEnable(true, false)
 		render_OverrideColorWriteEnable(true, false)
 
+		local bone_pos, bone_ang = body:GetBonePosition(self.Bone)
+
 		for key, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do
 			if !IsValid(hole) then
 				body.GS2BulletHoles[self.PhysBone][key] = nil
 				continue
 			end			
-						
+				
+			local pos, ang = LocalToWorld(hole:GetLPos(), hole:GetLAng(), bone_pos, bone_ang)
+
+			hole:SetRenderOrigin(pos)
+			hole:SetRenderAngles(ang)
+
 			render_SetStencilCompareFunction(STENCIL_ALWAYS)
 			render_SetStencilPassOperation(STENCIL_KEEP)
 			render_SetStencilZFailOperation(STENCIL_REPLACE)
