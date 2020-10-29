@@ -5,7 +5,7 @@ include("shared.lua")
 
 function ENT:Initialize()
 	self:SetModel("models/spitball_medium.mdl")
-	--self:SetModel("models/gibsplat2/bullethole.mdl")
+	
 	self:GetBody():DeleteOnRemove(self)
 
 	local body = self:GetBody()

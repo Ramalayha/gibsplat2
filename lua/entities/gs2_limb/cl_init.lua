@@ -367,13 +367,6 @@ function ENT:Draw()
 									bullet_holes[key] = nil
 									continue
 								end			
-								local lpos = hole:GetLocalPos()
-								local lang = hole:GetLocalAng()
-
-								local pos, ang = LocalToWorld(lpos, lang, bone_pos, bone_ang)
-								
-								hole:SetRenderOrigin(pos)
-								hole:SetRenderAngles(ang)
 								
 								render_SetStencilCompareFunction(STENCIL_ALWAYS)
 								render_SetStencilPassOperation(STENCIL_KEEP)

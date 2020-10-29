@@ -137,14 +137,7 @@ function ENT:Draw()
 				body.GS2BulletHoles[self.PhysBone][key] = nil
 				continue
 			end			
-			local lpos = hole:GetLocalPos()
-			local lang = hole:GetLocalAng()
-
-			local pos, ang = LocalToWorld(lpos, lang, body:GetBonePosition(self.Bone))
-			
-			hole:SetRenderOrigin(pos)
-			hole:SetRenderAngles(ang)
-			
+						
 			render_SetStencilCompareFunction(STENCIL_ALWAYS)
 			render_SetStencilPassOperation(STENCIL_KEEP)
 			render_SetStencilZFailOperation(STENCIL_REPLACE)
