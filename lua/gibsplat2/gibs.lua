@@ -31,6 +31,7 @@ local table_insert = table.insert
 local table_KeyFromValue = table.KeyFromValue
 
 local ents_Create = SERVER and ents.Create or ents.CreateClientside
+local ents_GetAll = ents.GetAll
 
 local ang_zero = Angle(0, 0, 0)
 
@@ -602,8 +603,8 @@ if CLIENT then
 	end)
 
 	local function RemoveGibs()
-		for _, gib in ipairs(ents.FindByClass("gs2_gib")) do			
-			if (gib:EntIndex() == -1) then
+		for _, gib in ipairs(ents_GetAll()) do			
+			if (gib:EntIndex() == -1 and gib:GetClass():find("^gs2_gib")) then
 				gib:Remove()
 			end
 		end
