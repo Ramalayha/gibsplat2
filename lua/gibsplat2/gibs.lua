@@ -601,10 +601,15 @@ if CLIENT then
 		end		
 	end)
 
-	hook.Add("PostCleanupMap", HOOK_NAME, function()
-		for _, gib in ipairs(ents.FindByClass("gs2_gib")) do
-			SafeRemoveEntity(gib)
+	local function RemoveGibs()
+		for _, gib in ipairs(ents.FindByClass("gs2_gib")) do			
+			if (gib:EntIndex() == -1) then
+				gib:Remove()
+			end
 		end
 		table.Empty(G_GIBS)
-	end)
+	end
+
+	hook.Add("PostCleanupMap", HOOK_NAME, RemoveGibs)
+	concommand.Add("gs2_cleargibs", RemoveGibs)
 end
