@@ -251,7 +251,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 				end
 			end
 		--end
-	elseif ent:IsNPC() then
+	elseif (ent:IsNPC() or ent:IsPlayer()) then
 		if (dmginfo:IsDamageType(5) and dmginfo:GetDamage() > ent:Health()) then --5 = DMG_CRUSH | DMG_SLASH
 			local dmg_type = dmginfo:GetDamageType() --Prevents zombie from cutting in half
 			dmginfo:SetDamageType(bit.band(dmg_type, bit.bnot(DMG_SLASH)))			
@@ -292,7 +292,7 @@ local function CreateRagdoll(self)
 	ragdoll:SetAngles(self:GetAngles())
 	ragdoll:Spawn()
 
-	ragdoll:MakeCustomRagdoll()
+	--ragdoll:MakeCustomRagdoll()
 
 	for i = 0, ragdoll:GetPhysicsObjectCount()-1 do
 		local phys = ragdoll:GetPhysicsObjectNum(i)
@@ -308,11 +308,20 @@ local function CreateRagdoll(self)
 	self:Spectate(OBS_MODE_CHASE)
 
 	dolls[self] = ragdoll
+
+	GS2CreateEntityRagdoll(self, ragdoll)
+end
+
+local oldGetRagdollEntity = PLAYER.GetRagdollEntity
+
+local function GetRagdoll(self)
+	return dolls[self] or NULL
 end
 
 if enabled:GetBool() then
 	if player_ragdolls:GetBool() then
 		PLAYER.CreateRagdoll = CreateRagdoll
+		PLAYER.GetRagdollEntity = GetRagdoll
 	end
 	if default_ragdolls:GetBool() then
 		hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
@@ -326,6 +335,7 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
  	if (new == "1") then
  		if player_ragdolls:GetBool() then
 			PLAYER.CreateRagdoll = CreateRagdoll
+			PLAYER.GetRagdollEntity = GetRagdoll
 		end
 		if default_ragdolls:GetBool() then
 			hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
@@ -335,6 +345,7 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 	else
 		PLAYER.CreateRagdoll = oldCreateRagdoll
+		PLAYER.GetRagdollEntity = oldGetRagdollEntity
 		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
 		hook.Remove("OnEntityCreated", HOOK_NAME)
 		hook.Remove("SetupPlayerVisibility", HOOK_NAME)
