@@ -93,6 +93,7 @@ local function GetPhysCount(ent)
 			return phys_bone
 		end
 	end
+	return -1
 end
 
 local MESH_HASH_LOOKUP = {}
@@ -128,8 +129,11 @@ function GetSortedMeshHashTable(mdl)
 						InsertMulti(ret, phys_bone, bg_num, bg_val, hash)																
 					end
 				end
+				coroutine.yield()
 			end
+			coroutine.yield()
 		end
+		coroutine.yield()
 	end
 	
 	temp:Remove()

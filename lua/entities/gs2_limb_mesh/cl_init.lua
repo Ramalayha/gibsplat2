@@ -67,7 +67,7 @@ function ENT:SetMesh(meshes)
 end
 
 function ENT:Think()
-	if IsValid(self.Body) then
+	if IsValid(self.Body) then		
 		if !IsValid(self.GS2ParentLimb) then
 			SafeRemoveEntity(self)
 			return
@@ -96,6 +96,7 @@ local lhack_matrix = Matrix()
 
 function ENT:Draw()
 	local body = self.Body
+	body.RenderOverride = null
 	if body.GS2Dissolving then
 		local start = body.GS2Dissolving[self.PhysBone]
 		if start then

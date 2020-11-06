@@ -14,7 +14,13 @@ local MATERIAL_CACHE = {}
 
 local THREADS = {}
 
+local PERCENT = 0
+
+local iterations = CreateClientConVar("gs2_mesh_iterations", 10, true, false, "How many times per frame the mesh generation code should run (higher = quicker generation, lower = smaller fps spikes)")
+
 function GetBoneMeshes(ent, phys_bone, norec)
+	PERCENT = 0
+
 	local mdl = ent:GetModel()
 
 	local bg_mask = util.GetBodygroupMask(ent)
@@ -80,6 +86,23 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 		local new_meshes = {}
 
+		--Calculate how much to increase each iteration for percentage mete
+		local incr = 0
+		for phys_bone = 0, phys_count - 1 do
+			if !hash_tbl[phys_bone] then
+				continue
+			end
+			for bg_num, meshes in pairs(hash_tbl[phys_bone]) do
+				for bg_val, data in pairs(meshes) do		
+					for _, hash in pairs(data) do
+						incr = incr + 1
+					end
+				end
+			end
+		end
+
+		incr = 1 / incr
+
 		for phys_bone = 0, phys_count - 1 do
 			if !hash_tbl[phys_bone] then
 				continue
@@ -93,6 +116,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 					for _, hash in pairs(data) do
 						local mesh = GS2ReadMesh(hash)
 						if mesh then
+							PERCENT = PERCENT + incr
 							SetMulti(new_meshes, phys_bone, bg_num, bg_val, hash, mesh)
 							continue
 						end
@@ -323,8 +347,11 @@ function GetBoneMeshes(ent, phys_bone, norec)
 								is_flesh = true
 							}) 
 						end	
+						PERCENT = PERCENT + incr
 					end
+					coroutine.yield()
 				end
+				coroutine.yield()
 			end 
 		end
 
@@ -339,11 +366,13 @@ function GetBoneMeshes(ent, phys_bone, norec)
 	end
 
 	local ret = {}
-	for bg_num, data in pairs(MDL_INDEX[mdl][phys_bone]) do
-		local bg_val = ent:GetBodygroup(bg_num)
-		if data[bg_val] then
-			for hash, mesh in pairs(data[bg_val]) do
-				table.insert(ret, mesh)
+	if MDL_INDEX[mdl][phys_bone] then
+		for bg_num, data in pairs(MDL_INDEX[mdl][phys_bone]) do
+			local bg_val = ent:GetBodygroup(bg_num)
+			if data[bg_val] then
+				for hash, mesh in pairs(data[bg_val]) do
+					table.insert(ret, mesh)
+				end
 			end
 		end
 	end
@@ -368,14 +397,22 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 	
 	if (coroutine.status(thread) == "dead") then
 		THREADS[mdl] = nil
-		print("Generated meshes for "..mdl.." in "..math.Round(SysTime() - start, 3).." seconds ("..table.Count(THREADS).." models left)")
+		local nmodels = table.Count(THREADS)
+		local form = nmodels > 1 and [[Generated meshes for "%s" in %i:%02i.%02i (%i models left)]] or [[Generated meshes for "%s" in %i:%02i.%02i]]
+		local ft = string.FormattedTime(math.Round(SysTime() - start, 3))
+		local str = form:format(mdl, ft.m, ft.s, ft.ms, nmodels)
+		print(str)
 		start = nil	
-	else
-		local t = SysTime()
-		local bool, err = coroutine.resume(thread)
-		if !bool then
-			print(mdl, err)
-		end	
+	else		
+		for i = 1, iterations:GetInt() do
+			local bool, err = coroutine.resume(thread)
+			if !bool then
+				print(mdl, err)
+				break
+			elseif (coroutine.status(thread) == "dead") then
+				break
+			end	
+		end
 	end			
 end)
 
@@ -388,4 +425,25 @@ hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 		end)
 		coroutine.resume(THREADS[mdl])
 	end
+end)
+
+local form = [[GS2: Building meshes for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
+local form2 = [[GS2: Building meshes for "%s" (%3.2f%% done)]]
+
+hook.Add("HUDPaint", "GS2BuildMeshDisplay", function()
+	local mdl = next(THREADS)
+	if !mdl then return end
+
+	local nmodels = table.Count(THREADS)
+
+	local form = nmodels > 1 and form or form2
+
+	local msg = form:format(mdl, 100 * PERCENT, nmodels - 1)
+
+	local w, h = surface.GetTextSize(msg)
+
+	surface.SetFont("DebugFixed")
+	surface.SetTextColor(255, 0, 0)
+	surface.SetTextPos(ScrW() * 0.99 - w, ScrH() / 2 - h / 2)
+	surface.DrawText(msg)
 end)

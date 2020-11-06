@@ -54,7 +54,7 @@ local timer_Simple = timer.Simple
 local ang_zero = Angle(0, 0, 0)
 local ang_180 = Angle(180, 0, 0)
 
-local oob_pos
+local oob_pos = vector_origin
 
 hook.Add("InitPostEntity", "GS2InitOOBPos", function()
 	oob_pos = ents.GetAll()[2]:GetPos() --1 is world so pick 2
@@ -276,6 +276,9 @@ function ENTITY:GS2Dismember(phys_bone)
 end
 
 function ENTITY:GS2Gib(phys_bone, no_gibs)
+	SafeRemoveEntity(self.GS2Limbs[phys_bone])
+	SafeRemoveEntity(self.GS2LimbRelays[phys_bone])
+	self.GS2Limbs[phys_bone] = nil
 	--Timer makes it run outside the PhysicsCollide hook to prevent physics crashes
 	timer_Simple(0, function()
 		if !IsValid(self) then return end
@@ -324,11 +327,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				SafeRemoveEntity(const.Constraint)
 			end
 		end
- 
-		SafeRemoveEntity(self.GS2Limbs[phys_bone])
-		SafeRemoveEntity(self.GS2LimbRelays[phys_bone])
-		self.GS2Limbs[phys_bone] = nil
-		
+ 		
 		for _, limb in pairs(self.GS2Limbs) do
 			if IsValid(limb) then
 				limb:SetGibMask(mask)
@@ -378,7 +377,9 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				
 			phys:SetContents(CONTENTS_EMPTY)
 			phys:EnableGravity(false)		
-			phys:EnableCollisions(false)			
+			phys:EnableCollisions(false)
+			phys:SetDragCoefficient(10)			
+			phys:SetAngleDragCoefficient(math.huge)
 			
 			--Wait 1 second
 			timer.Simple(1, function()

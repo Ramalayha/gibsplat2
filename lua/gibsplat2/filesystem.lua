@@ -43,6 +43,10 @@ function GS2WriteGibData(hash, data)
 
 	local F = file.Open(file_path, "wb", "DATA")
 
+	if !F then
+		return
+	end
+
 	F:WriteShort(GIB_VERSION)
 
 	F:WriteShort(#data)
@@ -196,6 +200,10 @@ local function GS2WriteMesh(hash, mesh)
 
 	local F = file.Open(file_path, "wb", "DATA")
 	
+	if !F then
+		return
+	end
+
 	F:WriteShort(MESH_VERSION)
 
 	if !mesh.body then

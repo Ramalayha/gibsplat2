@@ -1,6 +1,12 @@
 include("clipmesh.lua")
 include("filesystem.lua")
 
+local MSG_GIBS = "GS2CreateGibs"
+
+if SERVER then
+	util.AddNetworkString(MSG_GIBS)
+end
+
 local SafeRemoveEntity = SafeRemoveEntity
 local WorldToLocal = WorldToLocal
 local ipairs = ipairs
@@ -23,6 +29,8 @@ local table_Count = table.Count
 local table_Add = table.Add
 local table_insert = table.insert
 local table_KeyFromValue = table.KeyFromValue
+
+local ents_Create = SERVER and ents.Create or ents.CreateClientside
 
 local ang_zero = Angle(0, 0, 0)
 
@@ -54,7 +62,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 
 	local temp
 	if SERVER then
-		temp = ents.Create("prop_ragdoll")
+		temp = ents_Create("prop_ragdoll")
 		temp:SetModel(mdl)
 		temp:Spawn()
 	else
@@ -117,7 +125,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 		end
 	end
 
-	temp = SERVER and ents.Create("prop_physics") or ents.CreateClientProp()
+	temp = SERVER and ents_Create("prop_physics") or ents_CreateClientProp()
 
 	temp:PhysicsInitConvex(points)
 
@@ -294,6 +302,14 @@ local max_gibs			= CreateConVar("gs2_max_gibs", 128)
 
 local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
 
+local sv_gibs_def = 1
+if SERVER and !game.SinglePlayer() then
+	sv_gibs_def = 0
+end
+
+local sv_gibs			= CreateConVar("gs2_gib_sv", sv_gibs_def, FCVAR_REPLICATED)
+local cl_gibs 			= CreateClientConVar("gs2_gib_cl", 1)
+
 local GIB_CONN_DATA = {}
 
 local G_GIBS = {}
@@ -305,6 +321,7 @@ local gib_info = util.KeyValuesToTable(text or "")
 for body_type, gib_data in pairs(gib_info) do
 	for bone_name, data in pairs(gib_data) do
 		for mdl, offset in pairs(data) do
+			util.PrecacheModel(mdl)
 			if offset.vec_offset then
 				offset.vec_offset = Vector(unpack(offset.vec_offset:Split(" ")))
 			end
@@ -344,7 +361,17 @@ local function GetChildMeshRec(ent, output, parent)
 	end
 end
 
-function CreateGibs(ent, phys_bone)
+if CLIENT then
+	net.Receive(MSG_GIBS, function()
+		if !cl_gibs:GetBool() then return end
+		local ent = net.ReadEntity()
+		if IsValid(ent) then
+			CreateGibs(ent, net.ReadInt(32), net.ReadVector(), net.ReadVector())
+		end
+	end)
+end
+
+function CreateGibs(ent, phys_bone, vel, ang_vel)
 	local factor = gib_factor:GetFloat()
 	if (factor == 0) then
 		return
@@ -361,7 +388,26 @@ function CreateGibs(ent, phys_bone)
 
 	local custom_gibs
 
-	local phys = ent:GetPhysicsObjectNum(phys_bone)
+	if SERVER then
+		local phys = ent:GetPhysicsObjectNum(phys_bone)
+		vel = vel or phys:GetVelocity()
+		ang_vel = ang_vel or phys:GetAngleVelocity()
+		if !sv_gibs:GetBool() then
+			local RF = RecipientFilter()
+			RF:AddPVS(phys:GetPos())
+
+			net.Start(MSG_GIBS)
+				net.WriteEntity(ent)
+				net.WriteInt(phys_bone, 32)
+				net.WriteVector(vel)
+				net.WriteVector(ang_vel)
+			net.Send(RF)
+			return
+		end
+	else
+		vel = vel or Vector(0, 0, 0)
+		ang_vel = ang_vel or Vector(0, 0, 0)
+	end
 
 	if gib_data then
 		local bone = ent:TranslatePhysBoneToBone(phys_bone)
@@ -376,24 +422,40 @@ function CreateGibs(ent, phys_bone)
 		if (gib_custom:GetBool() and custom_gib_data) then
 			for mdl, data in pairs(custom_gib_data) do
 				if (math_random() < factor) then
-					local gib = ents.Create("gs2_gib_custom")
-					gib:SetModel(mdl)
+					local gib
+					if SERVER then
+						gib = ents_Create("gs2_gib_custom")
+						gib:SetModel(mdl)
 
-					gib.vec_offset = data.vec_offset or vector_origin
-					gib.ang_offset = data.ang_offset or ang_zero
+						gib.vec_offset = data.vec_offset or vector_origin
+						gib.ang_offset = data.ang_offset or ang_zero
 
-					local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
+						local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
 
-					gib:SetPos(pos)
-					gib:SetAngles(ang)
-					gib:Spawn()
+						gib:SetPos(pos)
+						gib:SetAngles(ang)
+						gib:Spawn()
+					else
+						gib = ents.CreateClientProp(mdl)
+						
+						gib.vec_offset = data.vec_offset or vector_origin
+						gib.ang_offset = data.ang_offset or ang_zero
+
+						local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
+
+						gib:SetPos(pos)
+						gib:SetAngles(ang)	
+						gib:Spawn()		
+
+						gib:AddCallback("PhysicsCollide", scripted_ents.Get("gs2_gib_custom").PhysicsCollide)			
+					end
 
 					local phys_gib = gib:GetPhysicsObject()
 
-					--phys_gib:SetVelocity(phys:GetVelocity())
-					--phys_gib:AddAngleVelocity(phys:GetAngleVelocity())
+					phys_gib:SetVelocity(vel)
+					phys_gib:AddAngleVelocity(ang_vel)
 
-					ent:DeleteOnRemove(gib)
+					--ent:DeleteOnRemove(gib)
 
 					table_insert(custom_gibs, gib)
 				end
@@ -403,13 +465,17 @@ function CreateGibs(ent, phys_bone)
 
 	for key, mesh in ipairs(meshes) do
 		if (math_random() < factor) then
-			local gib = ents.Create("gs2_gib")
+			local gib = ents_Create("gs2_gib")
 			gib:SetBody(ent)
 			gib:SetTargetBone(phys_bone)
 			gib:SetGibIndex(key)
-			gib:Spawn()
+			if SERVER then
+				gib:Spawn()
+			else
+				gib:Initialize()
+			end
 
-			ent:DeleteOnRemove(gib)
+			--ent:DeleteOnRemove(gib)
 
 			table_insert(gibs, gib)			
 		end
@@ -439,12 +505,16 @@ function CreateGibs(ent, phys_bone)
 	if custom_gibs then
 		for _, custom_gib in ipairs(custom_gibs) do
 			for _, gib in ipairs(gibs) do				
-				if (gib:IsTouching(custom_gib)) then												
+				if (math_random() < chance and gib:IsTouching(custom_gib)) then												
 					custom_gib:SetParent(gib)					
 					break			
 				end	
 			end
 			if !IsValid(custom_gib:GetParent()) then
+				local phys = custom_gib:GetPhysicsObject()
+
+				phys:SetVelocity(vel + vel * VectorRand())
+				phys:AddAngleVelocity(ang_vel + ang_vel * VectorRand())
 				table_insert(G_GIBS, custom_gib)
 			end
 			table.insert(ent.GS2Gibs, custom_gib)
@@ -459,9 +529,14 @@ function CreateGibs(ent, phys_bone)
 			gib:PhysicsInitConvex(convex)
 			gib:InitPhysics()
 			
+			local phys = gib:GetPhysicsObject()
+
+			phys:SetVelocity(vel + vel * VectorRand())
+			phys:AddAngleVelocity(ang_vel + ang_vel * VectorRand())
+
 			table_insert(G_GIBS, gib)
 		end
-		table.insert(ent.GS2Gibs, gib)
+		table_insert(ent.GS2Gibs, gib)
 	end
 
 	for i = 1, #G_GIBS - max_gibs:GetInt() do
@@ -524,5 +599,12 @@ if CLIENT then
 			end)
 			coroutine.resume(THREADS[mdl])
 		end		
+	end)
+
+	hook.Add("PostCleanupMap", HOOK_NAME, function()
+		for _, gib in ipairs(ents.FindByClass("gs2_gib")) do
+			SafeRemoveEntity(gib)
+		end
+		table.Empty(G_GIBS)
 	end)
 end

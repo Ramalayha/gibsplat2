@@ -34,7 +34,7 @@ function ENT:Think()
 	end
 
 	local phys = ent:GetPhysicsObjectNum(phys_bone)
-
+if phys:GetPos():Length() > 100000 then print("UH OH",phys:GetPos()) end
 	self:SetPos(phys:GetPos())
 	self:SetAngles(phys:GetAngles())
 end
