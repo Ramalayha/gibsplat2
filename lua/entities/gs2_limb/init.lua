@@ -5,6 +5,12 @@ include("shared.lua")
 
 local invis = Color(0,0,0,0)
 
+local function CheckShouldRemove(self, _, _, new)
+	if (bit.band(new, bit.lshift(1, self:GetTargetBone())) != 0) then
+		self:Remove()
+	end
+end
+
 function ENT:Initialize()
 	local body = self:GetBody()
 	self:SetModel(body:GetModel())
@@ -19,4 +25,6 @@ function ENT:Initialize()
 		local bg = body:GetBodygroup(data.id)
 		self:SetBodygroup(data.id, bg)
 	end	
+
+	self:NetworkVarNotify("GibMask", CheckShouldRemove)
 end
