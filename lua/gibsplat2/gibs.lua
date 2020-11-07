@@ -31,6 +31,7 @@ local table_insert = table.insert
 local table_KeyFromValue = table.KeyFromValue
 
 local ents_Create = SERVER and ents.Create or ents.CreateClientside
+local ents_CreateClientProp = ents.CreateClientProp
 local ents_GetAll = ents.GetAll
 
 local ang_zero = Angle(0, 0, 0)
@@ -46,6 +47,15 @@ local GIB_VERSION = 3
 local HOOK_NAME = "GibSplat2"
 
 local THREADS = {}
+
+local _ShouldGib = {}
+
+local function ShouldGib(phys_mat)
+	if (_ShouldGib[phys_mat] == nil) then
+		_ShouldGib[phys_mat] = file.Exists("materials/models/"..phys_mat..".vmt", "GAME")
+	end
+	return _ShouldGib[phys_mat]
+end
 
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
@@ -79,9 +89,10 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 
 	local phys = temp:GetPhysicsObjectNum(phys_bone)
 
-	if !IsValid(phys) then
+	if (!IsValid(phys) or !ShouldGib(phys:GetMaterial())) then
 		temp:Remove()
-		return {}
+		MDL_INDEX[mdl][phys_bone] = {}
+		return MDL_INDEX[mdl][phys_bone]
 	end
 
 	local min, max = phys:GetAABB()

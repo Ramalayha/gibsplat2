@@ -336,7 +336,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							local mat = phys_mat
 
 							if !mat then
-								MATERIAL_CACHE[mesh.material] = MATERIAL_CACHE[mesh.material] or Material(mesh.materil)
+								MATERIAL_CACHE[mesh.material] = MATERIAL_CACHE[mesh.material] or Material(mesh.material)
 								mat = MATERIAL_CACHE[mesh.material]
 							end
 							

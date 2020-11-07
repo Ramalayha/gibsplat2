@@ -275,7 +275,19 @@ function ENTITY:GS2Dismember(phys_bone)
 	end
 end
 
+local _ShouldGib = {}
+
+local function ShouldGib(phys_mat)
+	if (_ShouldGib[phys_mat] == nil) then
+		_ShouldGib[phys_mat] = file.Exists("materials/models/"..phys_mat..".vmt", "GAME")
+	end
+	return _ShouldGib[phys_mat]
+end
+
 function ENTITY:GS2Gib(phys_bone, no_gibs)
+	local phys_mat = self:GetPhysicsObject():GetMaterial()
+	local GibEffects = ShouldGib(phys_mat)
+	if !GibEffects then return end
 	SafeRemoveEntity(self.GS2Limbs[phys_bone])
 	SafeRemoveEntity(self.GS2LimbRelays[phys_bone])
 	self.GS2Limbs[phys_bone] = nil
@@ -405,6 +417,8 @@ function ENTITY:MakeCustomRagdoll()
 	local phys_mat = phys:GetMaterial()
 	self:SetNWString("GS2PhysMat", phys_mat)
 
+	local GibEffects = ShouldGib(phys_mat)
+
 	self.GS2LimbRelays = self.GS2LimbRelays or {}
 	--Damaging ragdolls behaves wierdly when they're picked apart so use these instead
 	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
@@ -463,7 +477,7 @@ function ENTITY:MakeCustomRagdoll()
 
 			local less = less_limbs:GetBool()
 
-			if !const_bs.__nosound then
+			if (GibEffects and !const_bs.__nosound) then
 				sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
 			end
 
@@ -472,9 +486,10 @@ function ENTITY:MakeCustomRagdoll()
 
 			local dir = phys_ang:Up() * 3
 
-			if !const_bs.__noblood then
+			if (GibEffects and !const_bs.__noblood) then
 				local EF = EffectData()
 				EF:SetOrigin(phys_pos)
+				EF:SetColor(self.__gs2bloodcolor or 0)
 
 				for i = 1, 3 do
 					util.Decal("Blood", phys_pos + dir, phys_pos - dir)
@@ -493,7 +508,7 @@ function ENTITY:MakeCustomRagdoll()
 
 			local mask = self:GetNWInt("GS2DisMask", 0)
 			mask = bit_bor(mask, bit_lshift(1, part_info.child))
-			self:SetNWInt("GS2DisMask", mask)	
+			self:SetNWInt("GS2DisMask", mask)
 
 			local dissolve
 
@@ -551,10 +566,10 @@ function ENTITY:MakeCustomRagdoll()
 					net.Broadcast()
 
 					SafeRemoveEntityDelayed(limb, dissolve + 2 - CurTime())
-				else
+				elseif GibEffects then
 					local EF = EffectData()
 					EF:SetEntity(self)
-					EF:SetOrigin(vector_origin)				
+					EF:SetOrigin(vector_origin)		
 					EF:SetAngles(ang_zero)
 					EF:SetHitBox(bone)
 					EF:SetColor(self.__gs2bloodcolor or 0)
@@ -576,7 +591,7 @@ function ENTITY:MakeCustomRagdoll()
 						self:GS2Gib(part_info.parent)
 					end
 				end			
-			elseif !self:GS2IsGibbed(part_info.parent) then				
+			elseif (GibEffects and !self:GS2IsGibbed(part_info.parent)) then				
 				local bone = self:TranslatePhysBoneToBone(part_info.child)
 				local parent = self:GetBoneParent(bone)
 
@@ -624,76 +639,78 @@ function ENTITY:MakeCustomRagdoll()
 
 	RestorePose(self)
 
-	self:AddCallback("PhysicsCollide", function(self, data)
-		local phys = data.PhysObject
-		local phys_bone
-		for i = 0, self:GetPhysicsObjectCount()-1 do
-			if self:GetPhysicsObjectNum(i) == phys then
-				phys_bone = i
-				break
+	if GibEffects then
+		self:AddCallback("PhysicsCollide", function(self, data)
+			local phys = data.PhysObject
+			local phys_bone
+			for i = 0, self:GetPhysicsObjectCount()-1 do
+				if self:GetPhysicsObjectNum(i) == phys then
+					phys_bone = i
+					break
+				end
 			end
-		end
 
-		if (data.Speed > 1000 or (phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH)) then --0 energy = jammed in something			
-			if !self:GS2IsGibbed(phys_bone) then
-				self:GS2Gib(phys_bone)
-			end		
-		elseif (data.Speed > 100) then			
-			if self:GS2IsDismembered(phys_bone) then			
-				util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-				local EF = EffectData()
-				EF:SetOrigin(data.HitPos)
-				EF:SetColor(self.__gs2bloodcolor or 0)
-				util.Effect("BloodImpact", EF)	
-			else			
-				for _, part_info in pairs(CONST_INFO) do
-					if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
-						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-						local EF = EffectData()
-						EF:SetOrigin(data.HitPos)
-						EF:SetColor(self.__gs2bloodcolor or 0)
-						util.Effect("BloodImpact", EF)
-						break
+			if (data.Speed > 1000 or (phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH)) then --0 energy = jammed in something			
+				if !self:GS2IsGibbed(phys_bone) then
+					self:GS2Gib(phys_bone)
+				end		
+			elseif (data.Speed > 100) then			
+				if self:GS2IsDismembered(phys_bone) then			
+					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+					local EF = EffectData()
+					EF:SetOrigin(data.HitPos)
+					EF:SetColor(self.__gs2bloodcolor or 0)
+					util.Effect("BloodImpact", EF)	
+				else			
+					for _, part_info in pairs(CONST_INFO) do
+						if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
+							util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+							local EF = EffectData()
+							EF:SetOrigin(data.HitPos)
+							EF:SetColor(self.__gs2bloodcolor or 0)
+							util.Effect("BloodImpact", EF)
+							break
+						end
 					end
 				end
 			end
-		end
 
-		--Dismemberment from slicing
+			--Dismemberment from slicing
 
-		local phys2 = data.HitObject
+			local phys2 = data.HitObject
 
-		local axis = IsSharp(data.HitEntity)
+			local axis = IsSharp(data.HitEntity)
 
-		if (axis and data.TheirOldVelocity:LengthSqr() > 100 * 100 and IsValid(phys2)) then
-			local vel = phys2:GetVelocityAtPoint(data.HitPos)
-			local ang = phys2:GetAngles()
-			
-			local dir
-			if (axis == AXIS_X) then
-				dir = ang:Forward()				
-			elseif (axis == AXIS_Y) then
-				dir = ang:Right()
-			else
-				dir = ang:Up()
+			if (axis and data.TheirOldVelocity:LengthSqr() > 100 * 100 and IsValid(phys2)) then
+				local vel = phys2:GetVelocityAtPoint(data.HitPos)
+				local ang = phys2:GetAngles()
+				
+				local dir
+				if (axis == AXIS_X) then
+					dir = ang:Forward()				
+				elseif (axis == AXIS_Y) then
+					dir = ang:Right()
+				else
+					dir = ang:Up()
+				end
+
+				local pre_speed = vel:Length()
+
+				vel = vel - dir * dir:Dot(vel)	
+
+				local post_speed = vel:Length()
+
+				local ang_offset = math_acos(post_speed / pre_speed)
+
+				if (ang_offset < 0.25 and math_random() > 0.5) then -- 0.25 ~= 15 degrees
+					local closest = self:GS2GetClosestPhysBone(data.HitPos, phys_bone)
+					if closest then
+						self:GS2Dismember(closest)	
+					end			
+				end
 			end
-
-			local pre_speed = vel:Length()
-
-			vel = vel - dir * dir:Dot(vel)	
-
-			local post_speed = vel:Length()
-
-			local ang_offset = math_acos(post_speed / pre_speed)
-
-			if (ang_offset < 0.25 and math_random() > 0.5) then -- 0.25 ~= 15 degrees
-				local closest = self:GS2GetClosestPhysBone(data.HitPos, phys_bone)
-				if closest then
-					self:GS2Dismember(closest)	
-				end			
-			end
-		end
-	end)
+		end)
+	end
 
 	self.__gs2custom = true
 end

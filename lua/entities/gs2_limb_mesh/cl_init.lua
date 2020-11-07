@@ -64,6 +64,9 @@ end
 
 function ENT:SetMesh(meshes)
 	self.meshes = meshes
+	if (meshes.body and meshes.flesh and meshes.flesh.Material:IsError()) then
+		meshes.flesh.Material = meshes.body.Material
+	end
 end
 
 function ENT:Think()

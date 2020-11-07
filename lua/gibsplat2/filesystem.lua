@@ -273,7 +273,7 @@ function GS2ReadMesh(hash)
 
 	len = F:ReadShort()
 
-	if (len > 0) then
+	if (len and len > 0) then
 		mesh.flesh = {is_flesh = true}
 
 		local mat = F:Read(len)
