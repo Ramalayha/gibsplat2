@@ -240,22 +240,6 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	return meshes
 end
 
-game.AddDecal("BloodSmall", {
-	"decals/flesh/blood1",
-	"decals/flesh/blood2",
-	"decals/flesh/blood3",
-	"decals/flesh/blood4",
-	"decals/flesh/blood5"
-})
-
-game.AddDecal("YellowBloodSmall", {
-	"decals/alienflesh/shot1",
-	"decals/alienflesh/shot2",
-	"decals/alienflesh/shot3",
-	"decals/alienflesh/shot4",
-	"decals/alienflesh/shot5"
-})
-
 local text = file.Read("materials/gibsplat2/skeletons.vmt", "GAME")
 
 local body_types = util.KeyValuesToTable(text or "").body_types or {}
@@ -383,11 +367,13 @@ if CLIENT then
 	end)
 end
 
-function CreateGibs(ent, phys_bone, vel, ang_vel)
+function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 	local factor = gib_factor:GetFloat()
 	if (factor == 0) then
 		return
 	end
+
+	blood_color = blood_color or 0
 
 	local mdl = ent:GetModel()
 	local meshes = GetPhysGibMeshes(mdl, phys_bone)
@@ -462,6 +448,8 @@ function CreateGibs(ent, phys_bone, vel, ang_vel)
 						gib:AddCallback("PhysicsCollide", scripted_ents.Get("gs2_gib_custom").PhysicsCollide)			
 					end
 
+					gib:SetBColor(blood_color)
+
 					local phys_gib = gib:GetPhysicsObject()
 
 					phys_gib:SetVelocity(vel)
@@ -481,6 +469,7 @@ function CreateGibs(ent, phys_bone, vel, ang_vel)
 			gib:SetBody(ent)
 			gib:SetTargetBone(phys_bone)
 			gib:SetGibIndex(key)
+			gib:SetBColor(blood_color)
 			if SERVER then
 				gib:Spawn()
 			else

@@ -3,12 +3,40 @@ include("gibsplat2/gibs.lua")
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
+game.AddDecal("BloodSmall", {
+	"decals/flesh/blood1",
+	"decals/flesh/blood2",
+	"decals/flesh/blood3",
+	"decals/flesh/blood4",
+	"decals/flesh/blood5"
+})
+
+/*game.AddDecal("YellowBloodSmall", {
+	"decals/alienflesh/shot1",
+	"decals/alienflesh/shot2",
+	"decals/alienflesh/shot3",
+	"decals/alienflesh/shot4",
+	"decals/alienflesh/shot5"
+})*/
+
+local decals = {
+	[BLOOD_COLOR_RED] = "BloodSmall",
+	[BLOOD_COLOR_YELLOW] = "YellowBlood",
+	[BLOOD_COLOR_GREEN] = "YellowBlood",
+	[BLOOD_COLOR_ANTLION] = "YellowBlood",
+	[BLOOD_COLOR_ANTLION_WORKER] = "YellowBlood"
+}
+
 local HOOK_NAME = "GibSplat2"
 
 function ENT:SetupDataTables()
 	self:NetworkVar("Int", 0, "GibIndex")
 	self:NetworkVar("Int", 1, "TargetBone")
 	self:NetworkVar("Entity", 0, "Body")
+end
+
+function ENT:SetBColor(color) print(color)
+	self.GS2BloodColor = color
 end
 
 function ENT:InitPhysics()
@@ -92,8 +120,14 @@ end
 
 function ENT:PhysicsCollide(data, phys)
 	if (data.Speed > 100) then
-		util.Decal("BloodSmall", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-		util.Decal("BloodSmall", data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+		local color = self.GS2BloodColor
+		if color then
+			local decal = decals[color]
+			if decal then
+				util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+			end
+		end
 	end
 	
 	if CLIENT then return end

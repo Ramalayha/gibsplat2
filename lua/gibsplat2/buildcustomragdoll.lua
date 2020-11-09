@@ -189,7 +189,7 @@ local function GetClosestPhys(self, pos, target_phys_bone)
 		if is_conn then	
 			local bone_pos = self:GetBoneMatrix(bone):GetTranslation()
 			local d = bone_pos:DistToSqr(pos)
-			if d < dist then
+			if (d < dist) then
 				dist = d
 				bone = i			
 			end
@@ -258,19 +258,18 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
 			local min, max = phys:GetAABB()
 			local bone_pos = phys:LocalToWorld((min + max) * 0.5)--self:GetBoneMatrix(bone):GetTranslation()
 			local d = bone_pos:DistToSqr(pos)
-			if d < dist then
+			if (d < dist) then
 				dist = d
 				closest_bone = phys_bone			
 			end
-		end
-		
+		end		
 	end
 
 	return closest_bone
 end
 
 function ENTITY:GS2Dismember(phys_bone)
-	if self.GS2Joints and self.GS2Joints[phys_bone] then
+	if (self.GS2Joints and self.GS2Joints[phys_bone]) then
 		SafeRemoveEntity(self.GS2Joints[phys_bone][1])	
 	end
 end
@@ -301,7 +300,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			return
 		end
 		mask = bit_bor(mask, phys_mask)
-		if mask == bit_lshift(1, self:GetPhysicsObjectCount()) - 1 then
+		if (mask == bit_lshift(1, self:GetPhysicsObjectCount()) - 1) then
 			if self.GS2Gibs then
 				for _, gib in pairs(self.GS2Gibs) do
 					if IsValid(gib) then
@@ -353,12 +352,12 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 		end
 
 		local phys = self:GetPhysicsObjectNum(phys_bone)
-
-		local pos = phys:GetPos()
-		local ang = phys:GetAngles()
-		local vel = phys:GetVelocity()
 		
-		if IsValid(self) and IsValid(phys) then
+		if IsValid(phys) then
+			local pos = phys:GetPos()
+			local ang = phys:GetAngles()
+			local vel = phys:GetVelocity()
+
 			self._GS2LastGibSound = self._GS2LastGibSound or 0
 			if (!no_gibs and self._GS2LastGibSound + 1 < CurTime()) then
 				sound_Play(snd_gib, phys:GetPos(), 100, 100, 1)
@@ -369,7 +368,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			local bone_name = self:GetBoneName(bone)
 
 			if !no_gibs then
-				local gibs = CreateGibs(self, phys_bone)
+				local gibs = CreateGibs(self, phys_bone, nil, nil, self.__gs2bloodcolor)
 
 				if (gibs and #gibs > 0) then
 					for _, ply in pairs(spectators) do
@@ -644,7 +643,7 @@ function ENTITY:MakeCustomRagdoll()
 			local phys = data.PhysObject
 			local phys_bone
 			for i = 0, self:GetPhysicsObjectCount()-1 do
-				if self:GetPhysicsObjectNum(i) == phys then
+				if (self:GetPhysicsObjectNum(i) == phys) then
 					phys_bone = i
 					break
 				end
@@ -661,16 +660,24 @@ function ENTITY:MakeCustomRagdoll()
 					EF:SetOrigin(data.HitPos)
 					EF:SetColor(self.__gs2bloodcolor or 0)
 					util.Effect("BloodImpact", EF)	
-				else			
-					for _, part_info in pairs(CONST_INFO) do
-						if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
-							util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-							local EF = EffectData()
-							EF:SetOrigin(data.HitPos)
-							EF:SetColor(self.__gs2bloodcolor or 0)
-							util.Effect("BloodImpact", EF)
-							break
+				else	
+					local do_effects = false
+					if (data.Speed > 500) then
+						do_effects = true
+					else
+						for _, part_info in pairs(CONST_INFO) do
+							if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
+								do_effects = true
+								break
+							end
 						end
+					end
+					if do_effects then
+						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+						local EF = EffectData()
+						EF:SetOrigin(data.HitPos)
+						EF:SetColor(self.__gs2bloodcolor or 0)
+						util.Effect("BloodImpact", EF)
 					end
 				end
 			end
