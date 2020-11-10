@@ -436,7 +436,6 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 
 						gib:SetPos(pos)
 						gib:SetAngles(ang)
-						gib:SetBColor(blood_color)
 						gib:Spawn()
 					else
 						gib = ents.CreateClientProp(mdl)
@@ -452,6 +451,8 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 
 						gib:AddCallback("PhysicsCollide", scripted_ents.Get("gs2_gib_custom").PhysicsCollide)			
 					end
+
+					gib:SetBColor(blood_color)
 
 					local phys_gib = gib:GetPhysicsObject()
 

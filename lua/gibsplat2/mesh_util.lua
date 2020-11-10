@@ -31,6 +31,12 @@ function MESH2HASH(mesh, ent, phys_bone)
 	return util.CRC(table.concat(tbl))
 end
 
+local function SafeYield()
+	if coroutine.running() then
+		coroutine.yield()
+	end
+end
+
 function InsertMulti(out, ...)
 	local tbl = {...}
 	local val = tbl[#tbl]
@@ -122,13 +128,13 @@ function GetSortedMeshHashTable(mdl)
 						MESH_HASH_LOOKUP[hash] = MESH_HASH_LOOKUP[hash] or mesh
 						InsertMulti(ret, phys_bone, bg_num, bg_val, hash)																
 					end
-					coroutine.yield()
+					SafeYield()
 				end
-				coroutine.yield()
+				SafeYield()
 			end
-			coroutine.yield()
+			SafeYield()
 		end
-		coroutine.yield()
+		SafeYield()
 	end
 	
 	temp:Remove()
