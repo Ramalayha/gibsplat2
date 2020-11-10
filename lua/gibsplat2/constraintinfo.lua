@@ -12,7 +12,13 @@ function GetModelConstraintInfo(mdl)
 
 	local CONST_INFO = {}
 
-	local KV = util.GetModelInfo(mdl).KeyValues
+	local mdl_info = util.GetModelInfo(mdl)
+
+	if (!mdl_info or !mdl_info.KeyValues) then 
+		return {}
+	end
+
+	local KV = mdl_info.KeyValues
 
 	if KV then
 		for str_part in KV:gmatch[[("?ragdollconstraint"?%s-{.-})]] do

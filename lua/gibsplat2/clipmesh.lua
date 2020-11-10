@@ -106,21 +106,22 @@ end
 
 function VoronoiSplit(mesh, points)
 	local new_meshes = {}
-	for key, p1 in ipairs(points) do
+
+	for key = 1, #points - 1 do
+		local p1 = points[key]
 		local tris = mesh
-		for key2, p2 in ipairs(points) do			
-			if (p1 != p2) then
-				local n = (p2 - p1)
-				n:Normalize()
-				local d = n:Dot((p1 + p2) / 2)
-				tris = ClipMesh(tris, n, d)
-				if (key2 % 3 == 0 and coroutine.running()) then
-					coroutine.yield()
-				end
-				if !tris then
-					break
-				end
+		for key2 = key + 1, #points do
+			local p2 = points[key2]				
+			local n = (p2 - p1)
+			n:Normalize()
+			local d = n:Dot((p1 + p2) / 2)
+			tris = ClipMesh(tris, n, d)
+			if (key2 % 3 == 0 and coroutine.running()) then
+				coroutine.yield()
 			end
+			if !tris then
+				break
+			end			
 		end
 		if tris then
 			new_meshes[key] = tris

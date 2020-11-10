@@ -35,7 +35,7 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Entity", 0, "Body")
 end
 
-function ENT:SetBColor(color) print(color)
+function ENT:SetBColor(color)
 	self.GS2BloodColor = color
 end
 

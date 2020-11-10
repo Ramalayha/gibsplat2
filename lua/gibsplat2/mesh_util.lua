@@ -105,12 +105,6 @@ function GetSortedMeshHashTable(mdl)
 		return MDL_LOOKUP[mdl], MESH_HASH_LOOKUP
 	end
 
-	--local data = GS2ReadMeshData(mdl)
-	if data then
-		MDL_LOOKUP[mdl] = data
-		return data, MESH_HASH_LOOKUP
-	end
-
 	local ret = {}
 	local temp = ClientsideRagdoll(mdl)
 	temp:SetupBones()

@@ -38,7 +38,7 @@ if SERVER then
 		path = path:sub(1,-2)
 		for _, file_name in ipairs(files) do 
 			local mdl = path..file_name
-			if (n < 2000 and file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/model_data/"..util.CRC(mdl)..".txt", "DATA") and IsRagdoll(mdl:sub(1,-4).."phy")) then
+			if (n < 2000 and file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/model_data/"..util.CRC(mdl)..".txt", "DATA") and !file.Exists("materials/gibsplat2/model_data/"..util.CRC(mdl)..".vmt", "GAME") and IsRagdoll(mdl:sub(1,-4).."phy")) then
 				if util.IsValidRagdoll(mdl) then
 					n = n+1
 					models[n] = mdl					
@@ -70,7 +70,11 @@ if SERVER then
 		local mdl = models[key]
 		if !mdl then
 			SafeRemoveEntity(temp)		
-			F:Close()		
+			F:Close()
+			net.Start("GS2Pregen")
+			net.WriteInt(0, 32)
+			net.WriteInt(0, 32)			
+			net.Broadcast()		
 			return
 		end
 		
@@ -104,6 +108,9 @@ if CLIENT then
 	net.Receive("GS2Pregen", function()
 		key = net.ReadInt(32)
 		n = net.ReadInt(32)	
+		if n == 0 then
+			return hook.Remove("HUDPaint", "h")
+		end
 		mdl = net.ReadString()	
 	end)
 	hook.Add("HUDPaint", "h", function()

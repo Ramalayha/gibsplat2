@@ -57,6 +57,8 @@ local function ShouldGib(phys_mat)
 	return _ShouldGib[phys_mat]
 end
 
+local PERCENT = 0
+
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
 		return MDL_INDEX[mdl][phys_bone]
@@ -236,6 +238,8 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (!norec and !mdl_info) then
 		GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
 	end
+
+	PERCENT = PERCENT + 1 / phys_count
 
 	return meshes
 end
@@ -566,12 +570,15 @@ hook.Add("Think", "GS2Gibs", function()
 
 	if !bool then
 		print(mdl, err)
+	elseif err then
+		PERCENT = err
 	end
 
 	if (coroutine.status(thread) == "dead") then
 		THREADS[mdl] = nil
 		print("Generated gibs for "..mdl.." in "..math.Round(SysTime() - start, 3).." seconds ("..table.Count(THREADS).." models left)")
-		start = nil							
+		start = nil	
+		PERCENT = 0						
 	end			
 end)
 
@@ -591,6 +598,27 @@ if SERVER then
 	end)
 end
 if CLIENT then
+	local form = [[GS2: Building gibs for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
+	local form2 = [[GS2: Building gibs for "%s" (%3.2f%% done)]]
+
+	hook.Add("HUDPaint", "GS2BuildGibsDisplay", function()
+		local mdl = next(THREADS)
+		if !mdl then return end
+
+		local nmodels = table.Count(THREADS)
+
+		local form = nmodels > 1 and form or form2
+
+		local msg = form:format(mdl, 100 * PERCENT, nmodels - 1)
+
+		local w, h = surface.GetTextSize(msg)
+
+		surface.SetFont("DebugFixed")
+		surface.SetTextColor(255, 0, 0)
+		surface.SetTextPos(ScrW() * 0.99 - w, ScrH() / 2 - h * 2)
+		surface.DrawText(msg)
+	end)
+
 	hook.Add("NetworkEntityCreated", "GS2Gibs", function(ent)
 		if !enabled:GetBool() then return end
 		local mdl = ent:GetModel()
