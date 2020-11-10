@@ -68,7 +68,15 @@ function GetBoneMeshes(ent, phys_bone, norec)
 		
 		local phys_count = temp:GetPhysicsObjectCount()
 
-		local phys_mat = temp:GetPhysicsObject():GetMaterial()
+		local phys_mat = ""
+
+		for phys_bone = 0, phys_count - 1 do
+			local phys = temp:GetPhysicsObjectNum(phys_bone)
+			if IsValid(phys) then
+				phys_mat = phys:GetMaterial()
+				break
+			end
+		end
 
 		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/"..phys_mat)
 		
