@@ -72,7 +72,7 @@ local MESH_CACHE = {}
 
 local function GetModelMeshesCached(mdl, bg_mask)
 	if (!MESH_CACHE[mdl] or !MESH_CACHE[mdl][bg_mask]) then
-		SetMulti(MESH_CACHE, mdl, bg_mask, util.GetModelMeshes(mdl, 0, bg_mask))
+		SetMulti(MESH_CACHE, mdl, bg_mask, util.GetModelMeshes(mdl, 0, bg_mask) or {})
 	end
 	return MESH_CACHE[mdl][bg_mask]
 end
