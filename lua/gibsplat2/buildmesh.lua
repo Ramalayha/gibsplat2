@@ -32,7 +32,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 			THREADS[mdl] = nil
 		end
 	end
- 
+
 	if (!MDL_INDEX[mdl] and THREADS[mdl] and coroutine.running() != THREADS[mdl]) then
 		while (coroutine.status(THREADS[mdl]) != "dead") do 
 			coroutine.resume(THREADS[mdl]) --force it to finish
@@ -106,7 +106,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 		for phys_bone = 0, phys_count - 1 do
 			if !hash_tbl[phys_bone] then
 				continue
-			end
+			end 
 			local bone = table.KeyFromValue(BONE2PBONE, phys_bone)
 			local bone_matrix = BONES[bone]
 			local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
@@ -149,25 +149,20 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							end
 						end
 
-						local new_verts = {}
-						for vert_index, vert in pairs(mesh.verticies) do
-							local new_vert = table.Copy(vert)
-							new_vert.pos = WorldToLocal(vert.pos, ang_zero, bone_pos, bone_ang)
-							new_verts[vert_index] = new_vert
-							if (vert_index % 500 == 0 and coroutine.running()) then
-								coroutine.yield()
-							end 
+						local verts = mesh.verticies
+						
+						for vert_index, vert in pairs(verts) do
+							vert._pos = vert._pos or vert.pos
+							vert.pos = WorldToLocal(vert._pos, ang_zero, bone_pos, bone_ang)
+							
+							vert.is_conn = nil
+							vert.is_strong = nil
 						end
 
 						local new_tris = {}
 						
-						local TRIS = {}				
-						for vert_index, vert in ipairs(mesh.triangles) do
-							TRIS[vert_index] = new_verts[table.KeyFromValue(mesh.verticies, vert)]
-							if (vert_index % 500 == 0 and coroutine.running()) then
-								coroutine.yield()
-							end
-						end
+						local TRIS = mesh.triangles			
+						
 						for tri_idx = 1, #TRIS-2, 3 do 
 							local is_strong = true
 							for offset = 0, 2 do
@@ -219,7 +214,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							continue
 						end
 					
-						for vert_index, vert in pairs(new_verts) do
+						for vert_index, vert in pairs(verts) do
 							if !vert.is_strong then								
 								for _, weight in pairs(vert.weights) do
 									if BONE2PBONE[weight.bone] == phys_bone then
@@ -295,7 +290,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							end 						
 						end	
 							
-						new_tris = {}
+						table.Empty(new_tris)
 						
 						for tri_idx = 1, #TRIS-2, 3 do
 							local strong_count = 0
@@ -347,6 +342,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 								is_flesh = true
 							}) 
 						end	
+
 						PERCENT = PERCENT + incr
 					end
 					coroutine.yield()

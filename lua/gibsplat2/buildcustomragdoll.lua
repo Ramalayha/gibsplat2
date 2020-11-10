@@ -57,13 +57,14 @@ local ang_180 = Angle(180, 0, 0)
 local oob_pos = vector_origin
 
 hook.Add("InitPostEntity", "GS2InitOOBPos", function()
-	oob_pos = ents.GetAll()[2]:GetPos() --1 is world so pick 2
+	local e = ents.GetAll()[2]
+	oob_pos = e:GetPos() --1 is world so pick 2
 
 	local offset = Vector(0, 0, 50000)
 
 	local tr = {
 		start = oob_pos,
-		endpos = oob_pos - offset,
+		endpos = oob_pos + offset,
 		mask = MASK_NPCWORLDSTATIC
 	}
 
@@ -75,18 +76,20 @@ hook.Add("InitPostEntity", "GS2InitOOBPos", function()
 			break
 		end
 		
-		res.HitPos.z = res.HitPos.z - 1
+		res.HitPos.z = res.HitPos.z + 1
 		tr.start = res.HitPos
-		tr.endpos = tr.start - offset
+		tr.endpos = tr.start + offset
 	end
 
 	tr.start = res.StartPos
-	tr.endpos = tr.start + offset
+	tr.endpos = tr.start - offset
 
 	res = util.TraceLine(tr)
 
-	oob_pos = res.HitPos	
+	oob_pos = res.HitPos
 	
+	print("GS2: oob spot set to "..tostring(oob_pos))
+
 	hook.Remove("InitPostEntity", "GS2InitOOBPos")
 end)
 
@@ -395,9 +398,8 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			--Wait 1 second
 			timer.Simple(1, function()
 				if IsValid(phys) then					
-					phys:EnableMotion(false)
-					local _, max = phys:GetAABB()
-					phys:SetPos(oob_pos - max)
+					phys:EnableMotion(false)					
+					phys:SetPos(oob_pos)
 					phys:SetAngles(ang_zero)
 				end
 			end)

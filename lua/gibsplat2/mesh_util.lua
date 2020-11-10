@@ -128,6 +128,7 @@ function GetSortedMeshHashTable(mdl)
 						MESH_HASH_LOOKUP[hash] = MESH_HASH_LOOKUP[hash] or mesh
 						InsertMulti(ret, phys_bone, bg_num, bg_val, hash)																
 					end
+					coroutine.yield()
 				end
 				coroutine.yield()
 			end
