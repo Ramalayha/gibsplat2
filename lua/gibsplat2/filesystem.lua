@@ -82,69 +82,76 @@ function GS2ReadGibData(hash, out, size)
 		return
 	end
 
-	local version = F:ReadShort()
+	local succ = pcall(function()
+		local version = F:ReadShort()
 
-	if (version != GIB_VERSION) then
-		F:Close()
-		print("GS2ReadGibData: File is wrong version ("..version..") should be "..GIB_VERSION.."!",hash)
-		file.Delete(file_path)
-		return
-	end
-
-	local data = {hash = hash}
-
-	for i = 1, F:ReadShort() do
-		local min = F:ReadVector()
-		local max = F:ReadVector()
-		local center = (min + max) / 2
-
-		local vertex_buffer = {}
-		local index_buffer = {}
-		local triangles = {}
-		local conns = {}
-
-		for j = 1, F:ReadShort() do
-			conns[j] = F:ReadShort()
+		if (version != GIB_VERSION) then
+			F:Close()
+			print("GS2ReadGibData: File is wrong version ("..version..") should be "..GIB_VERSION.."!",hash)
+			file.Delete(file_path..".txt")
+			return
 		end
 
-		for j = 1, F:ReadLong() do
-			vertex_buffer[j] = F:ReadVector()
+		local data = {hash = hash}
+
+		for i = 1, F:ReadShort() do
+			local min = F:ReadVector()
+			local max = F:ReadVector()
+			local center = (min + max) / 2
+
+			local vertex_buffer = {}
+			local index_buffer = {}
+			local triangles = {}
+			local conns = {}
+
+			for j = 1, F:ReadShort() do
+				conns[j] = F:ReadShort()
+			end
+
+			for j = 1, F:ReadLong() do
+				vertex_buffer[j] = F:ReadVector()
+			end
+
+			for j = 1, F:ReadLong() do
+				local idx = F:ReadLong()
+				index_buffer[j] = idx
+
+				local vert = {pos = vertex_buffer[idx]}
+				vert.normal = (vert.pos - center):GetNormal()
+				vert.u = vert.pos.x / size.x + vert.pos.z / size.z
+				vert.v = vert.pos.y / size.y + vert.pos.z / size.z
+
+				triangles[j] = vert
+			end
+					
+			local entry = {
+				vertex_buffer 	= vertex_buffer,
+				index_buffer 	= index_buffer,
+				triangles 		= triangles,
+				conns 			= conns,
+				min 			= min,
+				max 			= max,
+				center 			= center
+			}
+
+			if CLIENT then 
+				local M = Mesh()
+				M:BuildFromTriangles(triangles)
+				entry.mesh = M
+			end
+
+			data[i] = entry
 		end
 
-		for j = 1, F:ReadLong() do
-			local idx = F:ReadLong()
-			index_buffer[j] = idx
-
-			local vert = {pos = vertex_buffer[idx]}
-			vert.normal = (vert.pos - center):GetNormal()
-			vert.u = vert.pos.x / size.x + vert.pos.z / size.z
-			vert.v = vert.pos.y / size.y + vert.pos.z / size.z
-
-			triangles[j] = vert
-		end
-				
-		local entry = {
-			vertex_buffer 	= vertex_buffer,
-			index_buffer 	= index_buffer,
-			triangles 		= triangles,
-			conns 			= conns,
-			min 			= min,
-			max 			= max,
-			center 			= center
-		}
-
-		if CLIENT then 
-			local M = Mesh()
-			M:BuildFromTriangles(triangles)
-			entry.mesh = M
-		end
-
-		data[i] = entry
-	end
-
-	out[hash] = data
+		out[hash] = data
+	end)
 
 	F:Close()
+	
+	if !succ then
+		print("GS2ReadGibData: deleting corrupted file "..hash)
+		file.Delete(file_path..".txt")
+	end
 end
 
 local MESH_CACHE = {}
@@ -247,52 +254,63 @@ function GS2ReadMesh(hash)
 		return
 	end
 
-	if (F:ReadShort() != MESH_VERSION) then
-		file.Delete(file_path)
-		return
-	end
+	local succ, ret = pcall(function()
+		if (F:ReadShort() != MESH_VERSION) then
+			F:Close()
+			print("GS2ReadMesh: File is wrong version ("..version..") should be "..GIB_VERSION.."!", hash)
+			file.Delete(file_path..".txt")
+			return
+		end
 
-	local mesh = {}
+		local mesh = {}
 
-	local len = F:ReadShort()
+		local len = F:ReadShort()
 
-	if (len > 0) then
-		mesh.body = {}
+		if (len > 0) then
+			mesh.body = {}
 
-		local mat = F:Read(len)
+			local mat = F:Read(len)
 
-		MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
+			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
-		mesh.body.Material = MATERIAL_CACHE[mat]
+			mesh.body.Material = MATERIAL_CACHE[mat]
 
-		mesh.body.tris = ReadTriangles(F)
+			mesh.body.tris = ReadTriangles(F)
 
-		mesh.body.Mesh = Mesh()
-		mesh.body.Mesh:BuildFromTriangles(mesh.body.tris)
-	end
+			mesh.body.Mesh = Mesh()
+			mesh.body.Mesh:BuildFromTriangles(mesh.body.tris)
+		end
 
-	len = F:ReadShort()
+		len = F:ReadShort()
 
-	if (len and len > 0) then
-		mesh.flesh = {is_flesh = true}
+		if (len and len > 0) then
+			mesh.flesh = {is_flesh = true}
 
-		local mat = F:Read(len)
+			local mat = F:Read(len)
 
-		MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
+			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
-		mesh.flesh.Material = MATERIAL_CACHE[mat]
+			mesh.flesh.Material = MATERIAL_CACHE[mat]
 
-		mesh.flesh.tris = ReadTriangles(F)
+			mesh.flesh.tris = ReadTriangles(F)
 
-		mesh.flesh.Mesh = Mesh()
-		mesh.flesh.Mesh:BuildFromTriangles(mesh.flesh.tris)
-	end
+			mesh.flesh.Mesh = Mesh()
+			mesh.flesh.Mesh:BuildFromTriangles(mesh.flesh.tris)
+		end
+
+		MESH_CACHE[hash] = mesh
+
+		return mesh
+	end)
 
 	F:Close()
 
-	MESH_CACHE[hash] = mesh
-
-	return mesh
+	if !succ then 
+		print("GS2ReadMesh: deleting corrupted file "..file_name)
+		file.Delete(file_path..".txt")
+	else
+		return ret
+	end
 end
 
 function GS2WriteMeshData(data)
@@ -401,7 +419,7 @@ function GS2ReadModelData(mdl)
 	if (version != MDL_VERSION) then
 		F:Close()
 		print("GS2ReadModelData: File is wrong version ("..version..") should be "..MDL_VERSION.."!",hash)
-		file.Delete(file_path)
+		file.Delete(file_path..".txt")
 		return
 	end
 

@@ -111,6 +111,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 		incr = 1 / incr
 
+		coroutine.yield()
+
 		for phys_bone = 0, phys_count - 1 do
 			if !hash_tbl[phys_bone] then
 				continue
@@ -168,6 +170,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 						end
 
 						local new_tris = {}
+						local new_verts = {}
 						
 						local TRIS = mesh.triangles			
 						
@@ -188,9 +191,21 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							if is_strong then
 								for offset = 0, 2 do
 									local vert = TRIS[tri_idx + offset]
-											
 									vert.is_strong = true
-									table.insert(new_tris, vert)
+									if !new_verts[vert] then
+										local new_vert = {
+											pos = vert.pos * 1,
+											normal = (vert.normal or vector_origin) * 1,
+											tangent = (vert.tangent or vector_origin) * 1,
+											binormal = (vert.binormal or vector_origin) * 1,
+											u = vert.u,
+											v = vert.v,
+											userdata = vert.userdata,
+											is_strong = true
+										}
+										new_verts[vert] = new_vert
+									end
+									table.insert(new_tris, new_verts[vert])	
 								end
 							end
 							if (tri_idx % 500 == 0 and coroutine.running()) then
@@ -298,8 +313,9 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							end 						
 						end	
 							
-						table.Empty(new_tris)
-						
+						new_tris = {}
+						new_verts = {}				
+
 						for tri_idx = 1, #TRIS-2, 3 do
 							local strong_count = 0
 							local conn_count = 0
@@ -323,7 +339,20 @@ function GetBoneMeshes(ent, phys_bone, norec)
 									!vert1.pos:IsEqualTol(vert3.pos, 0) and
 									!vert2.pos:IsEqualTol(vert3.pos, 0)) then
 									for offset = 0, 2 do
-										table.insert(new_tris, TRIS[tri_idx + offset])					
+										local vert = TRIS[tri_idx + offset]
+										if !new_verts[vert] then
+											local new_vert = {
+												pos = vert.pos * 1,
+												normal = (vert.normal or vector_origin) * 1,
+												tangent = (vert.tangent or vector_origin) * 1,
+												binormal = (vert.binormal or vector_origin) * 1,
+												u = vert.u,
+												v = vert.v,
+												userdata = vert.userdata
+											}
+											new_verts[vert] = new_vert
+										end
+										table.insert(new_tris, new_verts[vert])					
 									end				
 								end
 							end
