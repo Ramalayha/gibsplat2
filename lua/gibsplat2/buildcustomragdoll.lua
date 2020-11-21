@@ -380,13 +380,20 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				end
 
 				local min, max = phys:GetAABB()
-
-				local center = (min + max) / 2
-
+				
 				local EF = EffectData()
-				EF:SetOrigin(center)
 				EF:SetColor(self.__gs2bloodcolor or 0)
-				util.Effect("BloodImpact", EF)
+				local pos = Vector()
+				for i = 1, math.random(1, min:Distance(max)) do
+					pos.x = math.Rand(min.x, max.x)
+					pos.y = math.Rand(min.y, max.y)
+					pos.z = math.Rand(min.z, max.z)
+					pos = phys:LocalToWorld(pos)
+					
+					EF:SetOrigin(pos)
+					EF:SetAngles(AngleRand())					
+					util.Effect("BloodImpact", EF)
+				end
 			end	
 				
 			phys:SetContents(CONTENTS_EMPTY)
@@ -642,6 +649,12 @@ function ENTITY:MakeCustomRagdoll()
 
 	if GibEffects then
 		self:AddCallback("PhysicsCollide", function(self, data)
+			local time = CurTime()
+			self.GS2LastCollide = self.GS2LastCollide or time
+			if (self.GS2LastCollide == time) then
+				return --Only run once per frame
+			end
+			self.GS2LastCollide = time
 			local phys = data.PhysObject
 			local phys_bone
 			for i = 0, self:GetPhysicsObjectCount()-1 do

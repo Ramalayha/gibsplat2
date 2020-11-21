@@ -2,24 +2,28 @@
 	Code borrowed from source sdk with slight modifications
 ]]
 
-local COLLIDE_CHANCE = 0.005
-local ATTACH_CHANCE = 0.01
+local DECAL_CHANCE = 0.01
+local LINGER_CHANCE = 0.3
 
-game.AddDecal("BloodSmall", {
+local blood_small = {
 	"decals/flesh/blood1",
 	"decals/flesh/blood2",
 	"decals/flesh/blood3",
 	"decals/flesh/blood4",
 	"decals/flesh/blood5"
-})
+}
 
-game.AddDecal("YellowBloodSmall", {
+local blood_small_yellow = {
 	"decals/alienflesh/shot1",
 	"decals/alienflesh/shot2",
 	"decals/alienflesh/shot3",
 	"decals/alienflesh/shot4",
 	"decals/alienflesh/shot5"
-})
+}
+
+game.AddDecal("BloodSmall", blood_small)
+
+game.AddDecal("BloodSmallYellow", blood_small_yellow)
 
 local bit_band = bit.band
 local bit_lshift = bit.lshift
@@ -58,40 +62,57 @@ function EFFECT:Init(data)
 	self:SetParentPhysNum(self.Body:TranslateBoneToPhysBone(self.Bone))
 
 	self.Emitter = ParticleEmitter(bone_pos, false)
+	self.Emitter3D = ParticleEmitter(bone_pos, true)
 
 	self.Particles = {}
 end
 
+local red = Vector(72, 0, 0)
+local yellow = Vector(195, 195, 0)
+
 local function OnCollide(self, pos, norm)
-	if (self.BloodColor == BLOOD_COLOR_RED) then
-		util.Decal("BloodSmall", pos, norm)
-	else
-		util.Decal("YellowBlood", pos, norm)
+	if (math.random() < DECAL_CHANCE) then
+		if (self.BloodColor == BLOOD_COLOR_RED) then
+			util.Decal("BloodSmall", pos, norm)
+		else
+			util.Decal("YellowBlood", pos, norm)
+		end
 	end
 
-	local emitter = ParticleEmitter(pos, true)
+	if (IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
+		local mat
+		if (self.BloodColor == BLOOD_COLOR_RED) then
+			mat = blood_small[math.random(1, #blood_small)]
+		else
+			mat = blood_small_yellow[math.random(1, #blood_small_yellow)]
+		end
+		local particle = self.Emitter:Add(mat, pos)
 
-	if IsValid(emitter) then		
-		local particle = emitter:Add("effects/blood_puff", pos + Vector(0,0,10))
+		local ang = norm:Angle()
+		ang:RotateAroundAxis(norm, math.Rand(0, 360))
 
-		particle:SetAngles(EyeAngles())
+		particle:SetAngles(ang)
 
-		local size = math.Rand(2, 4)
-		particle:SetStartSize(size)	
-		particle:SetEndSize(size * 2)
+		local size = math.Rand(0.5, 1)
+		particle:SetStartSize(size)
+		particle:SetEndSize(size)
 
 		particle:SetStartAlpha(255)
 		particle:SetEndAlpha(255)
 		--particle:SetRoll(math.random(0, 360))
 		
-		particle:SetLifeTime(10)
+		particle:SetLifeTime(0)
 		particle:SetDieTime(10)
 
+		local color = render.GetLightColor(pos + norm)
+		
 		if (self.BloodColor == BLOOD_COLOR_RED) then
-			particle:SetColor(72, 0, 0)
+			color:Mul(red)
 		else
-			particle:SetColor(195, 195, 0)
+			color:Mul(yellow)
 		end
+
+		particle:SetColor(color.x, color.y, color.z)
 	end
 
 	self:SetDieTime(0)
@@ -139,23 +160,22 @@ function EFFECT:Think() --do return false end
 		particle:SetStartLength(math.Rand(1.25, 2.75) * 5)
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(0.5, 1))
+
+		local color = render.GetLightColor(pos) * 1.5
+		
 		if (self.BloodColor == BLOOD_COLOR_RED) then
-			particle:SetColor(72, 0, 0)
+			color:Mul(red)
 		else
-			particle:SetColor(195, 195, 0)
+			color:Mul(yellow)
 		end
+
+		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		if math.random() < COLLIDE_CHANCE then
-			particle.BloodColor = self.BloodColor
-			particle.Emitter = self.Emitter
-			particle:SetCollideCallback(OnCollide)
-		end
-
-		if (math.random() < ATTACH_CHANCE) then
-			particle.Attach = true
-		end
+		particle.BloodColor = self.BloodColor
+		particle.Emitter = self.Emitter3D
+		particle:SetCollideCallback(OnCollide)
 	end
 
 	for i = 1, 12 do --24
@@ -179,24 +199,23 @@ function EFFECT:Think() --do return false end
 		particle:SetStartSize(math.Rand(0.025, 0.05))
 		particle:SetStartLength(math.Rand(2.5, 3.75))
 		particle:SetLifeTime(0)
-		particle:SetDieTime(math.Rand(0.5, 1))
+		particle:SetDieTime(math.Rand(5, 10))
+
+		local color = render.GetLightColor(pos) * 1.5
+		
 		if (self.BloodColor == BLOOD_COLOR_RED) then
-			particle:SetColor(72, 0, 0)
+			color:Mul(red)
 		else
-			particle:SetColor(195, 195, 0)
+			color:Mul(yellow)
 		end
+
+		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		if math.random() < COLLIDE_CHANCE then
-			particle.BloodColor = self.BloodColor
-			particle.Emitter = self.Emitter
-			particle:SetCollideCallback(OnCollide)
-		end
-
-		if (math.random() < ATTACH_CHANCE) then
-			particle.Attach = true
-		end
+		particle.BloodColor = self.BloodColor
+		particle.Emitter = self.Emitter3D
+		particle:SetCollideCallback(OnCollide)
 	end
 
 	for i = 1, 3 do --6
@@ -223,21 +242,21 @@ function EFFECT:Think() --do return false end
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(0.01, 0.03))
 
-		local colorRamp = math.Rand(0.75, 1.25)
+		local color = render.GetLightColor(pos) * 1.5
 
 		if (self.BloodColor == BLOOD_COLOR_RED) then
-			particle:SetColor(72 * colorRamp, 0, 0)
+			color:Mul(red)
 		else
-			particle:SetColor(195 * colorRamp, 195 * colorRamp, 0)
+			color:Mul(yellow)
 		end
+
+		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		if math.random() < COLLIDE_CHANCE then
-			particle.BloodColor = self.BloodColor
-			particle.Emitter = self.Emitter
-			particle:SetCollideCallback(OnCollide)
-		end
+		particle.BloodColor = self.BloodColor
+		particle.Emitter = self.Emitter3D
+		particle:SetCollideCallback(OnCollide)
 	end
 
 	self:NextThink(cur_time + 1)
