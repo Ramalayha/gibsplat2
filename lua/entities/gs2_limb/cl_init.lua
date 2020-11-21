@@ -124,8 +124,6 @@ end
 function ENT:Initialize()
 	self:SetLOD(0)
 	
-	self.Created = CurTime()
-
 	self.GS2BoneList = {}
 
 	self.BBID = self:AddCallback("BuildBonePositions", BuildBones)
@@ -440,6 +438,7 @@ end)
 hook.Add("NotifyShouldTransmit", HOOK_NAME, function(ent, should)
 	if (should and ent.UpdateRenderInfo) then
 		ent.GS2RenderMeshes = nil
+		ent.BBID = ent:AddCallback("BuildBonePositions", BuildBones)
 		ent:UpdateRenderInfo()
 	end
 end)
