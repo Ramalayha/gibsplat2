@@ -138,6 +138,10 @@ function ENT:OnRemove()
 end
 
 function ENT:Think()
+	if self.DoUpdate then
+		self.DoUpdate = nil
+		self:UpdateRenderInfo()
+	end
 	local body = self:GetBody()
 	local dis_mask = self:GetDisMask()
 	local gib_mask = self:GetGibMask()
@@ -439,6 +443,6 @@ hook.Add("NotifyShouldTransmit", HOOK_NAME, function(ent, should)
 	if (should and ent.UpdateRenderInfo) then
 		ent.GS2RenderMeshes = nil
 		ent.BBID = ent:AddCallback("BuildBonePositions", BuildBones)
-		ent:UpdateRenderInfo()
+		ent.DoUpdate = true
 	end
 end)
