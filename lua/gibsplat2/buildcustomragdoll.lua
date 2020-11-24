@@ -18,6 +18,12 @@ local decals = {
 	alienflesh = "YellowBlood"
 }
 
+local blood_colors = {
+	flesh = BLOOD_COLOR_RED,
+	zombieflesh = BLOOD_COLOR_RED,
+	alienflesh = BLOOD_COLOR_YELLOW
+}
+
 local CreateGibs = CreateGibs
 local SetPhysConstraintSystem = SetPhysConstraintSystem
 local SafeRemoveEntity = SafeRemoveEntity
@@ -361,6 +367,8 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			local ang = phys:GetAngles()
 			local vel = phys:GetVelocity()
 
+			local blood_color = blood_colors[phys:GetMaterial()]
+
 			self._GS2LastGibSound = self._GS2LastGibSound or 0
 			if (!no_gibs and self._GS2LastGibSound + 1 < CurTime()) then
 				sound_Play(snd_gib, phys:GetPos(), 100, 100, 1)
@@ -370,8 +378,8 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			local bone = self:TranslatePhysBoneToBone(phys_bone)
 			local bone_name = self:GetBoneName(bone)
 
-			if !no_gibs then
-				local gibs = CreateGibs(self, phys_bone, nil, nil, self.__gs2bloodcolor)
+			if (!no_gibs and blood_color) then
+				local gibs = CreateGibs(self, phys_bone, nil, nil, blood_color)
 
 				if (gibs and #gibs > 0) then
 					for _, ply in pairs(spectators) do
@@ -382,9 +390,9 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 				local min, max = phys:GetAABB()
 				
 				local EF = EffectData()
-				EF:SetColor(self.__gs2bloodcolor or 0)
+				EF:SetColor(blood_color)
 				local pos = Vector()
-				for i = 1, math.random(1, min:Distance(max)) do
+				for i = 1, math.Clamp(math.random(1, min:Distance(max)), 1, 5) do
 					pos.x = math.Rand(min.x, max.x)
 					pos.y = math.Rand(min.y, max.y)
 					pos.z = math.Rand(min.z, max.z)
@@ -492,12 +500,14 @@ function ENTITY:MakeCustomRagdoll()
 			local phys_pos = phys_child:GetPos()
 			local phys_ang = phys_child:GetAngles()
 
+			local blood_color = blood_colors[phys_child:GetMaterial()]
+
 			local dir = phys_ang:Up() * 3
 
-			if (GibEffects and !const_bs.__noblood) then
+			if (GibEffects and !const_bs.__noblood and blood_color) then
 				local EF = EffectData()
 				EF:SetOrigin(phys_pos)
-				EF:SetColor(self.__gs2bloodcolor or 0)
+				EF:SetColor(blood_color)
 
 				for i = 1, 3 do
 					util.Decal("Blood", phys_pos + dir, phys_pos - dir)
@@ -574,13 +584,14 @@ function ENTITY:MakeCustomRagdoll()
 					net.Broadcast()
 
 					SafeRemoveEntityDelayed(limb, dissolve + 2 - CurTime())
-				elseif GibEffects then
+				elseif (GibEffects and blood_color) then
 					local EF = EffectData()
 					EF:SetEntity(self)
 					EF:SetOrigin(vector_origin)		
 					EF:SetAngles(ang_zero)
 					EF:SetHitBox(bone)
-					EF:SetColor(self.__gs2bloodcolor or 0)
+					EF:SetColor(blood_color)
+					EF:SetScale(phys_child:GetVolume() / 200)
 					util.Effect("gs2_bloodspray", EF)
 				end
 			end
@@ -599,7 +610,7 @@ function ENTITY:MakeCustomRagdoll()
 						self:GS2Gib(part_info.parent)
 					end
 				end			
-			elseif (GibEffects and !self:GS2IsGibbed(part_info.parent)) then				
+			elseif (GibEffects and !self:GS2IsGibbed(part_info.parent) and blood_color) then				
 				local bone = self:TranslatePhysBoneToBone(part_info.child)
 				local parent = self:GetBoneParent(bone)
 
@@ -612,10 +623,11 @@ function ENTITY:MakeCustomRagdoll()
 
 				local EF = EffectData()
 				EF:SetEntity(self)
-				EF:SetOrigin(lpos)				
+				EF:SetOrigin(lpos * 0.7)				
 				EF:SetAngles(lang)
 				EF:SetHitBox(parent)
-				EF:SetColor(self.__gs2bloodcolor or 0)
+				EF:SetColor(blood_color)
+				EF:SetScale(phys_parent:GetVolume() / 200)
 				util.Effect("gs2_bloodspray", EF)
 
 				--RestorePose(self)
@@ -671,10 +683,12 @@ function ENTITY:MakeCustomRagdoll()
 			elseif (data.Speed > 100) then			
 				if self:GS2IsDismembered(phys_bone) then			
 					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-					local EF = EffectData()
-					EF:SetOrigin(data.HitPos)
-					EF:SetColor(self.__gs2bloodcolor or 0)
-					util.Effect("BloodImpact", EF)	
+					if blood_color then
+						local EF = EffectData()
+						EF:SetOrigin(data.HitPos)
+						EF:SetColor(blood_color)
+						util.Effect("BloodImpact", EF)
+					end
 				else	
 					local do_effects = false
 					if (data.Speed > 500) then
@@ -689,10 +703,12 @@ function ENTITY:MakeCustomRagdoll()
 					end
 					if do_effects then
 						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-						local EF = EffectData()
-						EF:SetOrigin(data.HitPos)
-						EF:SetColor(self.__gs2bloodcolor or 0)
-						util.Effect("BloodImpact", EF)
+						if blood_color then
+							local EF = EffectData()
+							EF:SetOrigin(data.HitPos)
+							EF:SetColor(blood_color)
+							util.Effect("BloodImpact", EF)
+						end
 					end
 				end
 			end

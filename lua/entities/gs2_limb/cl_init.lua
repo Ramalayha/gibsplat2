@@ -127,6 +127,8 @@ function ENT:Initialize()
 	self.GS2BoneList = {}
 
 	self.BBID = self:AddCallback("BuildBonePositions", BuildBones)
+
+	self:SetupBones()
 end
 
 function ENT:OnRemove()

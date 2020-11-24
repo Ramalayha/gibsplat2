@@ -11,7 +11,6 @@ local HOOK_NAME = "GibSplat2"
 
 local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
-	doll.__gs2bloodcolor = ent:GetBloodColor()
 	doll:MakeCustomRagdoll()
 	if ent.__forcegib then 
 		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib)

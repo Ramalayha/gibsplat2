@@ -6,27 +6,23 @@ local DECAL_CHANCE = 0.01
 local LINGER_CHANCE = 0.3
 
 local blood_small = {
-	"decals/flesh/blood1",
-	"decals/flesh/blood2",
-	"decals/flesh/blood3",
-	"decals/flesh/blood4",
-	"decals/flesh/blood5"
-}
-
-local blood_small_yellow = {
-	"decals/alienflesh/shot1",
-	"decals/alienflesh/shot2",
-	"decals/alienflesh/shot3",
-	"decals/alienflesh/shot4",
-	"decals/alienflesh/shot5"
+	"decals/genericflesh/blood1",
+	"decals/genericflesh/blood2",
+	"decals/genericflesh/blood3",
+	"decals/genericflesh/blood4",
+	"decals/genericflesh/blood5"
 }
 
 game.AddDecal("BloodSmall", blood_small)
 
-game.AddDecal("BloodSmallYellow", blood_small_yellow)
-
 local bit_band = bit.band
 local bit_lshift = bit.lshift
+
+local blood_colors = {
+	[BLOOD_COLOR_RED] = Vector(72, 0, 0),
+	[BLOOD_COLOR_YELLOW] = Vector(195, 195, 0),
+	[BLOOD_COLOR_GREEN] = Vector(195, 195, 0)
+}
 
 function EFFECT:Init(data)
 	self.LocalPos = data:GetOrigin()
@@ -36,8 +32,9 @@ function EFFECT:Init(data)
 	self.Color = data:GetColor()
 	self.Bone = data:GetHitBox()
 	self.Created = CurTime()
-	self.DieTime = 5
-	self.BloodColor = data:GetColor() or BLOOD_COLOR_RED
+	self.DieTime = math.Clamp(data:GetScale(), 1, 10)
+	self.Blood = data:GetColor()
+	self.BloodColor = blood_colors[self.Blood] or Vector(255, 255, 255)
 
 	if !IsValid(self.Body) then
 		self:Remove()
@@ -67,25 +64,37 @@ function EFFECT:Init(data)
 	self.Particles = {}
 end
 
-local red = Vector(72, 0, 0)
-local yellow = Vector(195, 195, 0)
+local trace = {
+	mask = MASK_NPCWORLDSTATIC
+}
 
 local function OnCollide(self, pos, norm)
 	if (math.random() < DECAL_CHANCE) then
-		if (self.BloodColor == BLOOD_COLOR_RED) then
-			util.Decal("BloodSmall", pos, norm)
+		if (self.Blood == BLOOD_COLOR_RED) then
+			--util.Decal("BloodSmall", pos, norm)
 		else
-			util.Decal("YellowBlood", pos, norm)
+			--util.Decal("YellowBlood", pos, norm)
 		end
 	end
 
-	if (IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
+	trace.start = pos + norm
+	trace.endpos = pos - norm
+
+	local tr = util.TraceLine(trace)
+
+	if !tr.Hit then
+		return
+	end
+
+	local blood_color = blood_colors[self.Blood]
+
+	if (blood_color and IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
 		local mat
-		if (self.BloodColor == BLOOD_COLOR_RED) then
+		--if (self.Blood == BLOOD_COLOR_RED) then
 			mat = blood_small[math.random(1, #blood_small)]
-		else
-			mat = blood_small_yellow[math.random(1, #blood_small_yellow)]
-		end
+		--else
+			--mat = blood_small_yellow[math.random(1, #blood_small_yellow)]
+		--end
 		local particle = self.Emitter:Add(mat, pos)
 
 		local ang = norm:Angle()
@@ -106,11 +115,7 @@ local function OnCollide(self, pos, norm)
 
 		local color = render.GetLightColor(pos + norm)
 		
-		if (self.BloodColor == BLOOD_COLOR_RED) then
-			color:Mul(red)
-		else
-			color:Mul(yellow)
-		end
+		color:Mul(blood_color)
 
 		particle:SetColor(color.x, color.y, color.z)
 	end
@@ -146,7 +151,7 @@ function EFFECT:Think() --do return false end
 
 		local dir = bone_dir + VectorRand(-0.3, 0.3)
 
-		local vel = dir * math.Rand(4, 40) * 10 * (0.5 + 0.5 * math.sin((cur_time - self.Created) * 3)) * (self.Created + self.DieTime - cur_time) / self.DieTime
+		local vel = dir * math.Rand(4, 40) * 10 * (0.7 + 0.3 * math.sin((cur_time - self.Created) * 3)) * (self.Created + self.DieTime - cur_time) / self.DieTime
 		
 		--vel = vel * (0.5 + math.sin(self.Created - cur_time) * 0.5)
 
@@ -161,19 +166,15 @@ function EFFECT:Think() --do return false end
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(0.5, 1))
 
-		local color = render.GetLightColor(pos) * 1.5
+		local color = render.GetLightColor(pos)
 		
-		if (self.BloodColor == BLOOD_COLOR_RED) then
-			color:Mul(red)
-		else
-			color:Mul(yellow)
-		end
+		color:Mul(self.BloodColor)
 
 		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		particle.BloodColor = self.BloodColor
+		particle.Blood = self.Blood
 		particle.Emitter = self.Emitter3D
 		particle:SetCollideCallback(OnCollide)
 	end
@@ -201,19 +202,15 @@ function EFFECT:Think() --do return false end
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(5, 10))
 
-		local color = render.GetLightColor(pos) * 1.5
+		local color = render.GetLightColor(pos)
 		
-		if (self.BloodColor == BLOOD_COLOR_RED) then
-			color:Mul(red)
-		else
-			color:Mul(yellow)
-		end
+		color:Mul(self.BloodColor)
 
 		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		particle.BloodColor = self.BloodColor
+		particle.Blood = self.Blood
 		particle.Emitter = self.Emitter3D
 		particle:SetCollideCallback(OnCollide)
 	end
@@ -242,19 +239,15 @@ function EFFECT:Think() --do return false end
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(0.01, 0.03))
 
-		local color = render.GetLightColor(pos) * 1.5
+		local color = render.GetLightColor(pos)
 
-		if (self.BloodColor == BLOOD_COLOR_RED) then
-			color:Mul(red)
-		else
-			color:Mul(yellow)
-		end
+		color:Mul(self.BloodColor)
 
 		particle:SetColor(color.x, color.y, color.z)
 
 		particle:SetCollide(true)
 
-		particle.BloodColor = self.BloodColor
+		particle.Blood = self.Blood
 		particle.Emitter = self.Emitter3D
 		particle:SetCollideCallback(OnCollide)
 	end
