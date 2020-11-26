@@ -2,18 +2,10 @@
 	Code borrowed from source sdk with slight modifications
 ]]
 
+local decal_lifetime = CreateClientConVar("gs2_particles_lifetime", 60, true)
+
 local DECAL_CHANCE = 0.01
 local LINGER_CHANCE = 0.3
-
-local blood_small = {
-	"decals/genericflesh/blood1",
-	"decals/genericflesh/blood2",
-	"decals/genericflesh/blood3",
-	"decals/genericflesh/blood4",
-	"decals/genericflesh/blood5"
-}
-
-game.AddDecal("BloodSmall", blood_small)
 
 local bit_band = bit.band
 local bit_lshift = bit.lshift
@@ -22,6 +14,30 @@ local blood_colors = {
 	[BLOOD_COLOR_RED] = Vector(72, 0, 0),
 	[BLOOD_COLOR_YELLOW] = Vector(195, 195, 0),
 	[BLOOD_COLOR_GREEN] = Vector(195, 195, 0)
+}
+
+local blood = {
+	[BLOOD_COLOR_RED] = {
+		"decals/flesh/blood1",
+		"decals/flesh/blood2",
+		"decals/flesh/blood3",
+		"decals/flesh/blood4",
+		"decals/flesh/blood5"
+	},
+	[BLOOD_COLOR_YELLOW] = {
+		"decals/alienflesh/blood1",
+		"decals/alienflesh/blood2",
+		"decals/alienflesh/blood3",
+		"decals/alienflesh/blood4",
+		"decals/alienflesh/blood5"
+	},
+	[BLOOD_COLOR_GREEN] = {
+		"decals/alienflesh/blood1",
+		"decals/alienflesh/blood2",
+		"decals/alienflesh/blood3",
+		"decals/alienflesh/blood4",
+		"decals/alienflesh/blood5"
+	}
 }
 
 function EFFECT:Init(data)
@@ -68,6 +84,8 @@ local trace = {
 	mask = MASK_NPCWORLDSTATIC
 }
 
+local PARTICLES = {}
+
 local function OnCollide(self, pos, norm)
 	if (math.random() < DECAL_CHANCE) then
 		if (self.Blood == BLOOD_COLOR_RED) then
@@ -86,15 +104,11 @@ local function OnCollide(self, pos, norm)
 		return
 	end
 
-	local blood_color = blood_colors[self.Blood]
+	local blood_materials = blood[self.Blood]
 
-	if (blood_color and IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
-		local mat
-		--if (self.Blood == BLOOD_COLOR_RED) then
-			mat = blood_small[math.random(1, #blood_small)]
-		--else
-			--mat = blood_small_yellow[math.random(1, #blood_small_yellow)]
-		--end
+	if (blood_materials and IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
+		local mat = blood_materials[math.random(1, #blood_materials)]
+		
 		local particle = self.Emitter:Add(mat, pos)
 
 		local ang = norm:Angle()
@@ -111,13 +125,15 @@ local function OnCollide(self, pos, norm)
 		--particle:SetRoll(math.random(0, 360))
 		
 		particle:SetLifeTime(0)
-		particle:SetDieTime(10)
+		particle:SetDieTime(decal_lifetime:GetFloat())
 
 		local color = render.GetLightColor(pos + norm)
 		
-		color:Mul(blood_color)
+		--color:Mul(blood_color * math.random(0.95, 1))
 
-		particle:SetColor(color.x, color.y, color.z)
+		--particle:SetColor(color.x, color.y, color.z)
+
+		table.insert(PARTICLES, particle)
 	end
 
 	self:SetDieTime(0)
@@ -262,3 +278,12 @@ local mat = Material("models/flesh")
 function EFFECT:Render()
 	
 end
+
+hook.Add("PostCleanupMap", "GS2ClearParticles", function()
+	for key, particle in ipairs(PARTICLES) do
+		if particle then
+			particle:SetDieTime(0)
+		end
+		PARTICLES[key] = nil
+	end
+end)

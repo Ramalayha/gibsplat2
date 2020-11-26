@@ -426,6 +426,8 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 end
 
 function ENTITY:MakeCustomRagdoll()
+	if self.__gs2custom then return end
+	
 	local phys = self:GetPhysicsObject()
 	if !IsValid(phys) then
 		return

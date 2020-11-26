@@ -19,7 +19,7 @@ local function GS2CreateEntityRagdoll(ent, doll)
 			doll:GS2Gib(phys_bone)
 		end
 	end
-	if ent.__lastdmgpos then
+	if (ent.__lastdmgpos and ent.__lastdmgtime == CurTime()) then
 		local dmg_pos = ent.__lastdmgpos
 		local dmg_force = ent.__lastdmgforce
 		local phys_count = doll:GetPhysicsObjectCount()
@@ -258,6 +258,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 		if dmginfo:IsExplosionDamage() then
 			ent.__lastdmgpos = dmginfo:GetDamagePosition()
 			ent.__lastdmgforce = dmginfo:GetDamageForce()
+			ent.__lastdmgtime = CurTime()
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then
 				ent.__forcegib = dmg_pos

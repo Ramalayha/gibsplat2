@@ -535,8 +535,8 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 			
 			local phys = gib:GetPhysicsObject()
 
-			phys:SetVelocity(vel + vel * VectorRand())
-			phys:AddAngleVelocity(ang_vel + ang_vel * VectorRand())
+			phys:SetVelocity(vel + vel * VectorRand() + VectorRand() * 20)
+			phys:AddAngleVelocity(ang_vel + ang_vel * VectorRand() + VectorRand() * 20)
 
 			table_insert(G_GIBS, gib)
 		end
