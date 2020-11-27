@@ -7,6 +7,8 @@ local decal_lifetime = CreateClientConVar("gs2_particles_lifetime", 60, true)
 local DECAL_CHANCE = 0.01
 local LINGER_CHANCE = 0.3
 
+local SIZE = 2
+
 local bit_band = bit.band
 local bit_lshift = bit.lshift
 
@@ -78,6 +80,19 @@ function EFFECT:Init(data)
 	self.Emitter3D = ParticleEmitter(bone_pos, true)
 
 	self.Particles = {}
+
+	for hbg = 0, self.Body:GetHitBoxGroupCount() - 1 do
+		for hb = 0, self.Body:GetHitBoxCount(hbg) - 1 do
+			if (self.Body:GetHitBoxBone(hb, hbg) == self.Bone) then
+				local min, max = self.Body:GetHitBoxBounds(hb, hbg)
+				min.x = 0
+				max.x = 0
+				self.Radius = min:Distance(max) * 0.2
+				return
+			end
+		end
+	end
+	self.Radius = 0
 end
 
 local trace = {
@@ -117,8 +132,8 @@ local function OnCollide(self, pos, norm)
 		particle:SetAngles(ang)
 
 		local size = math.Rand(0.5, 1)
-		particle:SetStartSize(size)
-		particle:SetEndSize(size)
+		particle:SetStartSize(SIZE * size)
+		particle:SetEndSize(SIZE * size)
 
 		particle:SetStartAlpha(255)
 		particle:SetEndAlpha(255)
@@ -160,7 +175,7 @@ function EFFECT:Think() --do return false end
 	local right = bone_dir:Cross(Vector(0, 0, 1))
 	local up = right:Cross(bone_dir)
 
-	for i = 1, 7 do --14
+	for i = 1, 4 do --14
 		local pos = bone_pos
 		 + right * math.Rand(-0.5, 0.5)
 		 + up * math.Rand(0.5, 0.5)
@@ -171,13 +186,13 @@ function EFFECT:Think() --do return false end
 		
 		--vel = vel * (0.5 + math.sin(self.Created - cur_time) * 0.5)
 
-		local particle = self.Emitter:Add("effects/blood_drop", pos)
+		local particle = self.Emitter:Add("effects/blood_drop", pos + Angle(0, math.Rand(0, 360), 0):Forward() * self.Radius)
 
 		table.insert(self.Particles, particle)
 
 		particle:SetGravity(Vector(0, 0, -600))
 		particle:SetVelocity(vel)
-		particle:SetStartSize(math.Rand(0.2, 0.3) * 5)
+		particle:SetStartSize(SIZE * math.Rand(0.2, 0.3) * 5)
 		particle:SetStartLength(math.Rand(1.25, 2.75) * 5)
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(0.5, 1))
@@ -195,7 +210,7 @@ function EFFECT:Think() --do return false end
 		particle:SetCollideCallback(OnCollide)
 	end
 
-	for i = 1, 12 do --24
+	for i = 1, 6 do --24
 		local pos = bone_pos
 		 + right * math.Rand(-0.5, 0.5)
 		 + up * math.Rand(0.5, 0.5)
@@ -213,7 +228,7 @@ function EFFECT:Think() --do return false end
 
 		particle:SetGravity(Vector(0, 0, -600))
 		particle:SetVelocity(vel)
-		particle:SetStartSize(math.Rand(0.025, 0.05))
+		particle:SetStartSize(SIZE * math.Rand(0.025, 0.05))
 		particle:SetStartLength(math.Rand(2.5, 3.75))
 		particle:SetLifeTime(0)
 		particle:SetDieTime(math.Rand(5, 10))
@@ -231,21 +246,21 @@ function EFFECT:Think() --do return false end
 		particle:SetCollideCallback(OnCollide)
 	end
 
-	for i = 1, 3 do --6
+	for i = 1, 10 do --6
 		local pos = bone_pos + bone_dir
 		 + right * math.Rand(-1, 1)
 		 + up * math.Rand(-1, 1)
 
 		local vel = bone_dir * math.Rand(10, 20) + VectorRand(-0.5, 0.5)
 
-		local particle = self.Emitter:Add("effects/blood_puff", pos)
+		local particle = self.Emitter:Add("effects/blood_puff", pos + Angle(math.Rand(0, 360), 0, 0):Forward() * self.Radius)
 
 		particle:SetGravity(Vector(0, 0, -600))
 		particle:SetVelocity(vel)
 
-		local size = math.Rand(1.5, 2)
-		particle:SetStartSize(size)	
-		particle:SetEndSize(size * 4)
+		local size = math.Rand(1, 1.5)
+		particle:SetStartSize(SIZE * size)	
+		particle:SetEndSize(SIZE * size * 4)
 
 		particle:SetStartAlpha(math.random(80, 128))
 		particle:SetEndAlpha(0)

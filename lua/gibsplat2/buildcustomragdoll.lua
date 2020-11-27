@@ -15,13 +15,15 @@ local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
 local decals = {
 	flesh = "Blood",
 	zombieflesh = "Blood",
-	alienflesh = "YellowBlood"
+	alienflesh = "YellowBlood",
+	antlion = "YellowBlood"
 }
 
 local blood_colors = {
 	flesh = BLOOD_COLOR_RED,
 	zombieflesh = BLOOD_COLOR_RED,
-	alienflesh = BLOOD_COLOR_YELLOW
+	alienflesh = BLOOD_COLOR_YELLOW,
+	antlion = BLOOD_COLOR_YELLOW
 }
 
 local CreateGibs = CreateGibs
