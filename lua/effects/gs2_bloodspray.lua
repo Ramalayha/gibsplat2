@@ -157,12 +157,14 @@ end
 function EFFECT:Think() --do return false end
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
+		self.Emitter3D:Finish()
 		return false
 	end
 	if (!IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
 	 	!self.Body.GS2Limbs or !IsValid(self.Body.GS2Limbs[self.PhysBone])) then
-	 	self.Emitter:Finish()	 	
+	 	self.Emitter:Finish()	
+	 	self.Emitter3D:Finish() 	
 		return false
 	end
 
