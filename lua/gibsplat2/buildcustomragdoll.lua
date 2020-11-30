@@ -295,6 +295,7 @@ local function ShouldGib(phys_mat)
 end
 
 function ENTITY:GS2Gib(phys_bone, no_gibs)
+	if self:GS2IsGibbed(phys_bone) then return end
 	local phys_mat = self:GetPhysicsObject():GetMaterial()
 	local GibEffects = ShouldGib(phys_mat)
 	if !GibEffects then return end
@@ -303,7 +304,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 	self.GS2Limbs[phys_bone] = nil
 	--Timer makes it run outside the PhysicsCollide hook to prevent physics crashes
 	timer_Simple(0, function()
-		if !IsValid(self) then return end
+		if (!IsValid(self) or self:GS2IsGibbed(phys_bone)) then return end
 
 		local mask = self:GetNWInt("GS2GibMask", 0)
 		local phys_mask = bit_lshift(1, phys_bone)
@@ -391,19 +392,11 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 
 				local min, max = phys:GetAABB()
 				
-				local EF = EffectData()
-				EF:SetColor(blood_color)
-				local pos = Vector()
-				for i = 1, math.Clamp(math.random(1, min:Distance(max)), 1, 5) do
-					pos.x = math.Rand(min.x, max.x)
-					pos.y = math.Rand(min.y, max.y)
-					pos.z = math.Rand(min.z, max.z)
-					pos = phys:LocalToWorld(pos)
-					
-					EF:SetOrigin(pos)
-					EF:SetAngles(AngleRand())					
-					util.Effect("BloodImpact", EF)
-				end
+				local pos = phys:LocalToWorld((min + max) / 2)	
+				local EF = EffectData()				
+				EF:SetOrigin(pos)
+				EF:SetColor(blood_color)						
+				util.Effect("BloodImpact", EF)				
 			end	
 				
 			phys:SetContents(CONTENTS_EMPTY)
@@ -513,11 +506,9 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetOrigin(phys_pos)
 				EF:SetColor(blood_color)
 
-				for i = 1, 3 do
-					util.Decal("Blood", phys_pos + dir, phys_pos - dir)
-					util.Decal("Blood", phys_pos - dir, phys_pos + dir)
-					util.Effect("BloodImpact", EF)
-				end
+				util.Decal("Blood", phys_pos + dir, phys_pos - dir)
+				util.Decal("Blood", phys_pos - dir, phys_pos + dir)
+				util.Effect("BloodImpact", EF)				
 			end
 			
 			if !IsValid(self.GS2Skeleton) then
@@ -681,9 +672,7 @@ function ENTITY:MakeCustomRagdoll()
 			end
 
 			if (data.Speed > 1000 or (phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH)) then --0 energy = jammed in something			
-				if !self:GS2IsGibbed(phys_bone) then
-					self:GS2Gib(phys_bone)
-				end		
+				self:GS2Gib(phys_bone)				
 			elseif (data.Speed > 100) then			
 				if self:GS2IsDismembered(phys_bone) then			
 					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
