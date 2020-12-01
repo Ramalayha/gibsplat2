@@ -1,3 +1,9 @@
+local function SafeYield()
+	if coroutine.running() then
+		coroutine.yield()
+	end
+end
+
 local function LinePlaneIntersect(pl, dl, n, d)
 	local t = (d - n:Dot(pl)) / n:Dot(dl)
 
@@ -116,8 +122,8 @@ function VoronoiSplit(mesh, points)
 			n:Normalize()
 			local d = n:Dot((p1 + p2) / 2)
 			tris = ClipMesh(tris, n, d)
-			if (key2 % 3 == 0 and coroutine.running()) then
-				coroutine.yield()
+			if (key2 % 3 == 0) then
+				SafeYield()
 			end
 			if !tris then
 				break

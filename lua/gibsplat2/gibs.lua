@@ -59,6 +59,12 @@ end
 
 local PERCENT = 0
 
+local function SafeYield()
+	if coroutine.running() then
+		coroutine.yield()
+	end
+end
+
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
 		return MDL_INDEX[mdl][phys_bone]
@@ -225,9 +231,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if !norec then		
 		for phys_bone2 = 0, phys_count - 1 do
 			if (phys_bone2 != phys_bone) then
-				if coroutine.running() then
-					coroutine.yield()
-				end				
+				SafeYield()				
 				GetPhysGibMeshes(mdl, phys_bone2, true)
 			end
 		end		
@@ -298,7 +302,7 @@ end
 local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3)
 local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7)
 local gib_custom		= CreateConVar("gs2_gib_custom", 1)
-local max_gibs			= CreateConVar("gs2_max_gibs", 128)
+local max_gibs			= CreateConVar("gs2_max_gibs", 32)
 
 local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
 
@@ -485,7 +489,8 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		end
 	end
 
-	local chance = gib_merge_chance:GetFloat()
+	--local chance = gib_merge_chance:GetFloat()
+	local chance = CLIENT and 0 or gib_merge_chance:GetFloat() --causes floating gibs clientside and idk how to fix ¯\_(ツ)_/¯
 
 	--Merge gibs into larger ones
 	for _, gib in ipairs(gibs) do

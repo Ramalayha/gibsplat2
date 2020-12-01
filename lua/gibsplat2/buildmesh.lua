@@ -18,6 +18,12 @@ local PERCENT = 0
 
 local iterations = CreateClientConVar("gs2_mesh_iterations", 10, true, false, "How many times per frame the mesh generation code should run (higher = quicker generation, lower = smaller fps spikes)")
 
+local function SafeYield()
+	if coroutine.running() then
+		coroutine.yield()
+	end
+end
+
 function GetBoneMeshes(ent, phys_bone, norec)
 	PERCENT = 0
 
@@ -110,8 +116,6 @@ function GetBoneMeshes(ent, phys_bone, norec)
 		end
 
 		incr = 1 / incr
-
-		coroutine.yield()
 
 		for phys_bone = 0, phys_count - 1 do
 			if !hash_tbl[phys_bone] then
@@ -208,8 +212,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 									table.insert(new_tris, new_verts[vert])	
 								end
 							end
-							if (tri_idx % 500 == 0 and coroutine.running()) then
-								coroutine.yield()							
+							if (tri_idx % 500 == 0) then
+								SafeYield()						
 							end 																
 						end
 
@@ -308,8 +312,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 									end
 								end					
 							end	
-							if (vert_index % 500 == 0 and coroutine.running()) then
-								coroutine.yield()
+							if (vert_index % 500 == 0) then
+								SafeYield()
 							end 						
 						end	
 							
@@ -356,8 +360,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 									end				
 								end
 							end
-							if (tri_idx % 500 == 0 and coroutine.running()) then
-								coroutine.yield()
+							if (tri_idx % 500 == 0) then
+								SafeYield()
 							end 																					
 						end
 
@@ -382,9 +386,9 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 						PERCENT = PERCENT + incr
 					end
-					coroutine.yield()
+					SafeYield()
 				end
-				coroutine.yield()
+				SafeYield()
 			end 
 		end
 
