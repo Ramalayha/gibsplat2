@@ -1,7 +1,7 @@
 VertexLitGeneric
 {
-	"$baseTexture" "models\gibs/brain"
-	"$bumpmap" "models\gibs\brain_bump"
+	"$baseTexture" "models\gibsplat2\gibs\brain"
+	"$bumpmap" "models\gibsplat2\gibs\brain_bump"
 	"$model" "1"
 	"$halflamert" "1"
 }

@@ -63,7 +63,7 @@ end
 local VERT_CACHE = {}
 local CONVEX_CACHE = {}
 
-function ENT:IsTouching(other) if other:GetClass():find("custom") then return end
+function ENT:IsTouching(other)
 	local mdl = other:GetModel()
 	local verts = VERT_CACHE[mdl]
 	if !verts then
@@ -126,6 +126,11 @@ local squish_snds = {
 }
 
 function ENT:PhysicsCollide(data, phys)
+	self.LastCollide = self.LastCollide or CurTime()
+	if (CurTime() - self.LastCollide < 0.01) then
+		return
+	end
+	self.LastCollide = CurTime()
 	if (data.Speed > 100) then
 		local color = self.GS2BloodColor
 		if color then

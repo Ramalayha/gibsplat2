@@ -324,13 +324,13 @@ local gib_info = util.KeyValuesToTable(text or "")
 
 for body_type, gib_data in pairs(gib_info) do
 	for bone_name, data in pairs(gib_data) do
-		for mdl, offset in pairs(data) do
-			util.PrecacheModel(mdl)
-			if offset.vec_offset then
-				offset.vec_offset = Vector(unpack(offset.vec_offset:Split(" ")))
+		for _, data in pairs(data) do
+			util.PrecacheModel(data.model)
+			if data.vec_offset then
+				data.vec_offset = Vector(unpack(data.vec_offset:Split(" ")))
 			end
-			if offset.ang_offset then
-				offset.ang_offset = Angle(unpack(offset.ang_offset:Split(" ")))
+			if data.ang_offset then
+				data.ang_offset = Angle(unpack(data.ang_offset:Split(" ")))
 			end
 		end
 	end
@@ -426,12 +426,12 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		custom_gibs = {}
 
 		if (gib_custom:GetBool() and custom_gib_data) then
-			for mdl, data in pairs(custom_gib_data) do
+			for _, data in pairs(custom_gib_data) do
 				if (math_random() < factor) then
 					local gib
 					if SERVER then
 						gib = ents_Create("gs2_gib_custom")
-						gib:SetModel(mdl)
+						gib:SetModel(data.model)
 
 						gib.vec_offset = data.vec_offset or vector_origin
 						gib.ang_offset = data.ang_offset or ang_zero
@@ -443,7 +443,7 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 						gib:SetBColor(blood_color)
 						gib:Spawn()
 					else
-						gib = ents.CreateClientProp(mdl)
+						gib = ents.CreateClientProp(data.model)
 						
 						gib.vec_offset = data.vec_offset or vector_origin
 						gib.ang_offset = data.ang_offset or ang_zero
