@@ -7,6 +7,13 @@ local gib_chance 		= CreateConVar("gs2_gib_chance", 0.3)
 
 local ang_zero = Angle(0, 0, 0)
 
+local blood_colors = {
+	flesh = BLOOD_COLOR_RED,
+	zombieflesh = BLOOD_COLOR_RED,
+	alienflesh = BLOOD_COLOR_YELLOW,
+	antlion = BLOOD_COLOR_YELLOW
+}
+
 local HOOK_NAME = "GibSplat2"
 
 local function GS2CreateEntityRagdoll(ent, doll)
@@ -98,6 +105,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 		if !phys_bone then
 			return
 		end
+		local phys = ent:GetPhysicsObjectNum(phys_bone)
 		if dmginfo:IsDamageType(DMG_ALWAYSGIB) then
 			ent:GS2Gib(phys_bone)
 		elseif dmginfo:IsExplosionDamage() then
@@ -232,16 +240,36 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 				ent:GS2Dismember(phys_bone)	
 			end
 		elseif IsKindaBullet(dmginfo) then
-			local hole = ents.Create("gs2_bullethole")
-			hole:SetBody(ent)
-			hole:SetTargetBone(phys_bone)			
-			hole:SetPos(dmg_pos)
-			hole:SetAngles(AngleRand())			
-			hole:Spawn()
-			
 			if ShouldGib(dmginfo) then
 				ent:GS2Gib(phys_bone)
-			end		
+			else
+				local hole = ents.Create("gs2_bullethole")
+				hole:SetBody(ent)
+				hole:SetTargetBone(phys_bone)			
+				hole:SetPos(dmg_pos)
+				hole:SetAngles(AngleRand())			
+				hole:Spawn()
+				
+				local pos = phys:GetPos()
+				local ang = phys:GetAngles()
+
+				local norm = ang:Forward()
+
+				local hitpos = pos + norm * norm:Dot(dmg_pos - pos)
+
+				local lpos, lang = WorldToLocal(dmg_pos, (hitpos - dmg_pos):Angle(), pos, ang)
+
+				local blood_color = blood_colors[phys:GetMaterial()]
+
+				local EF = EffectData()
+				EF:SetEntity(ent)
+				EF:SetOrigin(lpos)		
+				EF:SetAngles(lang)
+				EF:SetHitBox(ent:TranslatePhysBoneToBone(phys_bone))
+				EF:SetColor(blood_color)
+				EF:SetScale(0.1)
+				util.Effect("gs2_bloodspray", EF)
+			end				
 		end--else
 			local t = dmginfo:GetDamageType() --print(dmginfo:GetDamage())
 			for k,v in pairs(_G) do

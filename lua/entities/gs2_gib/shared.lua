@@ -118,6 +118,13 @@ function ENT:IsTouching(other) if other:GetClass():find("custom") then return en
 	end
 end
 
+local squish_snds = {
+	"physics/flesh/flesh_squishy_impact_hard1.wav",
+	"physics/flesh/flesh_squishy_impact_hard2.wav",
+	"physics/flesh/flesh_squishy_impact_hard3.wav",
+	"physics/flesh/flesh_squishy_impact_hard4.wav"
+}
+
 function ENT:PhysicsCollide(data, phys)
 	if (data.Speed > 100) then
 		local color = self.GS2BloodColor
@@ -132,29 +139,54 @@ function ENT:PhysicsCollide(data, phys)
 	
 	if CLIENT then return end
 
-	if ((phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH) or (data.Speed > 1000 and CurTime() - self.Created < 1)) then --0 energy = jammed in something
-		self:Remove()
+	if (phys:GetEnergy() == 0 or (data.Speed > 1000 and CurTime() - self.Created > 1)) then --0 energy = jammed in something
+		if (math.random() > 0.6) then
+			self:Remove()
+		else			
+			timer.Simple(0, function()
+				if IsValid(self) then
+					self:SetPos(data.HitPos)					
+					self:SetParent(data.HitEntity)								
+				end
+			end)
+			timer.Simple(math.Rand(10, 20), function()
+				if IsValid(self) then									
+					self:SetParent()
+					local phys = self:GetPhysicsObject()
+					phys:SetVelocity(vector_origin)
+					self:EmitSound(squish_snds[math.random(1, #squish_snds)])
+					local const = constraint.NoCollide(self, data.HitEntity, 0, 0)
+					SafeRemoveEntityDelayed(const, 5)
+					/*local EF = EffectData()
+					EF:SetOrigin(self:GetPos())
+					util.Effect("BloodImpact", EF)*/
+				end
+			end)
+		end
 	end
 end
 
 local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
 
+local function Collide(ent1, ent2)
+	local class1 = ent1:GetClass()
+	local class2 = ent2:GetClass()
+	if class1:find("^gs2_gib") then
+		if class2:find("^gs2_gib") then
+			return false
+		end		
+		if (class2 == "prop_ragdoll") then
+			return false
+		end
+	end
+	return true
+end
+
 local function ShouldGibCollide(ent1, ent2)
 	if !enabled:GetBool() then return end 
-	if (ent1:GetClass() == "gs2_gib") then
-		if (ent2:GetClass() == "gs2_gib") then
-			return false
-		end
-		if ent2:IsRagdoll() then
-			return false
-		end
-	elseif (ent2:GetClass() == "gs2_gib") then
-		if (ent1:GetClass() == "gs2_gib") then
-			return false
-		end
-		if ent1:IsRagdoll() then
-			return false
-		end
+	
+	if (!Collide(ent1, ent2) or !Collide(ent2, ent1)) then
+		return false
 	end
 end
 

@@ -50,7 +50,7 @@ function EFFECT:Init(data)
 	self.Color = data:GetColor()
 	self.Bone = data:GetHitBox()
 	self.Created = CurTime()
-	self.DieTime = math.Clamp(data:GetScale(), 1, 10)
+	self.DieTime = math.Clamp(data:GetScale(), 0, 10)
 	self.Blood = data:GetColor()
 	self.BloodColor = blood_colors[self.Blood] or Vector(255, 255, 255)
 
@@ -264,7 +264,7 @@ function EFFECT:Think() --do return false end
 		particle:SetStartSize(SIZE * size)	
 		particle:SetEndSize(SIZE * size * 4)
 
-		particle:SetStartAlpha(math.random(80, 128))
+		particle:SetStartAlpha(math.random(150, 200))
 		particle:SetEndAlpha(0)
 		particle:SetRoll(math.random(0, 360))
 		particle:SetRollDelta(0)
