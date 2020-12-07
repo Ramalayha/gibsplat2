@@ -129,6 +129,8 @@ function ENT:Initialize()
 	self.BBID = self:AddCallback("BuildBonePositions", BuildBones)
 
 	self:SetupBones()
+
+	self:DestroyShadow()
 end
 
 function ENT:OnRemove()
