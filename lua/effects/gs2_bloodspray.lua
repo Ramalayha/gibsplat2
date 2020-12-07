@@ -157,7 +157,9 @@ end
 function EFFECT:Think() --do return false end
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
-		self.Emitter3D:Finish()
+		if self.Emitter3D then
+			self.Emitter3D:Finish()
+		end
 		return false
 	end
 	if (!IsValid(self.Body) or
