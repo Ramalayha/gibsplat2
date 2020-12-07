@@ -151,6 +151,7 @@ local function OnCollide(self, pos, norm)
 		table.insert(PARTICLES, particle)
 	end
 
+	self:SetCollide(false)
 	self:SetDieTime(0)
 end
 
@@ -165,8 +166,11 @@ function EFFECT:Think() --do return false end
 	if (!IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
 	 	!self.Body.GS2Limbs or !IsValid(self.Body.GS2Limbs[self.PhysBone])) then
+
 	 	self.Emitter:Finish()	
-	 	self.Emitter3D:Finish() 	
+	 	if self.Emitter3D then
+	 		self.Emitter3D:Finish() 
+	 	end
 		return false
 	end
 
