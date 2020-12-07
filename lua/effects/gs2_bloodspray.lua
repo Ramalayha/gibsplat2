@@ -3,6 +3,7 @@
 ]]
 
 local decal_lifetime = CreateClientConVar("gs2_particles_lifetime", 60, true)
+local do_effects = CreateClientConVar("gs2_effects", 1)
 
 local DECAL_CHANCE = 0.01
 local LINGER_CHANCE = 0.3
@@ -43,6 +44,8 @@ local blood = {
 }
 
 function EFFECT:Init(data)
+	if !do_effects:GetBool() then return end
+
 	self.LocalPos = data:GetOrigin()
 	self.LocalAng = data:GetAngles()
 
@@ -155,7 +158,9 @@ local function OnCollide(self, pos, norm)
 	self:SetDieTime(0)
 end
 
-function EFFECT:Think() --do return false end
+function EFFECT:Think()
+	if !do_effects:GetBool() then return false end
+	
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
 		if self.Emitter3D then
