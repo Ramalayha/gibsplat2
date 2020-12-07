@@ -203,7 +203,7 @@ function EFFECT:Think() --do return false end
 
 		local color = render.GetLightColor(pos)
 		
-		color:Mul(self.BloodColor)
+		color = color * self.BloodColor
 
 		particle:SetColor(color.x, color.y, color.z)
 
@@ -239,7 +239,7 @@ function EFFECT:Think() --do return false end
 
 		local color = render.GetLightColor(pos)
 		
-		color:Mul(self.BloodColor)
+		color = color * self.BloodColor
 
 		particle:SetColor(color.x, color.y, color.z)
 
@@ -276,7 +276,7 @@ function EFFECT:Think() --do return false end
 
 		local color = render.GetLightColor(pos)
 
-		color:Mul(self.BloodColor)
+		color = color * self.BloodColor
 
 		particle:SetColor(color.x, color.y, color.z)
 
