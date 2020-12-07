@@ -170,6 +170,12 @@ function EFFECT:Think() --do return false end
 		return false
 	end
 
+	self.LastThink = self.LastThink or cur_time
+	if (cur_time - self.LastThink < 0.05) then
+		return true
+	end
+	self.LastThink = cur_time
+
 	local matrix = self.Body:GetBoneMatrix(self.Bone)
 
 	local bone_pos, bone_ang = LocalToWorld(self.LocalPos, self.LocalAng, matrix:GetTranslation(), matrix:GetAngles())
@@ -286,8 +292,6 @@ function EFFECT:Think() --do return false end
 		particle.Emitter = self.Emitter3D
 		particle:SetCollideCallback(OnCollide)
 	end
-
-	self:NextThink(cur_time + 1)
 
  	return true
 end
