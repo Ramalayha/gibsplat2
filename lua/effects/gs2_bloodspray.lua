@@ -102,7 +102,7 @@ local trace = {
 	mask = MASK_NPCWORLDSTATIC
 }
 
-local PARTICLES = {}
+local PARTICLES = setmetatable({}, {__mode = "v"}) --weak table so they can get garbage collected
 
 local function OnCollide(self, pos, norm)
 	if (math.random() < DECAL_CHANCE) then
@@ -160,7 +160,7 @@ end
 
 function EFFECT:Think()
 	if !do_effects:GetBool() then return false end
-	
+
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
 		if self.Emitter3D then
@@ -180,7 +180,7 @@ function EFFECT:Think()
 	end
 
 	self.LastThink = self.LastThink or cur_time
-	if (cur_time - self.LastThink < 0.05) then
+	if (cur_time - self.LastThink < 0.01) then
 		return true
 	end
 	self.LastThink = cur_time
