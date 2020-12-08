@@ -658,8 +658,8 @@ function ENTITY:MakeCustomRagdoll()
 		self:AddCallback("PhysicsCollide", function(self, data)
 			local time = CurTime()
 			self.GS2LastCollide = self.GS2LastCollide or time
-			if (self.GS2LastCollide == time) then
-				return --Only run once per frame
+			if (time - self.GS2LastCollide < 0.05) then
+				return --Don't run too often
 			end
 			self.GS2LastCollide = time
 			local phys = data.PhysObject

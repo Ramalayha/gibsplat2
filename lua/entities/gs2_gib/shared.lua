@@ -126,11 +126,12 @@ local squish_snds = {
 }
 
 function ENT:PhysicsCollide(data, phys)
-	self.LastCollide = self.LastCollide or CurTime()
-	if (CurTime() - self.LastCollide < 0.01) then
+	local time = CurTime()
+	self.LastCollide = self.LastCollide or time
+	if (time - self.LastCollide < 0.05) then
 		return
 	end
-	self.LastCollide = CurTime()
+	self.LastCollide = time
 	if (data.Speed > 100) then
 		local color = self.GS2BloodColor
 		if color then
@@ -161,10 +162,7 @@ function ENT:PhysicsCollide(data, phys)
 					phys:SetVelocity(vector_origin)
 					self:EmitSound(squish_snds[math.random(1, #squish_snds)])
 					local const = constraint.NoCollide(self, data.HitEntity, 0, 0)
-					SafeRemoveEntityDelayed(const, 5)
-					/*local EF = EffectData()
-					EF:SetOrigin(self:GetPos())
-					util.Effect("BloodImpact", EF)*/
+					SafeRemoveEntityDelayed(const, 5)					
 				end
 			end)
 		end
@@ -187,22 +185,10 @@ local function Collide(ent1, ent2)
 	return true
 end
 
-local function ShouldGibCollide(ent1, ent2)
+hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
 	if !enabled:GetBool() then return end 
 	
 	if (!Collide(ent1, ent2) or !Collide(ent2, ent1)) then
 		return false
 	end
-end
-
-cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
-	if new == "1" then
-		hook.Add("ShouldCollide", HOOK_NAME, ShouldGibCollide)
-	else
-		hook.Remove("ShouldCollide", HOOK_NAME)
-	end
 end)
-
-if enabled:GetBool() then
-	hook.Add("ShouldCollide", HOOK_NAME, ShouldGibCollide)
-end

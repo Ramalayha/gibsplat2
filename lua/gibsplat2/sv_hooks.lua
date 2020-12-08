@@ -270,14 +270,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 				EF:SetScale(0.1)
 				util.Effect("gs2_bloodspray", EF)
 			end				
-		end--else
-			local t = dmginfo:GetDamageType() --print(dmginfo:GetDamage())
-			for k,v in pairs(_G) do
-				if k:find("^DMG_") and bit.band(v,t) != 0 then
-					--print(k)
-				end
-			end
-		--end
+		end
 	elseif (ent:IsNPC() or ent:IsPlayer()) then
 		if (dmginfo:IsDamageType(5) and dmginfo:GetDamage() > ent:Health()) then --5 = DMG_CRUSH | DMG_SLASH
 			local dmg_type = dmginfo:GetDamageType() --Prevents zombie from cutting in half

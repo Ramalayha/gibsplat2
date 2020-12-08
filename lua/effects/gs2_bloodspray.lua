@@ -3,6 +3,7 @@
 ]]
 
 local decal_lifetime = CreateClientConVar("gs2_particles_lifetime", 60, true)
+local max_particles = CreateClientConVar("gs2_max_particles", 128)
 local do_effects = CreateClientConVar("gs2_effects", 1)
 
 local DECAL_CHANCE = 0.01
@@ -45,7 +46,7 @@ local blood = {
 
 function EFFECT:Init(data)
 	if !do_effects:GetBool() then return end
-
+	
 	self.LocalPos = data:GetOrigin()
 	self.LocalAng = data:GetAngles()
 
@@ -105,6 +106,7 @@ local trace = {
 local PARTICLES = setmetatable({}, {__mode = "v"}) --weak table so they can get garbage collected
 
 local function OnCollide(self, pos, norm)
+	if (#PARTICLES >= max_particles:GetInt()) then return end
 	if (math.random() < DECAL_CHANCE) then
 		if (self.Blood == BLOOD_COLOR_RED) then
 			--util.Decal("BloodSmall", pos, norm)
@@ -160,6 +162,7 @@ end
 
 function EFFECT:Think()
 	if !do_effects:GetBool() then return false end
+	if (#PARTICLES >= max_particles:GetInt()) then return false end
 
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
@@ -180,7 +183,7 @@ function EFFECT:Think()
 	end
 
 	self.LastThink = self.LastThink or cur_time
-	if (cur_time - self.LastThink < 0.01) then
+	if (cur_time - self.LastThink < 0.05) then
 		return true
 	end
 	self.LastThink = cur_time
