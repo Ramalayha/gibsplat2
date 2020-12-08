@@ -22,6 +22,8 @@ local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
 
 local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 
+local SKEL_CACHE = {}
+
 local function GetOrCreateSkel(self, bone)
 	local mdl = self:GetModel()
 	
@@ -41,10 +43,14 @@ local function GetOrCreateSkel(self, bone)
 		return NULL
 	end
 
-	local part = ClientsideModel(bone_mdl)
-	part:SetSkin(2)
-	part:SetupBones()
-	part:SetNoDraw(true)
+	local part = SKEL_CACHE[bone_mdl]
+	if !part then
+		part = ClientsideModel(bone_mdl)
+		part:SetSkin(2)
+		part:SetupBones()
+		part:SetNoDraw(true)
+		SKEL_CACHE[bone_mdl] = part
+	end
 	
 	return part
 end
