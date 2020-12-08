@@ -164,6 +164,14 @@ function EFFECT:Think()
 	if !do_effects:GetBool() then return false end
 	if (#PARTICLES >= max_particles:GetInt()) then return false end
 
+	if (FrameTime() > 0.05) then
+		--buffer overflow is probably occuring SHUT. DOWN. EVERYTHING!
+		for _, part in pairs(PARTICLES) do
+			part:SetDieTime(0)
+		end
+		return false
+	end
+
 	local cur_time = CurTime()
 	if !IsValid(self.Emitter) then
 		if self.Emitter3D then
