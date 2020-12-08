@@ -14,7 +14,7 @@ AddCSLuaFile("gibsplat2/mesh_util.lua")
 local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")
 	for _, file_name in pairs(files) do		
-		resource.AddFile(path:sub(0, -2)..file_name)
+		resource.AddSingleFile(path:sub(0, -2)..file_name)
 	end
 	for _, folder in pairs(folders) do
 		AddFolder(path:sub(0, -2)..folder.."/*")
@@ -28,3 +28,5 @@ AddFolder("materials/decals/alienflesh/*")
 resource.AddFile("materials/models/alienflesh.vmt")
 resource.AddFile("materials/models/zombieflesh.vmt")
 resource.AddFile("materials/models/antlion.vmt")
+resource.AddSingleFile("materials/gibsplat2/skeletons.vmt")
+resource.AddSingleFile("materials/gibsplat2/gibs.vmt")
