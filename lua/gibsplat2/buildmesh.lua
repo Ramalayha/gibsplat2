@@ -468,6 +468,7 @@ local form = [[GS2: Building meshes for "%s" (%3.2f%% done), %i models remaining
 local form2 = [[GS2: Building meshes for "%s" (%3.2f%% done)]]
 
 hook.Add("HUDPaint", "GS2BuildMeshDisplay", function()
+	if !enabled:GetBool() then return end
 	local mdl = next(THREADS)
 	if !mdl then return end
 
