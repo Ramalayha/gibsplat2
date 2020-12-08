@@ -255,6 +255,7 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 end
 
 function ENT:UpdateRenderInfo()
+	self:DestroyShadow()
 	local body = self:GetBody()
 	if !IsValid(body) then
 		return
