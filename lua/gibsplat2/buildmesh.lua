@@ -482,6 +482,7 @@ net.Receive("GS2ForceModelPregen", function()
 				while (coroutine.status(THREADS[mdl]) != "dead") do
 					coroutine.resume(THREADS[mdl])
 				end	
+				table.remove(THREADS, mdl)
 			end			
 		end
 		local temp = ClientsideModel(mdl)
