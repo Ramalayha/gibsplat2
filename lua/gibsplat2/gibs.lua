@@ -65,6 +65,12 @@ local function SafeYield()
 	end
 end
 
+local function SafeResume(thread)
+	if (coroutine.status(thread) != "dead") then
+		return coroutine.resume(thread)
+	end
+end
+
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
 		return MDL_INDEX[mdl][phys_bone]
@@ -307,11 +313,11 @@ local max_gibs			= CreateConVar("gs2_max_gibs", 32)
 local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
 
 local sv_gibs_def = 1
-if SERVER and !game.SinglePlayer() then
+/*if SERVER and !game.SinglePlayer() then
 	sv_gibs_def = 0
-end
+end*/
 
-local sv_gibs			= CreateConVar("gs2_gib_sv", sv_gibs_def, FCVAR_REPLICATED)
+local sv_gibs			= CreateConVar("gs2_gib_sv", sv_gibs_def, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 local cl_gibs 			= CreateClientConVar("gs2_gib_cl", 1)
 
 local GIB_CONN_DATA = {}
@@ -325,12 +331,14 @@ local gib_info = util.KeyValuesToTable(text or "")
 for body_type, gib_data in pairs(gib_info) do
 	for bone_name, data in pairs(gib_data) do
 		for _, data in pairs(data) do
-			util.PrecacheModel(data.model)
-			if data.vec_offset then
-				data.vec_offset = Vector(unpack(data.vec_offset:Split(" ")))
-			end
-			if data.ang_offset then
-				data.ang_offset = Angle(unpack(data.ang_offset:Split(" ")))
+			if data.model then
+				util.PrecacheModel(data.model)
+				if data.vec_offset then
+					data.vec_offset = Vector(unpack(data.vec_offset:Split(" ")))
+				end
+				if data.ang_offset then
+					data.ang_offset = Angle(unpack(data.ang_offset:Split(" ")))
+				end
 			end
 		end
 	end
@@ -375,6 +383,10 @@ if CLIENT then
 	end)
 end
 
+--Prevent crazy origin messages
+local world_max = Vector(16384, 16384, 16384)
+local world_min = -world_max
+
 function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 	local factor = gib_factor:GetFloat()
 	if (factor == 0) then
@@ -415,49 +427,42 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		ang_vel = ang_vel or Vector(0, 0, 0)
 	end
 
-	if gib_data then
-		local bone = ent:TranslatePhysBoneToBone(phys_bone)
-		local bone_name = ent:GetBoneName(bone):lower()
+	local bone = ent:TranslatePhysBoneToBone(phys_bone)
+	local bone_name = ent:GetBoneName(bone):lower()
 
-		local bone_pos, bone_ang = ent:GetBonePosition(bone)
+	local bone_pos, bone_ang = ent:GetBonePosition(bone)
 
+	if !bone_pos:WithinAABox(world_min, world_max) then
+		return --boogus bone position
+	end
+
+	if gib_data then		
 		local custom_gib_data = gib_data[bone_name]
 
 		custom_gibs = {}
 
 		if (gib_custom:GetBool() and custom_gib_data) then
 			for _, data in pairs(custom_gib_data) do
-				if (math_random() < factor) then
-					local gib
-					if SERVER then
-						gib = ents_Create("gs2_gib_custom")
-						gib:SetModel(data.model)
+				if (math_random() < factor) then					
+					local gib = ents_Create("gs2_gib_custom")
+					gib:SetModel(data.model)
 
-						gib.vec_offset = data.vec_offset or vector_origin
-						gib.ang_offset = data.ang_offset or ang_zero
+					gib.vec_offset = data.vec_offset or vector_origin
+					gib.ang_offset = data.ang_offset or ang_zero
 
-						local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
-
-						gib:SetPos(pos)
-						gib:SetAngles(ang)
-						gib:SetBColor(blood_color)
-						gib:Spawn()
-					else
-						gib = ents.CreateClientProp(data.model)
-						
-						gib.vec_offset = data.vec_offset or vector_origin
-						gib.ang_offset = data.ang_offset or ang_zero
-
-						local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
-
-						gib:SetPos(pos)
-						gib:SetAngles(ang)	
-						gib:Spawn()		
-
-						gib:AddCallback("PhysicsCollide", scripted_ents.Get("gs2_gib_custom").PhysicsCollide)			
-					end
-
+					local pos, ang = LocalToWorld(gib.vec_offset, gib.ang_offset, bone_pos, bone_ang)
+					
+					gib:SetPos(pos)
+					gib:SetAngles(ang)
+					gib:SetBColor(blood_color)
+					gib:Spawn()
+					
 					local phys_gib = gib:GetPhysicsObject()
+
+					if !IsValid(phys_gib) then
+						gib:Remove()
+						continue
+					end
 
 					phys_gib:SetVelocity(vel)
 					phys_gib:AddAngleVelocity(ang_vel)
@@ -552,6 +557,12 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		SafeRemoveEntity(table_remove(G_GIBS, 1))
 	end
 
+	for _, gib in pairs(ent.GS2Gibs) do
+		if IsValid(gib) then
+			ent:DeleteOnRemove(gib) --sometimes gib is not valid and i cba to figure out why
+		end
+	end
+
 	return gibs
 end
 
@@ -570,9 +581,9 @@ hook.Add("Think", "GS2Gibs", function()
 		print("Started generating gibs for "..mdl)
 	end
 		
-	local bool, err = coroutine.resume(thread)
+	local bool, err = SafeResume(thread)
 
-	if !bool then
+	if (!bool and err) then
 		print(mdl, err)
 	elseif err then
 		PERCENT = err
@@ -586,9 +597,12 @@ hook.Add("Think", "GS2Gibs", function()
 	end			
 end)
 
+local player_ragdolls = CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
+
 if SERVER then
 	hook.Add("OnEntityCreated", "GS2Gibs", function(ent)
 		if !enabled:GetBool() then return end
+		if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 		timer.Simple(0.1, function()
 			if !IsValid(ent) then return end
 			local mdl = ent:GetModel()
@@ -596,7 +610,7 @@ if SERVER then
 				THREADS[mdl] = coroutine.create(function()			
 					GetPhysGibMeshes(mdl, 0)
 				end)
-				coroutine.resume(THREADS[mdl])
+				SafeResume(THREADS[mdl])
 			end
 		end)
 	end)
@@ -626,22 +640,26 @@ if CLIENT then
 
 	hook.Add("NetworkEntityCreated", "GS2Gibs", function(ent)
 		if !enabled:GetBool() then return end
+		if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 		local mdl = ent:GetModel()
 		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
 			THREADS[mdl] = coroutine.create(function()			
 				GetPhysGibMeshes(mdl, 0)
 			end)
-			coroutine.resume(THREADS[mdl])
+			SafeResume(THREADS[mdl])
 		end		
 	end)
 
 	local function RemoveGibs()
+		for _, gib in pairs(G_GIBS) do
+			SafeRemoveEntity(gib)
+		end
+		table.Empty(G_GIBS)
 		for _, gib in ipairs(ents_GetAll()) do			
 			if (gib:EntIndex() == -1 and gib:GetClass():find("^gs2_gib")) then
 				gib:Remove()
 			end
 		end
-		table.Empty(G_GIBS)
 	end
 
 	hook.Add("PostCleanupMap", HOOK_NAME, RemoveGibs)

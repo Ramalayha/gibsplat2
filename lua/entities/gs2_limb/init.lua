@@ -18,6 +18,7 @@ function ENT:Initialize()
 	self:SetPos(body:GetPos())
 	self:SetParent(body)
 	self:SetTransmitWithParent(true)
+	self:DrawShadow(false)
 	body:DrawShadow(false)
 	body:SetColor(invis)
 

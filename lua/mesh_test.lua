@@ -1,45 +1,50 @@
-local mdl = "models/hunter.mdl"
+local ent = ents.FindByClass("prop_ragdoll")[1]
 
-SafeRemoveEntity(e)
+local mdl = ent:GetModel()
 
-e = ClientsideModel(mdl)
+local temp = ClientsideRagdoll(mdl)
+local phys = temp:GetPhysicsObjectNum(10)
 
-e:ResetSequence(-2)
-e:SetCycle(0)
-e:SetPlaybackRate(0)
+local convexes = phys:GetMeshConvexes()
+temp:Remove()
 
-e:SetupBones()
-for i=0,e:GetBoneCount()-1 do
-	--print(e:GetBoneName(i), e:GetBonePosition(i))
-end
+local meshes = {}
 
-for pose_param = 0, e:GetNumPoseParameters() - 1 do
-	print(e:GetPoseParameterName(pose_param))
-end
-
-local a = Angle(0,0,0)
-a:RotateAroundAxis(e:GetUp(), -90)
---local p,a = e:GetBonePosition(0)
---a:RotateAroundAxis(a:Right(), 180)
---a:RotateAroundAxis(a:Forward(), -90)
-print(a)
---e:SetPos(-p)
---e:SetAngles(a)
-e:SetupBones()
-
-local meshes = util.GetModelMeshes(mdl)
-
-local M = {}
-
-for k,v in pairs(meshes) do
+for _, convex in pairs(convexes) do
+	local center = Vector(0,0,0)
+	local count = 0
+	for _, vert in pairs(convex) do
+		if !vert.checked then
+			vert.checked = true
+			center:Add(vert.pos)
+			count = count + 1
+		end
+	end
+	center:Div(count)
+	for _, vert in pairs(convex) do
+		if vert.checked then
+			vert.checked = nil
+			--vert.pos = center + (vert.pos - center) * 0.85
+		end
+	end
 	local m = Mesh()
-	m:BuildFromTriangles(v.triangles)
-	table.insert(M, {Material(v.material),m})
+	m:BuildFromTriangles(convex)
+	table.insert(meshes, m)	
 end
+PrintTable(meshes)
+local bone = ent:LookupBone("ValveBiped.Bip01_Head1")
+
+local mat = Material("models/flesh")
+
+local matrix = ent:GetBoneMatrix(bone)
 
 hook.Add("PostDrawOpaqueRenderables","h",function()
-	for k,v in pairs(M) do
-		render.SetMaterial(v[1])
-		v[2]:Draw()
-	end
+	if !IsValid(ent) then return end
+	render.SetMaterial(mat)
+	
+	cam.PushModelMatrix(matrix)
+		for _, mesh in pairs(meshes) do		
+			mesh:Draw()		
+		end
+	cam.PopModelMatrix()
 end)

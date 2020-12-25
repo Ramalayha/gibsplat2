@@ -8,6 +8,7 @@ local min_strength 	= CreateConVar("gs2_min_constraint_strength", 4000)
 local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000)
 local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250)
 local less_limbs	= CreateConVar("gs2_less_limbs", 0)
+local gib_chance 	= CreateConVar("gs2_gib_chance", 0.3, FCVAR_REPLICATED)
 
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -62,44 +63,7 @@ local timer_Simple = timer.Simple
 local ang_zero = Angle(0, 0, 0)
 local ang_180 = Angle(180, 0, 0)
 
-local oob_pos = vector_origin
-
-hook.Add("InitPostEntity", "GS2InitOOBPos", function()
-	local e = ents.GetAll()[2]
-	oob_pos = e:GetPos() --1 is world so pick 2
-
-	local offset = Vector(0, 0, 50000)
-
-	local tr = {
-		start = oob_pos,
-		endpos = oob_pos + offset,
-		mask = MASK_NPCWORLDSTATIC
-	}
-
-	local res
-
-	while true do												
-		res = util.TraceLine(tr)
-		if !res.Hit then
-			break
-		end
-		
-		res.HitPos.z = res.HitPos.z + 1
-		tr.start = res.HitPos
-		tr.endpos = tr.start + offset
-	end
-
-	tr.start = res.StartPos
-	tr.endpos = tr.start - offset
-
-	res = util.TraceLine(tr)
-
-	oob_pos = res.HitPos
-	
-	print("GS2: oob spot set to "..tostring(oob_pos))
-
-	hook.Remove("InitPostEntity", "GS2InitOOBPos")
-end)
+local oob_pos = Vector(-16383, 0, 0) * 0.5
 
 local RAGDOLL_POSE = {}
 
@@ -287,15 +251,22 @@ end
 
 local _ShouldGib = {}
 
+local whitelist = {
+	"flesh",
+	"zombieflesh",
+	"alienflesh",
+	"antlion"
+}
+
 local function ShouldGib(phys_mat)
 	if (_ShouldGib[phys_mat] == nil) then
-		_ShouldGib[phys_mat] = file.Exists("materials/models/"..phys_mat..".vmt", "GAME")
+		_ShouldGib[phys_mat] = table.HasValue(whitelist, phys_mat)
 	end
 	return _ShouldGib[phys_mat]
 end
 
-function ENTITY:GS2Gib(phys_bone, no_gibs)
-	if self:GS2IsGibbed(phys_bone) then return end
+function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
+	if (!forcegib and (self:GS2IsGibbed(phys_bone) or (!no_gibs and math.random() > gib_chance:GetFloat()))) then return end
 	local phys_mat = self:GetPhysicsObject():GetMaterial()
 	local GibEffects = ShouldGib(phys_mat)
 	if !GibEffects then return end
@@ -308,7 +279,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 
 		local mask = self:GetNWInt("GS2GibMask", 0)
 		local phys_mask = bit_lshift(1, phys_bone)
-		if (bit_band(mask, phys_mask) != 0) then --Called twice, do nothing
+		if self:GS2IsGibbed(phys_bone) then --Called twice, do nothing
 			return
 		end
 		mask = bit_bor(mask, phys_mask)
@@ -316,7 +287,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			if self.GS2Gibs then
 				for _, gib in pairs(self.GS2Gibs) do
 					if IsValid(gib) then
-						self:DontDeleteOnRemove(gib)
+						self:DontDeleteOnRemove(gib)						
 					end
 				end
 			end
@@ -409,8 +380,9 @@ function ENTITY:GS2Gib(phys_bone, no_gibs)
 			timer.Simple(1, function()
 				if IsValid(phys) then					
 					phys:EnableMotion(false)					
-					phys:SetPos(oob_pos)
 					phys:SetAngles(ang_zero)
+					phys:SetPos(oob_pos)
+					phys:SetVelocityInstantaneous(vector_origin)				
 				end
 			end)
 		end
@@ -427,6 +399,9 @@ function ENTITY:MakeCustomRagdoll()
 	if !IsValid(phys) then
 		return
 	end
+
+	self:SetCustomCollisionCheck(true)
+
 	local phys_mat = phys:GetMaterial()
 	self:SetNWString("GS2PhysMat", phys_mat)
 
@@ -605,22 +580,21 @@ function ENTITY:MakeCustomRagdoll()
 						self:GS2Gib(part_info.parent)
 					end
 				end			
-			elseif (GibEffects and !self:GS2IsGibbed(part_info.parent) and blood_color) then				
-				local bone = self:TranslatePhysBoneToBone(part_info.child)
-				local parent = self:GetBoneParent(bone)
+			elseif (GibEffects and !self:GS2IsGibbed(part_info.parent) and blood_color) then
+				local pose = RAGDOLL_POSE[self:GetModel()]
 
-				--PutInRagdollPose(self)
+				local pose_child = pose[part_info.child]
+				local pose_parent = pose[part_info.parent]
 
-				local bone_pos, bone_ang = self:GetBonePosition(bone)
-				local lpos, lang = WorldToLocal(bone_pos, bone_ang, self:GetBonePosition(parent))
+				local lpos, lang = WorldToLocal(pose_child.pos, pose_child.ang, pose_parent.pos, pose_parent.ang)
 				
 				lang.p = lang.p + 180
 
 				local EF = EffectData()
 				EF:SetEntity(self)
-				EF:SetOrigin(lpos * 0.7)				
+				EF:SetOrigin(lpos * 0.7)		
 				EF:SetAngles(lang)
-				EF:SetHitBox(parent)
+				EF:SetHitBox(self:TranslatePhysBoneToBone(part_info.parent))
 				EF:SetColor(blood_color)
 				EF:SetScale(phys_parent:GetVolume() / 200)
 				util.Effect("gs2_bloodspray", EF)
@@ -656,12 +630,6 @@ function ENTITY:MakeCustomRagdoll()
 
 	if GibEffects then
 		self:AddCallback("PhysicsCollide", function(self, data)
-			local time = CurTime()
-			self.GS2LastCollide = self.GS2LastCollide or time
-			if (time - self.GS2LastCollide < 0.05) then
-				return --Don't run too often
-			end
-			self.GS2LastCollide = time
 			local phys = data.PhysObject
 			local phys_bone
 			for i = 0, self:GetPhysicsObjectCount()-1 do
@@ -670,10 +638,17 @@ function ENTITY:MakeCustomRagdoll()
 					break
 				end
 			end
-
-			if (data.Speed > 1000 or (phys:GetEnergy() == 0 and data.HitEntity:GetMoveType() == MOVETYPE_PUSH)) then --0 energy = jammed in something			
-				self:GS2Gib(phys_bone)				
-			elseif (data.Speed > 100) then			
+			local speed = data.Speed
+			if (speed > 1000 or (!data.HitEntity:IsWorld() and !data.HitEntity:IsPlayer() and data.HitEntity != self and phys:GetEnergy() == 0)) then --0 energy = jammed in something			
+				self:GS2Gib(phys_bone)
+				return
+			end
+			
+			if (data.DeltaTime < 0.05) then
+				return --Don't run decal code too often
+			end
+				
+			if (speed > 100) then			
 				if self:GS2IsDismembered(phys_bone) then			
 					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 					if blood_color then
@@ -684,7 +659,7 @@ function ENTITY:MakeCustomRagdoll()
 					end
 				else	
 					local do_effects = false
-					if (data.Speed > 500) then
+					if (speed > 500) then
 						do_effects = true
 					else
 						for _, part_info in pairs(CONST_INFO) do
@@ -745,3 +720,27 @@ function ENTITY:MakeCustomRagdoll()
 
 	self.__gs2custom = true
 end
+
+local enabled = GetConVar("gs2_enabled")
+
+hook.Add("SetupPlayerVisibility", HOOK_NAME, function(ply)
+	if !enabled:GetBool() then return end
+	
+	for _, ent in ipairs(ents.FindByClass("prop_ragdoll")) do
+		if (ent.__gs2custom and ent.GS2LimbRelays) then
+			for _, relay in pairs(ent.GS2LimbRelays) do
+				if IsValid(relay) then					
+					if ply:TestPVS(relay:GetPos()) then
+						for phys_bone = 0, ent:GetPhysicsObjectCount() - 1 do
+							local phys = ent:GetPhysicsObjectNum(phys_bone)
+							if IsValid(phys) then
+								AddOriginToPVS(phys:GetPos())	
+							end
+						end	
+						break										
+					end
+				end
+			end
+		end
+	end
+end)

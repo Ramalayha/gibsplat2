@@ -43,6 +43,8 @@ local MAT_CACHE = {}
 
 function ENT:Initialize()
 	self.Created = CurTime()
+	self:DrawShadow(false)
+	self:DestroyShadow()
 end
 
 function ENT:SetBody(body, phys_bone)
@@ -70,7 +72,7 @@ function ENT:SetMesh(meshes)
 end
 
 function ENT:Think()
-	if IsValid(self.Body) then		
+	if IsValid(self.Body) then	
 		if !IsValid(self.GS2ParentLimb) then
 			SafeRemoveEntity(self)
 			return
@@ -120,6 +122,8 @@ function ENT:Draw()
 
 	self.is_flesh = false
 	self.Mesh = self.meshes.body
+	
+	if (!self.Mesh or !self.Mesh.Mesh) then return end
 
 	self:DrawModel()
 
@@ -191,7 +195,8 @@ function ENT:Draw()
 end
 
 function ENT:GetRenderMesh()
-	if self.Mesh and IsValid(self.Body) then		
+	if self.Mesh and IsValid(self.Body) then
+		self.Body:SetupBones()	
 		local matrix = self.Body:GetBoneMatrix(self.Bone)
 		if matrix then
 			local bone_pos = matrix:GetTranslation()
@@ -202,8 +207,8 @@ function ENT:GetRenderMesh()
 
 			lhack_matrix:Translate(-bone_pos)
 
-			self.Mesh.Matrix = lhack_matrix * matrix
-			return self.Mesh
+			self.Mesh.Matrix = lhack_matrix * matrix			
 		end
+		return self.Mesh
 	end
 end

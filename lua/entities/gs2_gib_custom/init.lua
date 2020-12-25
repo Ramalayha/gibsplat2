@@ -21,11 +21,20 @@ function ENT:Initialize()
 	self_phys:Wake()	
 	self_phys:SetDragCoefficient(0.3)	
 	self_phys:SetAngleDragCoefficient(0.3)
+
+	self:StartMotionController()
+end
+
+function ENT:Think()
+	if (self.LastSim and self.LastSim + self.LifeTime:GetFloat() < CurTime()) then
+		self:Remove()
+	end
 end
 
 function ENT:OnTakeDamage(dmginfo)
-	if !self.GS2_dummy then
-		dmginfo:SetDamageForce(dmginfo:GetDamageForce() / self:GetPhysicsObject():GetMass())
+	local phys = self:GetPhysicsObject()
+	if (!self.GS2_dummy and IsValid(phys)) then
+		dmginfo:SetDamageForce(dmginfo:GetDamageForce() / phys:GetMass())
 		self:TakePhysicsDamage(dmginfo)
 	end
 end

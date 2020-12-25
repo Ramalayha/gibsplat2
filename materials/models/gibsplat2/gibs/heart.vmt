@@ -1,0 +1,8 @@
+"VertexLitGeneric"
+{
+	"$basetexture"	"models/gibsplat2/gibs/heart"
+	"$surfaceprop"	"flesh"
+	"$selfillum" 1
+	"$bumpmap"	"models/gibsplat2/gibs/heart_normal"
+	"$model" "1"
+}

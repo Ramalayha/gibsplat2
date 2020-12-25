@@ -3,6 +3,8 @@ include("gibsplat2/gibs.lua")
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
+ENT.LifeTime = CreateConVar("gs2_gib_lifetime", 30) --after not moving for this amount of time the gib will fade away
+
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
 	"decals/flesh/blood2",
@@ -10,14 +12,6 @@ game.AddDecal("BloodSmall", {
 	"decals/flesh/blood4",
 	"decals/flesh/blood5"
 })
-
-/*game.AddDecal("YellowBloodSmall", {
-	"decals/alienflesh/shot1",
-	"decals/alienflesh/shot2",
-	"decals/alienflesh/shot3",
-	"decals/alienflesh/shot4",
-	"decals/alienflesh/shot5"
-})*/
 
 local decals = {
 	[BLOOD_COLOR_RED] = "BloodSmall",
@@ -39,6 +33,10 @@ function ENT:SetBColor(color)
 	self.GS2BloodColor = color
 end
 
+function ENT:PhysicsSimulate()
+	self.LastSim = CurTime()
+end
+
 function ENT:InitPhysics()
 	local body = self:GetBody()
 	local phys_bone = self:GetTargetBone()
@@ -56,6 +54,7 @@ function ENT:InitPhysics()
 			self:SetCustomCollisionCheck(true)			
 			phys_self:SetMaterial("watermelon")
 			self.GS2_dummy = false
+			self:StartMotionController()
 		end
 	end
 end
@@ -125,14 +124,46 @@ local squish_snds = {
 	"physics/flesh/flesh_squishy_impact_hard4.wav"
 }
 
-function ENT:PhysicsCollide(data, phys)
-	local time = CurTime()
-	self.LastCollide = self.LastCollide or time
-	if (time - self.LastCollide < 0.05) then
+function ENT:PhysicsCollide(data, phys_self)
+	local speed = data.Speed
+	if (self.Created and speed > 1000 and CurTime() - self.Created > 1) then
+		self:Remove()
 		return
 	end
-	self.LastCollide = time
-	if (data.Speed > 100) then
+	if SERVER then
+		if (!data.HitEntity:IsWorld() and !data.HitEntity:IsRagdoll() and (phys_self:GetEnergy() == 0 or phys_self:GetEnergy() > 10000)) then --0 energy = jammed in something
+			if (math.random() > 0.6 or phys_self:GetPos():Distance(data.HitPos) > self:BoundingRadius() * 0.7) then
+				self:Remove()
+			else	
+				local color = self.GS2BloodColor
+				if color then
+					local decal = decals[color]
+					if decal then
+						util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+						util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+					end
+				end
+				local phys = data.HitObject
+				local lpos, lang = WorldToLocal(phys_self:GetPos(), phys_self:GetAngles(), phys:GetPos(), phys:GetAngles())
+				timer.Simple(0, function()
+					if (IsValid(self) and IsValid(phys)) then			
+						self:SetNotSolid(true)
+						self:PhysicsDestroy()
+						local pos, ang = LocalToWorld(lpos, lang, phys:GetPos(), phys:GetAngles())
+						self:SetPos(pos)
+						self:SetAngles(ang)
+						self:SetParent(data.HitEntity)									
+					end
+				end)			
+			end
+		end
+	end
+
+	if (data.DeltaTime < 0.05) then
+		return
+	end
+	
+	if (speed > 100) then
 		local color = self.GS2BloodColor
 		if color then
 			local decal = decals[color]
@@ -141,32 +172,7 @@ function ENT:PhysicsCollide(data, phys)
 				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 			end
 		end
-	end
-	
-	if CLIENT then return end
-
-	if (phys:GetEnergy() == 0 or (data.Speed > 1000 and CurTime() - self.Created > 1)) then --0 energy = jammed in something
-		if (math.random() > 0.6) then
-			self:Remove()
-		else			
-			timer.Simple(0, function()
-				if IsValid(self) then
-					self:SetPos(data.HitPos)					
-					self:SetParent(data.HitEntity)								
-				end
-			end)
-			timer.Simple(math.Rand(10, 20), function()
-				if IsValid(self) then									
-					self:SetParent()
-					local phys = self:GetPhysicsObject()
-					phys:SetVelocity(vector_origin)
-					self:EmitSound(squish_snds[math.random(1, #squish_snds)])
-					local const = constraint.NoCollide(self, data.HitEntity, 0, 0)
-					SafeRemoveEntityDelayed(const, 5)					
-				end
-			end)
-		end
-	end
+	end	
 end
 
 local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)

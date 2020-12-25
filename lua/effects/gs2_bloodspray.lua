@@ -7,7 +7,7 @@ local max_particles = CreateClientConVar("gs2_max_particles", 128)
 local do_effects = CreateClientConVar("gs2_effects", 1)
 
 local DECAL_CHANCE = 0.01
-local LINGER_CHANCE = 0.3
+local LINGER_CHANCE = 0.2
 
 local SIZE = 2
 
@@ -65,6 +65,8 @@ function EFFECT:Init(data)
 
 	self.PhysBone = self.Body:TranslateBoneToPhysBone(self.Bone)
 
+	self.mask = bit_lshift(1, self.PhysBone)
+
 	local matrix = self.Body:GetBoneMatrix(self.Bone)
 	
 	if !matrix then
@@ -83,6 +85,8 @@ function EFFECT:Init(data)
 	self.Emitter = ParticleEmitter(bone_pos, false)
 	self.Emitter3D = ParticleEmitter(bone_pos, true)
 
+	self.last_sim = CurTime()
+
 	self.Particles = {}
 
 	for hbg = 0, self.Body:GetHitBoxGroupCount() - 1 do
@@ -100,27 +104,20 @@ function EFFECT:Init(data)
 end
 
 local trace = {
-	mask = MASK_NPCWORLDSTATIC
+	mask = MASK_SOLID_BRUSHONLY
 }
 
 local PARTICLES = setmetatable({}, {__mode = "v"}) --weak table so they can get garbage collected
 
 local function OnCollide(self, pos, norm)
 	if (#PARTICLES >= max_particles:GetInt()) then return end
-	if (math.random() < DECAL_CHANCE) then
-		if (self.Blood == BLOOD_COLOR_RED) then
-			--util.Decal("BloodSmall", pos, norm)
-		else
-			--util.Decal("YellowBlood", pos, norm)
-		end
-	end
-
+	
 	trace.start = pos + norm
 	trace.endpos = pos - norm
 
 	local tr = util.TraceLine(trace)
 
-	if !tr.Hit then
+	if (!tr.Hit or tr.HitNoDraw or tr.HitSky) then
 		return
 	end
 
@@ -162,17 +159,9 @@ end
 
 function EFFECT:Think()
 	if !do_effects:GetBool() then return false end
-	if (#PARTICLES >= max_particles:GetInt()) then return false end
-
-	if (FrameTime() > 0.05) then
-		--buffer overflow is probably occuring SHUT. DOWN. EVERYTHING!
-		for _, part in pairs(PARTICLES) do
-			part:SetDieTime(0)
-		end
-		return false
-	end
-
+	--line 162 is not an error dammit!
 	local cur_time = CurTime()
+
 	if !IsValid(self.Emitter) then
 		if self.Emitter3D then
 			self.Emitter3D:Finish()
@@ -181,7 +170,7 @@ function EFFECT:Think()
 	end
 	if (!IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
-	 	!self.Body.GS2Limbs or !IsValid(self.Body.GS2Limbs[self.PhysBone])) then
+	 	!self.Body.GS2Limbs or bit_band(self.mask, self.Body:GetNWInt("GS2GibMask")) != 0) then
 
 	 	self.Emitter:Finish()	
 	 	if self.Emitter3D then
@@ -190,15 +179,15 @@ function EFFECT:Think()
 		return false
 	end
 
-	self.LastThink = self.LastThink or cur_time
-	if (cur_time - self.LastThink < 0.05) then
-		return true
-	end
-	self.LastThink = cur_time
-
 	local matrix = self.Body:GetBoneMatrix(self.Bone)
 
 	local bone_pos, bone_ang = LocalToWorld(self.LocalPos, self.LocalAng, matrix:GetTranslation(), matrix:GetAngles())
+
+	self.last_bone_pos = self._last_bone_pos or bone_pos
+
+	local bone_vel = bone_pos - self.last_bone_pos
+	bone_vel:Div(cur_time - self.last_sim)
+	self.last_sim = cur_time
 
 	local bone_dir = -bone_ang:Forward()
 
@@ -221,7 +210,7 @@ function EFFECT:Think()
 		table.insert(self.Particles, particle)
 
 		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(vel)
+		particle:SetVelocity(bone_vel + vel)
 		particle:SetStartSize(SIZE * math.Rand(0.2, 0.3) * 5)
 		particle:SetStartLength(math.Rand(1.25, 2.75) * 5)
 		particle:SetLifeTime(0)
@@ -240,7 +229,7 @@ function EFFECT:Think()
 		particle:SetCollideCallback(OnCollide)
 	end
 
-	for i = 1, 6 do --24
+	for i = 1, 8 do --24
 		local pos = bone_pos
 		 + right * math.Rand(-0.5, 0.5)
 		 + up * math.Rand(0.5, 0.5)
@@ -257,7 +246,7 @@ function EFFECT:Think()
 		table.insert(self.Particles, particle)
 
 		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(vel)
+		particle:SetVelocity(bone_vel + vel)
 		particle:SetStartSize(SIZE * math.Rand(0.025, 0.05))
 		particle:SetStartLength(math.Rand(2.5, 3.75))
 		particle:SetLifeTime(0)
@@ -286,7 +275,7 @@ function EFFECT:Think()
 		local particle = self.Emitter:Add("effects/blood_puff", pos + Angle(math.Rand(0, 360), 0, 0):Forward() * self.Radius)
 
 		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(vel)
+		particle:SetVelocity(bone_vel + vel)
 
 		local size = math.Rand(1, 1.5)
 		particle:SetStartSize(SIZE * size)	
@@ -323,7 +312,7 @@ function EFFECT:Render()
 end
 
 hook.Add("PostCleanupMap", "GS2ClearParticles", function()
-	for key, particle in ipairs(PARTICLES) do
+	for key, particle in pairs(PARTICLES) do
 		if particle then
 			particle:SetDieTime(0)
 		end

@@ -1,9 +1,8 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 			= CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
-local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 1)
-local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1)
-local gib_chance 		= CreateConVar("gs2_gib_chance", 0.3)
+local enabled 			= CreateConVar("gs2_enabled", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
+local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, FCVAR_REPLICATED)
 
 local ang_zero = Angle(0, 0, 0)
 
@@ -23,7 +22,7 @@ local function GS2CreateEntityRagdoll(ent, doll)
 		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib)
 		
 		if phys_bone then
-			doll:GS2Gib(phys_bone)
+			doll:GS2Gib(phys_bone, false, true)
 		end
 	end
 	if (ent.__lastdmgpos and ent.__lastdmgtime == CurTime()) then
@@ -43,23 +42,10 @@ local function GS2CreateEntityRagdoll(ent, doll)
 		timer.Simple(0, function()
 			if IsValid(doll) then
 				for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
-					if (math.random() < gib_chance:GetFloat()) then
-						doll:GS2Gib(phys_bone)
-					end
+					doll:GS2Gib(phys_bone)					
 				end
 			end	
 		end)
-	end
-end
-
-local function GS2SetupPlayerVisibility(ply)
-	for _, doll in pairs(ents.FindByClass("prop_ragdoll")) do
-		if (doll:GetNWInt("GS2GibMask", 0) != 0) then
-			for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
-				local phys = doll:GetPhysicsObjectNum(phys_bone)
-				AddOriginToPVS(phys:GetPos())
-			end
-		end
 	end
 end
 
@@ -84,15 +70,16 @@ local function IsKindaBullet(dmginfo)
 			dmginfo:IsDamageType(DMG_CLUB) or 
 			dmginfo:IsDamageType(DMG_ENERGYBEAM) or 
 			dmginfo:IsDamageType(DMG_NEVERGIB) or --crossbow
-			dmginfo:IsDamageType(DMG_SNIPER)
+			dmginfo:IsDamageType(DMG_SNIPER) or
+			dmginfo:IsDamageType(DMG_BUCKSHOT) --this doesnt count as bullet damage for some reason
 end
 
 local function ShouldGib(dmginfo)
 	local dmg = dmginfo:GetDamage()
 
-	local gib_chance = math.min(0.95, 6/dmg)
+	local gib_chance = math.min(0.95, 4/dmg)
 
-	return math.random() > gib_chance	
+	return math.random() > gib_chance
 end
 
 local function GS2EntityTakeDamage(ent, dmginfo)
@@ -229,46 +216,50 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 					end
 				end
 			else
-				if (dmg >= 100) then
-					ent:GS2Gib(phys_bone)--, dmginfo)
+				if (!att:IsPlayer() and dmg >= 100) then
+					ent:GS2Gib(phys_bone)
 				end
 			end
 		elseif dmginfo:IsDamageType(DMG_SLASH) then
 			if ShouldGib(dmginfo) then
-				ent:GS2Gib(phys_bone)
+				ent:GS2Gib(phys_bone, false, true)
 			else
 				ent:GS2Dismember(phys_bone)	
 			end
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then
-				ent:GS2Gib(phys_bone)
+				ent:GS2Gib(phys_bone, false, true)
 			else
-				local hole = ents.Create("gs2_bullethole")
-				hole:SetBody(ent)
-				hole:SetTargetBone(phys_bone)			
-				hole:SetPos(dmg_pos)
-				hole:SetAngles(AngleRand())			
-				hole:Spawn()
-				
-				local pos = phys:GetPos()
-				local ang = phys:GetAngles()
-
-				local norm = ang:Forward()
-
-				local hitpos = pos + norm * norm:Dot(dmg_pos - pos)
-
-				local lpos, lang = WorldToLocal(dmg_pos, (hitpos - dmg_pos):Angle(), pos, ang)
-
 				local blood_color = blood_colors[phys:GetMaterial()]
+				if blood_color then
+					local hole = ents.Create("gs2_bullethole")
+					hole:SetBody(ent)
+					hole:SetTargetBone(phys_bone)			
+					hole:SetPos(dmg_pos)
+					hole:SetAngles(AngleRand())		
+					hole:Spawn()
+					
+					local pos = phys:GetPos()
+					local ang = phys:GetAngles()
 
-				local EF = EffectData()
-				EF:SetEntity(ent)
-				EF:SetOrigin(lpos)		
-				EF:SetAngles(lang)
-				EF:SetHitBox(ent:TranslatePhysBoneToBone(phys_bone))
-				EF:SetColor(blood_color)
-				EF:SetScale(0.1)
-				util.Effect("gs2_bloodspray", EF)
+					local norm = ang:Forward()
+
+					local hitpos = pos + norm * norm:Dot(dmg_pos - pos)
+
+					local lpos, lang = WorldToLocal(dmg_pos, (hitpos - dmg_pos):Angle(), pos, ang)
+
+					local EF = EffectData()
+					EF:SetEntity(ent)
+					EF:SetOrigin(lpos)		
+					EF:SetAngles(lang)
+					EF:SetHitBox(ent:TranslatePhysBoneToBone(phys_bone))
+					EF:SetColor(blood_color)
+					EF:SetScale(0.1)
+					util.Effect("gs2_bloodspray", EF)
+
+					EF:SetOrigin(hitpos)
+					util.Effect("BloodImpact", EF)
+				end
 			end				
 		end
 	elseif (ent:IsNPC() or ent:IsPlayer()) then
@@ -283,6 +274,18 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then
 				ent.__forcegib = dmg_pos
+			end
+		else
+			local att = dmginfo:GetAttacker()
+			local is_heavy
+			if IsValid(att) then
+				local phys = att:GetPhysicsObject()
+				if IsValid(phys) then
+					is_heavy = phys:GetMass() >= 300 --this triggers zombie splitting to occur and we dont want that
+				end
+			end
+			if (dmginfo:IsDamageType(DMG_CRUSH) and is_heavy and ent:GetClass():find("zombie")) then
+				dmginfo:SetDamageType(DMG_GENERIC) --change damage type so zombies dont split
 			end
 		end
 	end
@@ -348,7 +351,6 @@ if enabled:GetBool() then
 		hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
 		hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
 	end
-	hook.Add("SetupPlayerVisibility", HOOK_NAME, GS2SetupPlayerVisibility)
 	hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 end
 
@@ -362,14 +364,12 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 			hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
 			hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
 		end
-		hook.Add("SetupPlayerVisibility", HOOK_NAME, GS2SetupPlayerVisibility)
 		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 	else
 		PLAYER.CreateRagdoll = oldCreateRagdoll
 		PLAYER.GetRagdollEntity = oldGetRagdollEntity
 		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
 		hook.Remove("OnEntityCreated", HOOK_NAME)
-		hook.Remove("SetupPlayerVisibility", HOOK_NAME)
 		hook.Remove("EntityTakeDamage", HOOK_NAME)		
 	end
 end)
@@ -400,3 +400,61 @@ if game.SinglePlayer() then
 	enabled:SetBool(true)
 	default_ragdolls:SetBool(true)
 end
+
+if game.GetMap():find("ragdoll_slaughter") then --special case for these maps
+	scripted_ents.Register({Base = "base_anim"}, "trigger_push")
+end
+
+--[[local function DisableTriggers()
+	if game.GetMap():find("ragdoll_slaughter") then --special case for these maps
+		for _, ent in pairs(ents.FindByClass("trigger_push")) do
+			ent:Fire("disable")
+		end
+	end
+end
+
+DisableTriggers()
+
+hook.Add("PostCleanupMap", "GS2DisablePushTriggers", DisableTriggers)]]
+
+local MSG = "GS2ForceModelPregen"
+
+util.AddNetworkString(MSG)
+
+local function ForceModelPregen(ply, dosv)
+	timer.Simple(1, function() --wait a second to avoid crash
+		local active_models = {}
+		for _, ent in pairs(ents.GetAll()) do
+			if (player_ragdolls:GetBool() or !ent:IsPlayer()) then
+				local mdl = ent:GetModel()
+				if (!active_models[mdl] and util.IsValidRagdoll(mdl or "")) then
+					active_models[mdl] = true
+					if dosv then
+						hook.GetTable()["OnEntityCreated"]["GS2Gibs"](ent) --ugly, forces gibs to generate
+					end
+				end
+			end
+		end
+
+		net.Start(MSG)
+		net.WriteUInt(table.Count(active_models), 16)
+		for mdl in pairs(active_models) do
+			net.WriteString(mdl)		
+		end
+		net.Send(ply)
+	end)
+end
+
+hook.Add("PlayerInitialSpawn", "GibSplat2ForceModelPregen", function(ply)
+	if enabled:GetBool() then		
+		ForceModelPregen(ply)
+	end
+end)
+
+cvars.AddChangeCallback("gs2_enabled", function(_, old, new)
+	if (!suppress and old == "0" and new == "1") then
+		local RF = RecipientFilter()
+		RF:AddAllPlayers()
+		ForceModelPregen(RF, true)
+	end
+end)

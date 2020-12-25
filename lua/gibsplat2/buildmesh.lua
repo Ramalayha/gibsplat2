@@ -453,14 +453,33 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 	end			
 end)
 
+local player_ragdolls = CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
+
 hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 	if !enabled:GetBool() then return end
+	if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 	local mdl = ent:GetModel()
 	if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
 		THREADS[mdl] = coroutine.create(function()			
 			GetBoneMeshes(ent, 0)
 		end)
 		coroutine.resume(THREADS[mdl])
+	end
+end)
+
+net.Receive("GS2ForceModelPregen", function()
+	local count = net.ReadUInt(16)
+	for i = 1, count do
+		local mdl = net.ReadString()
+		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
+			THREADS[mdl] = coroutine.create(function()			
+				GetBoneMeshes(ent, 0)
+			end)
+			coroutine.resume(THREADS[mdl])
+		end
+		local temp = ClientsideModel(mdl)
+		hook.GetTable()["NetworkEntityCreated"]["GS2Gibs"](temp) --ugly!
+		temp:Remove()
 	end
 end)
 

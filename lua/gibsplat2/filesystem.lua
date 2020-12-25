@@ -87,7 +87,7 @@ function GS2ReadGibData(hash, out, size)
 
 		if (version != GIB_VERSION) then
 			F:Close()
-			print("GS2ReadGibData: File is wrong version ("..version..") should be "..GIB_VERSION.."!",hash)
+			print("GS2ReadGibData: File is wrong version ("..(version or "NULL")..") should be "..GIB_VERSION.."!",hash)
 			file.Delete(file_path..".txt")
 			return
 		end
@@ -358,6 +358,7 @@ function GS2WriteModelData(mdl)
 	local file_path = "gibsplat2/model_data/"..hash..".txt"
 
 	local F = file.Open(file_path, "wb", "DATA")
+	F:Seek(0)
 
 	F:WriteShort(MDL_VERSION)
 
@@ -368,8 +369,12 @@ function GS2WriteModelData(mdl)
 
 	for phys_bone, data in pairs(gib_data) do
 		F:WriteShort(phys_bone)
-		F:WriteShort(#data.hash)
-		F:Write(data.hash)
+		if data.hash then
+			F:WriteShort(#data.hash)
+			F:Write(data.hash)
+		else
+			F:WriteShort(0)
+		end
 	end
 
 	if CLIENT then
@@ -414,11 +419,13 @@ function GS2ReadModelData(mdl)
 		return
 	end
 
+	F:Seek(0)
+
 	local version = F:ReadShort()
 
 	if (version != MDL_VERSION) then
 		F:Close()
-		print("GS2ReadModelData: File is wrong version ("..version..") should be "..MDL_VERSION.."!",hash)
+		print("GS2ReadModelData: File is wrong version ("..(version or "NULL")..") should be "..MDL_VERSION.."!",hash)
 		file.Delete(file_path..".txt")
 		return
 	end

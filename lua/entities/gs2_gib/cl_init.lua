@@ -17,6 +17,10 @@ function ENT:Initialize()
 	if !IsValid(body) then		
 		return
 	end
+
+	body:SetupBones()
+
+	self.Created = CurTime()
 	
 	local phys_bone = self:GetTargetBone()
 
@@ -34,7 +38,7 @@ function ENT:Initialize()
 	self:SetModel("models/error.mdl")
 
 	self:AddCallback("PhysicsCollide", self.PhysicsCollide)
-
+	
 	self:Think() --Forces think once for clientside only gibs
 end
 
@@ -63,6 +67,9 @@ end
 
 function ENT:Draw()
 	self:DrawModel()
+	if (self:EntIndex() == -1 and self.LastSim and self.LastSim + self.LifeTime:GetFloat() < CurTime()) then
+		SafeRemoveEntityDelayed(self, 0)
+	end
 end
 
 function ENT:GetRenderMesh()

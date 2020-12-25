@@ -130,6 +130,7 @@ function ENT:Initialize()
 
 	self:SetupBones()
 
+	self:DrawShadow(false)
 	self:DestroyShadow()
 end
 
@@ -319,9 +320,9 @@ local function null() end
 
 function ENT:Draw()
 	local body = self:GetBody()
-	if IsValid(body) then
-		body.RenderOverride = null --Hide actual ragdoll
+	if IsValid(body) then		
 		if !self.GS2RenderMeshes and self.GS2BoneList then
+			body.RenderOverride = null --Hide actual ragdoll
 			self:SetupBones()						
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self:GetTargetBone()]

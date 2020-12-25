@@ -1,4 +1,5 @@
 "VertexLitGeneric"
 {
-	"$basetexture" "models/gibsplat2/gibs/eyeball"
+	"$basetexture" 	"models/gibsplat2/gibs/eyeball"
+	"$detail"		"models/gibsplat2/overlays/flesh"
 }
