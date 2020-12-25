@@ -439,9 +439,11 @@ local function ForceModelPregen(ply, dosv)
 		net.Start(MSG)
 		net.WriteUInt(table.Count(active_models), 16)
 		for mdl in pairs(active_models) do
-			net.WriteString(mdl)		
+			net.WriteString(mdl)	
 		end
 		net.Send(ply)
+		enabled:SetBool(false)
+		enabled:SetBool(true)
 	end)
 end
 
