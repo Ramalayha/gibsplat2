@@ -271,7 +271,11 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 	local GibEffects = ShouldGib(phys_mat)
 	if !GibEffects then return end
 	SafeRemoveEntity(self.GS2Limbs[phys_bone])
-	SafeRemoveEntity(self.GS2LimbRelays[phys_bone])
+	local relay = self.GS2LimbRelays[phys_bone]
+	if IsValid(relay) then
+		SafeRemoveEntity(relay)
+		relay:SetParent()
+	end
 	self.GS2Limbs[phys_bone] = nil
 	--Timer makes it run outside the PhysicsCollide hook to prevent physics crashes
 	timer_Simple(0, function()
