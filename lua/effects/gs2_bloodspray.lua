@@ -117,7 +117,7 @@ local function OnCollide(self, pos, norm)
 
 	local tr = util.TraceLine(trace)
 
-	if (!tr.Hit or tr.HitNoDraw or tr.HitSky) then
+	if (!tr.Hit or tr.HitNoDraw or tr.HitSky or (IsValid(tr.Entity) and !tr.Entity:IsWorld())) then
 		return
 	end
 
