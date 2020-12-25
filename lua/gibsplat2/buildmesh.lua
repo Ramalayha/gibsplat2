@@ -475,6 +475,7 @@ net.Receive("GS2ForceModelPregen", function()
 			THREADS[mdl] = coroutine.create(function()			
 				GetBoneMeshes(ent, 0)
 			end)
+			local hash = util.CRC(mdl)
 			if (file.Exists("materials/gibsplat2/model_data/"..hash..".txt", "GAME") or file.Exists("gibsplat2/model_data/"..hash..".txt", "LUA")) then
 				while (coroutine.status(THREADS[mdl]) != "dead") do
 					coroutine.resume(THREADS[mdl])
