@@ -421,6 +421,8 @@ local MSG = "GS2ForceModelPregen"
 
 util.AddNetworkString(MSG)
 
+local suppress = false
+
 local function ForceModelPregen(ply, dosv)
 	timer.Simple(1, function() --wait a second to avoid crash
 		local active_models = {}
@@ -442,8 +444,10 @@ local function ForceModelPregen(ply, dosv)
 			net.WriteString(mdl)	
 		end
 		net.Send(ply)
+		suppress = true
 		enabled:SetBool(false)
 		enabled:SetBool(true)
+		suppress = false
 	end)
 end
 
