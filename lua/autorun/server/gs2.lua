@@ -4,7 +4,9 @@ include("gibsplat2/gibs.lua")
 include("gibsplat2/buildcustomragdoll.lua")
 include("gibsplat2/buildmesh.lua")
 
-AddCSLuaFile("gibsplat2/constraintinfo.lua")
+resource.AddWorkshop("2336666211")
+
+--[[AddCSLuaFile("gibsplat2/constraintinfo.lua")
 AddCSLuaFile("gibsplat2/buildmesh.lua")
 AddCSLuaFile("gibsplat2/gibs.lua")
 AddCSLuaFile("gibsplat2/clipmesh.lua")
@@ -29,4 +31,4 @@ resource.AddFile("materials/models/alienflesh.vmt")
 resource.AddFile("materials/models/zombieflesh.vmt")
 resource.AddFile("materials/models/antlion.vmt")
 resource.AddSingleFile("materials/gibsplat2/skeletons.vmt")
-resource.AddSingleFile("materials/gibsplat2/gibs.vmt")
+resource.AddSingleFile("materials/gibsplat2/gibs.vmt")]]
