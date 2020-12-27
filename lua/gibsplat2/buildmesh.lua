@@ -509,9 +509,9 @@ hook.Add("HUDPaint", "GS2BuildMeshDisplay", function()
 
 	local msg = form:format(mdl, 100 * PERCENT, nmodels - 1)
 
-	local w, h = surface.GetTextSize(msg)
-
 	surface.SetFont("DebugFixed")
+	local w, h = surface.GetTextSize(msg)
+	
 	surface.SetTextColor(255, 0, 0)
 	surface.SetTextPos(ScrW() * 0.99 - w, ScrH() / 2 - h / 2)
 	surface.DrawText(msg)
