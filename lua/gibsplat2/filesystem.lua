@@ -306,7 +306,7 @@ function GS2ReadMesh(hash)
 	F:Close()
 
 	if !succ then 
-		print("GS2ReadMesh: deleting corrupted file "..file_name)
+		print("GS2ReadMesh: deleting corrupted file "..file_path)
 		file.Delete(file_path..".txt")
 	else
 		return ret
