@@ -441,7 +441,11 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 		print(str)
 		start = nil	
 	else		
-		for i = 1, iterations:GetInt() do
+		local iter = iterations:GetInt()
+		if !system.HasFocus() then
+			iter = iter * 10
+		end
+		for i = 1, iter do
 			local bool, err = coroutine.resume(thread)
 			if !bool then
 				print(mdl, err)
