@@ -6,14 +6,14 @@ include("gibsplat2/buildmesh.lua")
 
 resource.AddWorkshop("2336666211")
 
---[[AddCSLuaFile("gibsplat2/constraintinfo.lua")
+AddCSLuaFile("gibsplat2/constraintinfo.lua")
 AddCSLuaFile("gibsplat2/buildmesh.lua")
 AddCSLuaFile("gibsplat2/gibs.lua")
 AddCSLuaFile("gibsplat2/clipmesh.lua")
 AddCSLuaFile("gibsplat2/filesystem.lua")
 AddCSLuaFile("gibsplat2/mesh_util.lua")
 
-local function AddFolder(path)
+--[[local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")
 	for _, file_name in pairs(files) do		
 		resource.AddSingleFile(path:sub(0, -2)..file_name)
