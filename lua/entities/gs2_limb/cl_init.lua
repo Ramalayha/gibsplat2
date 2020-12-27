@@ -430,7 +430,7 @@ local HOOK_NAME = "GibSplat2"
 hook.Add("OnEntityCreated", HOOK_NAME, function(ent)
 	if ent:IsRagdoll() or ent:GetClass() == "gs2_limb" then
 		local old_all = ents.GetAll()
-		timer.Simple(0.015, function()
+		timer.Simple(0.1, function()
 			local all = ents.GetAll()
 			for _, e in ipairs(all) do
 				if (e:EntIndex() == -1 and e:GetClass() == "class C_RopeKeyframe" and !table_HasValue(old_all, e)) then
