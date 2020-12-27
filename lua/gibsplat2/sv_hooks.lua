@@ -74,10 +74,12 @@ local function IsKindaBullet(dmginfo)
 			dmginfo:IsDamageType(DMG_BUCKSHOT) --this doesnt count as bullet damage for some reason
 end
 
+local gib_chance = GetConVar("gs2_gib_chance")
+
 local function ShouldGib(dmginfo)
 	local dmg = dmginfo:GetDamage()
 
-	local gib_chance = math.min(0.95, 4/dmg)
+	local gib_chance = !gib_chance:GetBool() and 0 or math.min(0.95, 4/dmg)
 
 	return math.random() > gib_chance
 end
