@@ -79,7 +79,7 @@ local gib_chance = CreateConVar("gs2_gib_chance", 0.3, FCVAR_REPLICATED)
 local function ShouldGib(dmginfo)
 	local dmg = dmginfo:GetDamage()
 
-	local gib_chance = !gib_chance:GetBool() and 0 or math.min(0.95, 4/dmg)
+	local gib_chance = gib_chance:GetFloat() == 0 and 1 or math.min(0.95, 4/dmg)
 
 	return math.random() > gib_chance
 end
