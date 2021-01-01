@@ -93,8 +93,13 @@ local function BuildBones(self, num_bones)
 			if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
 				local info = self.GS2BoneList[bone]
 				
-				if (!info or info.parent != bone) then
+				if !info then
 					self:SetBoneMatrix(bone, self_matrix)
+				elseif (info.parent != bone) then
+					local matrix = body:GetBoneMatrix(info.parent)
+					matrix:Translate(vec_offset)
+					matrix:Scale(vec_zero)
+					self:SetBoneMatrix(bone, matrix)
 				else
 					local matrix = body:GetBoneMatrix(bone)
 					if matrix then
