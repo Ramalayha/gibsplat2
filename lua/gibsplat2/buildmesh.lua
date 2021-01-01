@@ -429,6 +429,7 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 	end
 	if !start then
 		start = SysTime()
+		PERCENT = 0
 		print("Started generating meshes for "..mdl)
 	end			
 	
