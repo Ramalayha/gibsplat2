@@ -47,8 +47,8 @@ local table_HasValue = table.HasValue
 
 local vec_zero = Vector(0, 0, 0)
 local vec_offset = Vector(1, 0, 0)
-local matrix_inf = Matrix()
-matrix_inf:Translate(Vector(math.huge))
+--local matrix_inf = Matrix()
+--matrix_inf:Translate(Vector(math.huge))
 
 local dummy = ClientsideModel("models/error.mdl")
 dummy:SetNoDraw(true)

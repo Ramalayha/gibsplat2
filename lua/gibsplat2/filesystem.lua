@@ -2,7 +2,7 @@
 
 local GIB_VERSION = 1
 local MESH_VERSION = 1
-local MDL_VERSION = 1
+local MDL_VERSION = 2
 
 function VEC2STR(vec)
 	return math.Round(vec.x, 3)..math.Round(vec.y, 3)..math.Round(vec.z, 3)
@@ -353,7 +353,12 @@ function GS2WriteModelData(mdl)
 	file.CreateDir("gibsplat2")
 	file.CreateDir("gibsplat2/model_data")
 
-	local hash = util.CRC(mdl)
+	local F = file.Open(mdl, "rb", "GAME")
+	F:Seek(8)
+	local checksum = F:Read(4)
+	F:Close()
+
+	local hash = util.CRC(mdl..checksum)
 
 	local file_path = "gibsplat2/model_data/"..hash..".txt"
 
@@ -409,7 +414,12 @@ function GS2ReadModelData(mdl)
 		return MDL_CACHE[mdl]
 	end
  
-	local hash = util.CRC(mdl)
+	local F = file.Open(mdl, "rb", "GAME")
+	F:Seek(8)
+	local checksum = F:Read(4)
+	F:Close()
+
+	local hash = util.CRC(mdl..checksum)
 
 	local file_path = "gibsplat2/model_data/"..hash
 
