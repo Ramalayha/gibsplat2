@@ -107,7 +107,7 @@ local trace = {
 	mask = MASK_SOLID_BRUSHONLY
 }
 
-local PARTICLES = setmetatable({}, {__mode = "v"}) --weak table so they can get garbage collected
+local PARTICLES = {}
 
 local function OnCollide(self, pos, norm)
 	if (#PARTICLES >= max_particles:GetInt()) then return end

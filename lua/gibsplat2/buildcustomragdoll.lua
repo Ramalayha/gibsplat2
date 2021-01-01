@@ -8,7 +8,7 @@ local min_strength 	= CreateConVar("gs2_min_constraint_strength", 4000, FCVAR_AR
 local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000, FCVAR_ARCHIVE)
 local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250, FCVAR_ARCHIVE)
 local less_limbs	= CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
-local gib_chance 	= CreateConVar("gs2_gib_chance", 0.3, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local gib_chance 	= CreateConVar("gs2_gib_chance", 0.1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 local snd_dismember = Sound("physics/body/body_medium_break3.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -451,7 +451,7 @@ function ENTITY:MakeCustomRagdoll()
 		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
 		const_bs:Activate()
-
+		
 		local const_rc = ents_Create("phys_ragdollconstraint")
 		const_rc:SetPos(phys_child:GetPos())
 		const_rc:SetAngles(phys_child:GetAngles())
@@ -463,9 +463,37 @@ function ENTITY:MakeCustomRagdoll()
 		const_rc:Spawn()
 		const_rc:Activate()
 
+		local const_bs2 = ents_Create("phys_ballsocket")
+		const_bs2:SetPos(phys_child:GetPos())
+		const_bs2:SetPhysConstraintObjects(phys_parent, phys_child)
+		const_bs2:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 2 * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
+		const_bs2:Spawn()
+		const_bs2:Activate()
+
+		local const_rc2 = ents_Create("phys_ragdollconstraint")
+		const_rc2:SetPos(phys_child:GetPos())
+		const_rc2:SetAngles(phys_child:GetAngles())
+		const_rc2:SetPhysConstraintObjects(phys_parent, phys_child)
+		const_rc2:SetKeyValue("spawnflags", 2) --free movement, let const_bs keep them together
+		for key, value in pairs(part_info) do
+			if key:find("^[xyz]min$") then
+				const_rc2:SetKeyValue(key, value - 15)
+			elseif key:find("^[xyz]max$") then
+				const_rc2:SetKeyValue(key, value + 15)		
+			end
+		end
+		const_rc2:Spawn()
+
+		const_bs2:DeleteOnRemove(const_bs)
+		const_bs2:DeleteOnRemove(const_rc2)
+		
 		const_bs:CallOnRemove("GS2Dismember", function()
 			SafeRemoveEntity(const_rc)
 			if !IsValid(phys_child) then return end
+			
+			if IsValid(const_rc2) then
+				const_rc2:Activate()
+			end
 
 			local less = less_limbs:GetBool()
 
@@ -614,10 +642,10 @@ function ENTITY:MakeCustomRagdoll()
 		end)
 
 		self.GS2Joints[part_info.child] = self.GS2Joints[part_info.child] or {}
-		table_insert(self.GS2Joints[part_info.child], const_bs)
+		table_insert(self.GS2Joints[part_info.child], const_bs2)
 
 		self.GS2Joints[part_info.parent] = self.GS2Joints[part_info.parent] or {}
-		table_insert(self.GS2Joints[part_info.parent], const_bs)
+		table_insert(self.GS2Joints[part_info.parent], const_bs2)
 	end
 
 	local limb = ents_Create("gs2_limb")
