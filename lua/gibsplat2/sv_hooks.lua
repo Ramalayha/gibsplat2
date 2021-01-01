@@ -1,8 +1,8 @@
 util.AddNetworkString("GS2Dissolve")
 
 local enabled 			= CreateConVar("gs2_enabled", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
-local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, FCVAR_REPLICATED)
+local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 local ang_zero = Angle(0, 0, 0)
 

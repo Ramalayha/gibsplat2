@@ -305,12 +305,12 @@ function GS2GetBodyType(mdl)
 	return MDLTYPE_CACHE[mdl] or ""
 end
 
-local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3)
-local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7)
-local gib_custom		= CreateConVar("gs2_gib_custom", 1)
-local max_gibs			= CreateConVar("gs2_max_gibs", 32)
+local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3, FCVAR_ARCHIVE)
+local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7, FCVAR_ARCHIVE)
+local gib_custom		= CreateConVar("gs2_gib_custom", 1, FCVAR_ARCHIVE)
+local max_gibs			= CreateConVar("gs2_max_gibs", 32, FCVAR_ARCHIVE)
 
-local generate_all		= CreateConVar("gs2_gib_generate_all", 0)
+local generate_all		= CreateConVar("gs2_gib_generate_all", 0, FCVAR_ARCHIVE)
 
 local sv_gibs_def = 1
 /*if SERVER and !game.SinglePlayer() then
@@ -318,7 +318,7 @@ local sv_gibs_def = 1
 end*/
 
 local sv_gibs			= CreateConVar("gs2_gib_sv", sv_gibs_def, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local cl_gibs 			= CreateClientConVar("gs2_gib_cl", 1)
+local cl_gibs 			= CreateClientConVar("gs2_gib_cl", 1, FCVAR_ARCHIVE)
 
 local GIB_CONN_DATA = {}
 
@@ -592,9 +592,9 @@ hook.Add("Think", "GS2Gibs", function()
 	if (coroutine.status(thread) == "dead") then
 		THREADS[mdl] = nil
 		print("Generated gibs for "..mdl.." in "..math.Round(SysTime() - start, 3).." seconds ("..table.Count(THREADS).." models left)")
-		start = nil	
-		PERCENT = 0						
-	end			
+		start = nil
+		PERCENT = 0
+	end	
 end)
 
 local player_ragdolls = CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)

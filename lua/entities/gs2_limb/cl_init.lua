@@ -45,7 +45,8 @@ local render_SetColorModulation = render.SetColorModulation
 local table_Empty = table.Empty
 local table_HasValue = table.HasValue
 
-local vec_zero = Vector(0,0,0)
+local vec_zero = Vector(0, 0, 0)
+local vec_offset = Vector(1, 0, 0)
 local matrix_inf = Matrix()
 matrix_inf:Translate(Vector(math.huge))
 
@@ -76,13 +77,24 @@ local function BuildBones(self, num_bones)
 		return
 	end
 	body:SetupBones()
+
+	local self_phys_bone = self:GetTargetBone()
+		
+	local self_bone = self:TranslatePhysBoneToBone(self_phys_bone)
+	local self_matrix = body:GetBoneMatrix(self_bone)
+	if !self_matrix then
+		return
+	end
+
 	if self.SkinPass then
+		self_matrix:Translate(vec_offset)
+		self_matrix:Scale(vec_zero)
 		for bone = 0, num_bones - 1 do
 			if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
 				local info = self.GS2BoneList[bone]
 				
 				if (!info or info.parent != bone) then
-					self:SetBoneMatrix(bone, matrix_inf)
+					self:SetBoneMatrix(bone, self_matrix)
 				else
 					local matrix = body:GetBoneMatrix(bone)
 					if matrix then
@@ -93,16 +105,9 @@ local function BuildBones(self, num_bones)
 		end	
 		return
 	end
-
-	local self_phys_bone = self:GetTargetBone()
-		
-	local self_bone = self:TranslatePhysBoneToBone(self_phys_bone)
-	local self_matrix = body:GetBoneMatrix(self_bone)
-	if !self_matrix then
-		return
-	end
-	self_matrix:Scale(vec_zero)
 	
+	self_matrix:Scale(vec_zero)
+
 	for bone = 0, num_bones - 1 do
 		if self:BoneHasFlag(bone, BONE_USED_BY_ANYTHING) then
 			local info = self.GS2BoneList[bone]
