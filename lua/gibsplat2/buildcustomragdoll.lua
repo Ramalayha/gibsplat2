@@ -10,8 +10,9 @@ local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250, FC
 local less_limbs	= CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
 local gib_chance 	= CreateConVar("gs2_gib_chance", 0.1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
-local snd_dismember = Sound("physics/body/body_medium_break3.wav")
+local snd_dismember = Sound("physics/body/body_medium_break2.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
+local snd_snap = Sound("physics/body/body_medium_break3.wav")
 
 local decals = {
 	flesh = "Blood",
@@ -26,6 +27,10 @@ local blood_colors = {
 	alienflesh = BLOOD_COLOR_YELLOW,
 	antlion = BLOOD_COLOR_YELLOW
 }
+
+local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
+
+local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 
 local CreateGibs = CreateGibs
 local SetPhysConstraintSystem = SetPhysConstraintSystem
@@ -439,7 +444,9 @@ function ENTITY:MakeCustomRagdoll()
 
 	self.GS2Joints = {}
 	
-	local CONST_INFO = GetModelConstraintInfo(self:GetModel())
+	local mdl = self:GetModel()
+
+	local CONST_INFO = GetModelConstraintInfo(mdl)
 
 	for _, part_info in pairs(CONST_INFO) do
 		local phys_parent = self:GetPhysicsObjectNum(part_info.parent)
@@ -448,7 +455,7 @@ function ENTITY:MakeCustomRagdoll()
 		local const_bs = ents_Create("phys_ballsocket")
 		const_bs:SetPos(phys_child:GetPos())
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
+		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 0.5 * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
 		const_bs:Activate()
 		
@@ -463,42 +470,60 @@ function ENTITY:MakeCustomRagdoll()
 		const_rc:Spawn()
 		const_rc:Activate()
 
-		local const_bs2 = ents_Create("phys_ballsocket")
-		const_bs2:SetPos(phys_child:GetPos())
-		const_bs2:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs2:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 2 * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
-		const_bs2:Spawn()
-		const_bs2:Activate()
+		local body_type = GS2GetBodyType(mdl)
+		local skel_parts = skeleton_parts[body_type]
+		local bone_child = self:TranslatePhysBoneToBone(part_info.child)		
+		local const_bs2
+		if (skel_parts and skel_parts[self:GetBoneName(bone_child):lower()]) then			
+			const_bs2 = ents_Create("phys_ballsocket") 
+			const_bs2:SetPos(phys_child:GetPos())
+			const_bs2:SetPhysConstraintObjects(phys_parent, phys_child)
+			const_bs2:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
+			const_bs2:Spawn()
+			const_bs2:Activate()
 
-		local const_rc2 = ents_Create("phys_ragdollconstraint")
-		const_rc2:SetPos(phys_child:GetPos())
-		const_rc2:SetAngles(phys_child:GetAngles())
-		const_rc2:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_rc2:SetKeyValue("spawnflags", 2) --free movement, let const_bs keep them together
-		for key, value in pairs(part_info) do
-			if key:find("^[xyz]min$") then
-				const_rc2:SetKeyValue(key, value - 15)
-			elseif key:find("^[xyz]max$") then
-				const_rc2:SetKeyValue(key, value + 15)		
+			local const_rc2 = ents_Create("phys_ragdollconstraint")
+			const_rc2:SetPos(phys_child:GetPos())
+			const_rc2:SetAngles(phys_child:GetAngles())
+			const_rc2:SetPhysConstraintObjects(phys_parent, phys_child)
+			const_rc2:SetKeyValue("spawnflags", 2) --free movement, let const_bs2 keep them together
+			for key, value in pairs(part_info) do
+				if key:find("^[xyz]min$") then
+					const_rc2:SetKeyValue(key, value - 15)
+				elseif key:find("^[xyz]max$") then
+					const_rc2:SetKeyValue(key, value + 15)
+				end
 			end
-		end
-		const_rc2:Spawn()
+			const_rc2:Spawn()
+			const_rc2:Activate()
 
-		const_bs2:DeleteOnRemove(const_bs)
-		const_bs2:DeleteOnRemove(const_rc2)
-		
+			const_bs2:CallOnRemove("GS2Dismember2", function()			
+				if (GibEffects and IsValid(phys_child)) then
+					if (!IsValid(const_bs) or !const_bs.__nosound) then
+						self._GS2LastGibSound = self._GS2LastGibSound or 0
+						if (self._GS2LastGibSound + 1 < CurTime()) then
+							sound_Play(snd_snap, phys_child:GetPos(), 75, 100, 1)
+							self._GS2LastGibSound = CurTime()
+						end					
+					end
+				end
+				SafeRemoveEntity(const_bs)
+				SafeRemoveEntity(const_rc2)				
+			end)	
+		end
+				
 		const_bs:CallOnRemove("GS2Dismember", function()
 			SafeRemoveEntity(const_rc)
 			if !IsValid(phys_child) then return end
-			
-			if IsValid(const_rc2) then
-				const_rc2:Activate()
-			end
-
+						
 			local less = less_limbs:GetBool()
 
 			if (GibEffects and !const_bs.__nosound) then
-				sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
+				self._GS2LastGibSound = self._GS2LastGibSound or 0
+				if (self._GS2LastGibSound + 1 < CurTime()) then
+					sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)
+					self._GS2LastGibSound = CurTime()
+				end
 			end
 
 			local phys_pos = phys_child:GetPos()
@@ -642,10 +667,10 @@ function ENTITY:MakeCustomRagdoll()
 		end)
 
 		self.GS2Joints[part_info.child] = self.GS2Joints[part_info.child] or {}
-		table_insert(self.GS2Joints[part_info.child], const_bs2)
+		table_insert(self.GS2Joints[part_info.child], const_bs2 or const_bs)
 
 		self.GS2Joints[part_info.parent] = self.GS2Joints[part_info.parent] or {}
-		table_insert(self.GS2Joints[part_info.parent], const_bs2)
+		table_insert(self.GS2Joints[part_info.parent], const_bs2 or const_bs)
 	end
 
 	local limb = ents_Create("gs2_limb")

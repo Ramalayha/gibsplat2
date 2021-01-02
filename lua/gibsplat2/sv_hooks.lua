@@ -80,9 +80,11 @@ local function ShouldGib(dmginfo)
 	local chance = gib_chance:GetFloat()
 	if (chance >= 1) then
 		return true
+	elseif (chance <= 0) then
+		return false
 	end
 	
-	return math.random() < chance * dmginfo:GetDamage() / 20
+	return math.random() < chance and math.random() < dmginfo:GetDamage() / 20
 end
 
 local function GS2EntityTakeDamage(ent, dmginfo)
