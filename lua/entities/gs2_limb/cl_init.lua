@@ -47,8 +47,8 @@ local table_HasValue = table.HasValue
 
 local vec_zero = Vector(0, 0, 0)
 local vec_offset = Vector(1, 0, 0)
---local matrix_inf = Matrix()
---matrix_inf:Translate(Vector(math.huge))
+local matrix_zero = Matrix()
+matrix_zero:Scale(vec_zero)
 
 local dummy = ClientsideModel("models/error.mdl")
 dummy:SetNoDraw(true)
@@ -182,7 +182,7 @@ function ENT:Think()
 			self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
 		end
 		
-		local min, max = body:GetCollisionBounds()--self.Body:GetRenderBounds() render bounds can be 0 sometimes ?!?!
+		local min, max = body:GetRenderBounds()
 		min = body:LocalToWorld(min)
 		max = body:LocalToWorld(max)
 		self:SetRenderBoundsWS(min, max)
@@ -330,9 +330,9 @@ local function null() end
 
 function ENT:Draw()
 	local body = self:GetBody()
-	if IsValid(body) then		
-		if !self.GS2RenderMeshes and self.GS2BoneList then
-			body.RenderOverride = null --Hide actual ragdoll
+	if IsValid(body) then	
+		body.RenderOverride = null --Hide actual ragdoll		
+		if !self.GS2RenderMeshes and self.GS2BoneList then			
 			self:SetupBones()						
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self:GetTargetBone()]
