@@ -106,6 +106,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (!IsValid(phys) or !ShouldGib(phys:GetMaterial())) then
 		temp:Remove()
 		MDL_INDEX[mdl][phys_bone] = {}
+		GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
 		return MDL_INDEX[mdl][phys_bone]
 	end
 
@@ -137,6 +138,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 		end
 		if MDL_INDEX[mdl][phys_bone] then
 			THREADS[mdl] = nil
+			GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
 			return MDL_INDEX[mdl][phys_bone]
 		end
 	end
@@ -331,8 +333,7 @@ local gib_info = util.KeyValuesToTable(text or "")
 for body_type, gib_data in pairs(gib_info) do
 	for bone_name, data in pairs(gib_data) do
 		for _, data in pairs(data) do
-			if data.model then
-				util.PrecacheModel(data.model)
+			if data.model then				
 				if data.vec_offset then
 					data.vec_offset = Vector(unpack(data.vec_offset:Split(" ")))
 				end

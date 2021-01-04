@@ -172,10 +172,15 @@ function EFFECT:Think()
 	 	cur_time - self.Created > self.DieTime or
 	 	!self.Body.GS2Limbs or bit_band(self.mask, self.Body:GetNWInt("GS2GibMask")) != 0) then
 
-	 	self.Emitter:Finish()	
-	 	if self.Emitter3D then
-	 		self.Emitter3D:Finish() 
-	 	end
+		local Emitter = self.Emitter
+		local Emitter3D = self.Emitter3D
+
+		timer.Simple(10 ,function() --give some time for particles to hit the ground
+		 	Emitter:Finish()	
+		 	if Emitter3D then
+		 		Emitter3D:Finish()
+		 	end
+		end)
 		return false
 	end
 

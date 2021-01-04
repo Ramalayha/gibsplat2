@@ -3,6 +3,18 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+local text = file.Read("materials/gibsplat2/gibs.vmt", "GAME")
+
+local gib_info = util.KeyValuesToTable(text or "")
+
+for _, data in pairs(gib_info) do
+	for _, data in pairs(data) do
+		for _, data in pairs(data) do
+			util.PrecacheModel(data.model)
+		end
+	end
+end
+
 function ENT:Initialize()
 	self.Created = CurTime()
 

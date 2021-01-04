@@ -18,7 +18,7 @@ local bit_bor 		= bit.bor
 local bit_band 		= bit.band
 local bit_lshift 	= bit.lshift
 
-local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
+local text = file.Read("materials/gibsplat2/skeletons.vmt", "GAME")
 
 local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 

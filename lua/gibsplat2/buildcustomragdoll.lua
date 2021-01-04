@@ -8,7 +8,7 @@ local min_strength 	= CreateConVar("gs2_min_constraint_strength", 4000, FCVAR_AR
 local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000, FCVAR_ARCHIVE)
 local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250, FCVAR_ARCHIVE)
 local less_limbs	= CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
-local gib_chance 	= CreateConVar("gs2_gib_chance", 0.1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local gib_chance 	= CreateConVar("gs2_gib_chance", 0.15, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 local snd_dismember = Sound("physics/body/body_medium_break2.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -28,7 +28,7 @@ local blood_colors = {
 	antlion = BLOOD_COLOR_YELLOW
 }
 
-local text = file.Read("gibsplat2/skeletons.vmt", "GAME")
+local text = file.Read("materials/gibsplat2/skeletons.vmt", "GAME")
 
 local skeleton_parts = util.KeyValuesToTable(text or "").skeleton_parts or {}
 

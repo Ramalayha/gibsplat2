@@ -13,20 +13,6 @@ AddCSLuaFile("gibsplat2/clipmesh.lua")
 AddCSLuaFile("gibsplat2/filesystem.lua")
 AddCSLuaFile("gibsplat2/mesh_util.lua")
 
---util.PrecacheModel( string modelName )
-
-local function PrecacheFolder(path)
-	local files, folders = file.Find(path, "GAME")
-	for _, file_name in pairs(files) do		
-		util.PrecacheModel(path:sub(0, -2)..file_name)
-	end
-	for _, folder in pairs(folders) do
-		PrecacheFolder(path:sub(0, -2)..folder.."/*")
-	end
-end
-
-PrecacheFolder("models/gibsplat2/*")
-
 --[[local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")
 	for _, file_name in pairs(files) do		

@@ -85,7 +85,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 		end
 
 		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/"..phys_mat)
-		
+				
 		local BONE2PBONE = {}
 		local BONE_PARENT = {}
 
@@ -369,7 +369,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							local new_mesh = Mesh()
 							new_mesh:BuildFromTriangles(new_tris)
 
-							local mat = phys_mat
+							local mat = MATERIAL_CACHE[phys_mat]
 
 							if !mat then
 								MATERIAL_CACHE[mesh.material] = MATERIAL_CACHE[mesh.material] or Material(mesh.material)
@@ -378,7 +378,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 							
 							InsertMultiWithKey(new_meshes, phys_bone, bg_num, bg_val, hash, "flesh", {
 								Mesh = new_mesh,
-								Material = MATERIAL_CACHE[phys_mat],				
+								Material = mat,				
 								tris = new_tris,
 								is_flesh = true
 							}) 
@@ -468,7 +468,7 @@ hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 		THREADS[mdl] = coroutine.create(function()			
 			GetBoneMeshes(ent, 0)
 		end)
-		coroutine.resume(THREADS[mdl])
+		coroutine.resume(THREADS[mdl])		
 	end
 end)
 
@@ -487,7 +487,7 @@ net.Receive("GS2ForceModelPregen", function()
 				while (coroutine.status(THREADS[mdl]) != "dead") do
 					coroutine.resume(THREADS[mdl])
 				end	
-				table.remove(THREADS, mdl)
+				THREADS[mdl] = nil
 			end			
 		end
 		local temp = ClientsideModel(mdl)
