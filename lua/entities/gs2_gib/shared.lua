@@ -95,12 +95,12 @@ function ENT:IsTouching(other)
 			local max = -min
 			for _, vert in ipairs(verts) do
 				min.x = math.min(min.x, vert.x)
-				min.y = math.min(min.x, vert.y)
-				min.z = math.min(min.x, vert.z)
+				min.y = math.min(min.y, vert.y)
+				min.z = math.min(min.z, vert.z)
 
 				max.x = math.max(max.x, vert.x)
-				max.y = math.max(max.x, vert.y)
-				max.z = math.max(max.x, vert.z)
+				max.y = math.max(max.y, vert.y)
+				max.z = math.max(max.z, vert.z)
 			end
 			self:PhysicsInitBox(min, max)
 		end

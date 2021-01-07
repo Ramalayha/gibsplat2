@@ -14,6 +14,11 @@ function ENT:Initialize()
 		
 		local self_phys = self:GetPhysicsObject()
 
+		if !IsValid(self_phys) then
+			self:Remove()
+			return
+		end
+
 		self_phys:SetMaterial("watermelon")
 		self_phys:Wake()	
 		self_phys:SetDragCoefficient(0.3)	

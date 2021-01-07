@@ -549,12 +549,12 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 				local max = -min
 				for _, vert in ipairs(convex) do
 					min.x = math.min(min.x, vert.x)
-					min.y = math.min(min.x, vert.y)
-					min.z = math.min(min.x, vert.z)
+					min.y = math.min(min.y, vert.y)
+					min.z = math.min(min.z, vert.z)
 
 					max.x = math.max(max.x, vert.x)
-					max.y = math.max(max.x, vert.y)
-					max.z = math.max(max.x, vert.z)
+					max.y = math.max(max.y, vert.y)
+					max.z = math.max(max.z, vert.z)
 				end
 				gib:PhysicsInitBox(min, max)
 			end
@@ -574,9 +574,11 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		SafeRemoveEntity(table_remove(G_GIBS, 1))
 	end
 
-	for _, gib in pairs(ent.GS2Gibs) do
-		if IsValid(gib) then
-			ent:DeleteOnRemove(gib) --sometimes gib is not valid and i cba to figure out why
+	if SERVER then
+		for _, gib in pairs(ent.GS2Gibs) do
+			if IsValid(gib) then
+				ent:DeleteOnRemove(gib) --sometimes gib is not valid and i cba to figure out why
+			end
 		end
 	end
 
