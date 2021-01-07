@@ -54,8 +54,7 @@ local function Process()
 	end
 	local mdl = models[key]
 	if !mdl then
-		SafeRemoveEntity(temp)		
-		F:Close()	
+		SafeRemoveEntity(temp)
 		return
 	end
 	
@@ -64,11 +63,7 @@ local function Process()
 	temp = ents.Create("prop_ragdoll")
 	temp:SetModel(mdl)
 	temp:Spawn()
-	
-	--print(key..": "..mdl)
-	F:Write(mdl.."\n")
-	F:Flush()
-	
+		
 	key = key + 1
 	timer.Simple(0.5, Process)
 end

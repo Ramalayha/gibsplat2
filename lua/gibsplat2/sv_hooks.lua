@@ -347,6 +347,27 @@ local function GetRagdoll(self)
 	return dolls[self] or NULL
 end
 
+local FL_PHYS = 8
+
+local filter
+
+local function FixTriggers()	
+	filter = ents.Create("gs2_filter")
+	filter:SetName("gs2_filter")
+	filter:Spawn()
+
+	for _, trigger in pairs(ents.FindByClass("trigger_*")) do
+		local spawnflags = trigger:GetInternalVariable("spawnflags")
+		if (bit.band(spawnflags, FL_PHYS) != 0) then		
+			trigger:SetSaveValue("m_hFilter", filter)				
+		end
+	end
+end
+
+local function FixTriggersDelayed()
+	timer.Simple(10, FixTriggers) --gotta wait a bit during InitPostEntity for some reason (gmod bug?)
+end
+
 if enabled:GetBool() then
 	if player_ragdolls:GetBool() then
 		PLAYER.CreateRagdoll = CreateRagdoll
@@ -355,6 +376,8 @@ if enabled:GetBool() then
 	if default_ragdolls:GetBool() then
 		hook.Add("CreateEntityRagdoll", HOOK_NAME, GS2CreateEntityRagdoll)
 		hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
+		hook.Add("PostCleanupMap", "GS2TriggerFix", FixTriggers)
+		hook.Add("InitPostEntity", "GS2TriggerFix", FixTriggersDelayed)
 	end
 	hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 end
@@ -370,12 +393,17 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 			hook.Add("OnEntityCreated", HOOK_NAME, GS2OnEntityCreated)
 		end
 		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
+		hook.Add("PostCleanupMap", "GS2TriggerFix", FixTriggers)
+		hook.Add("InitPostEntity", "GS2TriggerFix", FixTriggersDelayed)
 	else
 		PLAYER.CreateRagdoll = oldCreateRagdoll
 		PLAYER.GetRagdollEntity = oldGetRagdollEntity
 		hook.Remove("CreateEntityRagdoll", HOOK_NAME)
 		hook.Remove("OnEntityCreated", HOOK_NAME)
-		hook.Remove("EntityTakeDamage", HOOK_NAME)		
+		hook.Remove("EntityTakeDamage", HOOK_NAME)	
+		hook.Remove("PostCleanupMap", "GS2TriggerFix")
+		hook.Remove("InitPostEntity", "GS2TriggerFix")	
+		SafeRemoveEntity(filter)
 	end
 end)
 
@@ -405,22 +433,6 @@ if game.SinglePlayer() then
 	enabled:SetBool(true)
 	default_ragdolls:SetBool(true)
 end
-
-if game.GetMap():find("ragdoll_slaughter") then --special case for these maps
-	scripted_ents.Register({Base = "base_anim"}, "trigger_push")
-end
-
---[[local function DisableTriggers()
-	if game.GetMap():find("ragdoll_slaughter") then --special case for these maps
-		for _, ent in pairs(ents.FindByClass("trigger_push")) do
-			ent:Fire("disable")
-		end
-	end
-end
-
-DisableTriggers()
-
-hook.Add("PostCleanupMap", "GS2DisablePushTriggers", DisableTriggers)]]
 
 local MSG = "GS2ForceModelPregen"
 

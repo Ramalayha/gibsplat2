@@ -7,11 +7,13 @@ function ENT:Initialize()
 	local phys_bone = self.TargetPhysBone
 
 	local phys = ent:GetPhysicsObjectNum(phys_bone)
+	self.TargetPhys = phys
 
 	self:PhysicsInitBox(phys:GetAABB())
-	
+
 	self:SetNotSolid(true)
-	self:SetMoveType(MOVETYPE_NONE)
+	self:SetMoveType(MOVETYPE_NONE)	
+	self:SetCustomCollisionCheck(true)
 	
 	self:DrawShadow(false)
 end
@@ -51,5 +53,11 @@ function ENT:OnTakeDamage(dmginfo)
 
 			phys:ApplyForceOffset(dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())
 		end
+	end
+end
+
+local function ShouldCollide(ent1, ent2)
+	if (ent1:GetClass() == "gs2_limb_relay") then
+		return ent2:GetClass():find("^trigger_")
 	end
 end
