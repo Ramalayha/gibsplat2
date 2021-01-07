@@ -1,9 +1,11 @@
 include("gibsplat2/gibs.lua")
 
+local gib_expensive = CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
+
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
-ENT.LifeTime = CreateConVar("gs2_gib_lifetime", 30) --after not moving for this amount of time the gib will fade away
+ENT.LifeTime = CreateConVar("gs2_gib_lifetime", 300) --after not moving for this amount of time the gib will fade away
 
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
@@ -51,7 +53,7 @@ function ENT:InitPhysics()
 			self:SetSolid(SOLID_VPHYSICS)
 			self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 			self:EnableCustomCollisions(true)
-			self:SetCustomCollisionCheck(true)			
+			self:SetCustomCollisionCheck(true)		
 			phys_self:SetMaterial("watermelon")
 			self.GS2_dummy = false
 			self:StartMotionController()
@@ -86,7 +88,22 @@ function ENT:IsTouching(other)
 	CONVEX_CACHE[mdl] = CONVEX_CACHE[mdl] or {}
 	CONVEX_CACHE[mdl][phys_bone] = CONVEX_CACHE[mdl][phys_bone] or {}
 	if !CONVEX_CACHE[mdl][phys_bone][gib_index] then
-		self:PhysicsInitConvex(self.GS2GibInfo.vertex_buffer)
+		if gib_expensive:GetBool() then
+			self:PhysicsInitConvex(self.GS2GibInfo.vertex_buffer)
+		else
+			local min = Vector(math.huge, math.huge, math.huge)
+			local max = -min
+			for _, vert in ipairs(verts) do
+				min.x = math.min(min.x, vert.x)
+				min.y = math.min(min.x, vert.y)
+				min.z = math.min(min.x, vert.z)
+
+				max.x = math.max(max.x, vert.x)
+				max.y = math.max(max.x, vert.y)
+				max.z = math.max(max.x, vert.z)
+			end
+			self:PhysicsInitBox(min, max)
+		end
 		local phys = self:GetPhysicsObject()
 		CONVEX_CACHE[mdl][phys_bone][gib_index] = phys:GetMeshConvexes()[1]
 		self:PhysicsDestroy()
@@ -192,7 +209,7 @@ local function Collide(ent1, ent2)
 end
 
 hook.Add("ShouldCollide", HOOK_NAME, function(ent1, ent2)
-	if !enabled:GetBool() then return end 
+	if !enabled:GetBool() then return end
 	
 	if (!Collide(ent1, ent2) or !Collide(ent2, ent1)) then
 		return false

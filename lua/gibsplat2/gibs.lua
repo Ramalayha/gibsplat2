@@ -310,6 +310,7 @@ end
 local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3, FCVAR_ARCHIVE)
 local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7, FCVAR_ARCHIVE)
 local gib_custom		= CreateConVar("gs2_gib_custom", 1, FCVAR_ARCHIVE)
+local gib_expensive 	= CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
 local max_gibs			= CreateConVar("gs2_max_gibs", 32, FCVAR_ARCHIVE)
 
 local generate_all		= CreateConVar("gs2_gib_generate_all", 0, FCVAR_ARCHIVE)
@@ -541,7 +542,22 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 			local convex = {}
 			GetChildMeshRec(gib, convex, gib)
 			
-			gib:PhysicsInitConvex(convex)
+			if gib_expensive:GetBool() then
+				gib:PhysicsInitConvex(convex)
+			else
+				local min = Vector(math.huge, math.huge, math.huge)
+				local max = -min
+				for _, vert in ipairs(convex) do
+					min.x = math.min(min.x, vert.x)
+					min.y = math.min(min.x, vert.y)
+					min.z = math.min(min.x, vert.z)
+
+					max.x = math.max(max.x, vert.x)
+					max.y = math.max(max.x, vert.y)
+					max.z = math.max(max.x, vert.z)
+				end
+				gib:PhysicsInitBox(min, max)
+			end
 			gib:InitPhysics()
 			
 			local phys = gib:GetPhysicsObject()
