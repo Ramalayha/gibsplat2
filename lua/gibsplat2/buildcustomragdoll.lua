@@ -205,7 +205,19 @@ function ENTITY:GS2IsGibbed(phys_bone)
 	return bit_band(self:GetNWInt("GS2GibMask", 0), bit_lshift(1, phys_bone)) != 0
 end
 
-function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
+local PCOLLIDE_CACHE = {}
+
+local vec_min = Vector(-1, -1, -1)
+local vec_max = Vector(1, 1, 1)
+
+function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone, use_collides)
+	local mdl = self:GetModel()
+	local collides = PCOLLIDE_CACHE[mdl]
+	if (!collides and use_collides) then
+		PCOLLIDE_CACHE[mdl] = CreatePhysCollidesFromModel(mdl)
+		collides = PCOLLIDE_CACHE[mdl]
+	end
+
 	local closest_bone = 0
 	local dist = math.huge
 
@@ -234,13 +246,28 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone)
 		end	
 
 		if is_conn then	
+			--Vector, Vector, number PhysCollide:TraceBox( Vector origin, Angle angles, Vector rayStart, Vector rayEnd, Vector rayMins, Vector rayMaxs )
 			local phys = self:GetPhysicsObjectNum(phys_bone)
-			local min, max = phys:GetAABB()
-			local bone_pos = phys:LocalToWorld((min + max) * 0.5)--self:GetBoneMatrix(bone):GetTranslation()
-			local d = bone_pos:DistToSqr(pos)
-			if (d < dist) then
-				dist = d
-				closest_bone = phys_bone			
+			if use_collides then
+				local collide = collides[phys_bone + 1]				
+				local phys_pos = phys:GetPos()
+				local phys_ang = phys:GetAngles()
+				local lpos = phys:WorldToLocal(pos)
+				local hitpos, _, d = collide:TraceBox(phys_pos, phys_ang, pos, pos, vec_min, vec_max)
+				if hitpos then					
+					if (d < dist) then
+						dist = d
+						closest_bone = phys_bone	
+					end
+				end
+			else
+				local min, max = phys:GetAABB()
+				local bone_pos = phys:LocalToWorld((min + max) * 0.5)--self:GetBoneMatrix(bone):GetTranslation()
+				local d = bone_pos:DistToSqr(pos)
+				if (d < dist) then
+					dist = d
+					closest_bone = phys_bone			
+				end
 			end
 		end		
 	end

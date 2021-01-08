@@ -4,7 +4,8 @@ AddCSLuaFile("shared.lua")
 include("shared.lua")
 
 function ENT:Initialize()
-	self:SetModel("models/spitball_medium.mdl")
+	self:SetModel("models/props_junk/watermelon01.mdl")
+	self:SetModelScale(0.3)
 	
 	self:GetBody():DeleteOnRemove(self)
 

@@ -19,7 +19,7 @@ local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
 	doll:MakeCustomRagdoll()
 	if ent.__forcegib then 
-		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib)
+		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib, nil, true)
 		
 		if phys_bone then
 			doll:GS2Gib(phys_bone, false, true)
@@ -93,7 +93,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 	local dmg_force = dmginfo:GetDamageForce()
 
 	if ent.__gs2custom and ent:IsRagdoll() then
-		local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos)
+		local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos, nil, true)
 		if !phys_bone then
 			return
 		end
@@ -236,7 +236,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 				ent:GS2Gib(phys_bone, false, true)
 			else
 				local blood_color = blood_colors[phys:GetMaterial()]
-				if blood_color then
+				if blood_color then 					
 					local hole = ents.Create("gs2_bullethole")
 					hole:SetBody(ent)
 					hole:SetTargetBone(phys_bone)			
