@@ -12,6 +12,7 @@ AddCSLuaFile("gibsplat2/gibs.lua")
 AddCSLuaFile("gibsplat2/clipmesh.lua")
 AddCSLuaFile("gibsplat2/filesystem.lua")
 AddCSLuaFile("gibsplat2/mesh_util.lua")
+AddCSLuaFile("autorun/client/gs2_menu.lua")
 
 --[[local function AddFolder(path)
 	local files, folders = file.Find(path, "GAME")
