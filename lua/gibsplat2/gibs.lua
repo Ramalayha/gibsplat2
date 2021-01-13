@@ -626,10 +626,13 @@ if SERVER then
 			if !IsValid(ent) then return end
 			local mdl = ent:GetModel()
 			if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-				THREADS[mdl] = coroutine.create(function()			
+				if GS2ReadModelData(mdl) then
 					GetPhysGibMeshes(mdl, 0)
-				end)
-				SafeResume(THREADS[mdl])
+				else
+					THREADS[mdl] = coroutine.create(function()			
+						GetPhysGibMeshes(mdl, 0)
+					end)					
+				end
 			end
 		end)
 	end)

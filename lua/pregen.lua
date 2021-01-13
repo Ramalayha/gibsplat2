@@ -23,7 +23,7 @@ local function PreGenerate(path)
 		F:Seek(8)
 		local checksum = F:Read(4)
 		F:Close()
-		if (n < 2000 and file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/model_data/"..util.CRC(mdl..checksum)..".txt", "DATA") and !file.Exists("materials/gibsplat2/model_data/"..util.CRC(mdl..checksum)..".vmt", "GAME") and IsRagdoll(mdl:sub(1,-4).."phy")) then
+		if (file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/model_data/"..util.CRC(mdl..checksum)..".txt", "DATA") and !file.Exists("materials/gibsplat2/model_data/"..util.CRC(mdl..checksum)..".vmt", "GAME") and IsRagdoll(mdl:sub(1,-4).."phy")) then
 			if util.IsValidRagdoll(mdl) then
 				n = n+1
 				models[n] = mdl			

@@ -54,8 +54,8 @@ function GS2WriteGibData(hash, data)
 	for _, mesh in ipairs(data) do
 		F:WriteVector(mesh.min) 
 		F:WriteVector(mesh.max)
-		F:WriteShort(#mesh.conns)
-		for _, conn in ipairs(mesh.conns) do
+		F:WriteShort(table.Count(mesh.conns))
+		for _, conn in pairs(mesh.conns) do
 			F:WriteShort(conn)
 		end
 
@@ -82,7 +82,7 @@ function GS2ReadGibData(hash, out, size)
 		return
 	end
 
-	local succ = pcall(function()
+	local succ, err = pcall(function()
 		local version = F:ReadShort()
 
 		if (version != GIB_VERSION) then
@@ -149,7 +149,7 @@ function GS2ReadGibData(hash, out, size)
 	F:Close()
 	
 	if !succ then
-		print("GS2ReadGibData: deleting corrupted file "..hash)
+		print("GS2ReadGibData: deleting corrupted file "..hash.." (Error: "..err..")")
 		file.Delete(file_path..".txt")
 	end
 end
@@ -306,7 +306,7 @@ function GS2ReadMesh(hash)
 	F:Close()
 
 	if !succ then 
-		print("GS2ReadMesh: deleting corrupted file "..file_path)
+		print("GS2ReadMesh: deleting corrupted file "..hash.." (Error: "..ret..")")
 		file.Delete(file_path..".txt")
 	else
 		return ret
@@ -393,10 +393,15 @@ function GS2WriteModelData(mdl)
 				F:WriteShort(table.Count(data))
 				for bg_val, data in pairs(data) do
 					F:WriteShort(bg_val)
-					F:WriteShort(table.Count(data))
-					for hash in pairs(data) do
-						F:WriteShort(#hash)
-						F:Write(hash)
+					if (data == 0) then
+						F:WriteShort(0)
+					else
+						F:WriteShort(table.Count(data))
+						for hash in pairs(data) do
+							hash = tostring(hash)
+							F:WriteShort(#hash)
+							F:Write(hash)
+						end
 					end
 				end
 			end
@@ -444,31 +449,39 @@ function GS2ReadModelData(mdl)
 		gib_data = {}
 	}
 	
-	for i = 1, F:ReadShort() do
-		local phys_bone = F:ReadShort()
-		local hash = F:Read(F:ReadShort())
-		MDL_CACHE[mdl].gib_data[phys_bone] = hash
-	end
+	local succ, err = pcall(function()
+		for i = 1, F:ReadShort() do
+			local phys_bone = F:ReadShort()
+			local hash = F:Read(F:ReadShort())
+			MDL_CACHE[mdl].gib_data[phys_bone] = hash
+		end
 
-	if CLIENT then
-		MDL_CACHE[mdl].mesh_data = {}
+		if CLIENT then
+			MDL_CACHE[mdl].mesh_data = {}
 
-		for i = 1, F:ReadShort() do		
-			local phys_bone = F:ReadShort()	
-			for j = 1, F:ReadShort() do
-				local bg_num = F:ReadShort()
-				for k = 1, F:ReadShort() do
-					local bg_val = F:ReadShort()
-					for l = 1, F:ReadShort() do
-						local hash = F:Read(F:ReadShort())
-						InsertMulti(MDL_CACHE[mdl].mesh_data, phys_bone, bg_num, bg_val, GS2ReadMesh(hash))
+			for i = 1, F:ReadShort() do		
+				local phys_bone = F:ReadShort()	
+				for j = 1, F:ReadShort() do
+					local bg_num = F:ReadShort()
+					for k = 1, F:ReadShort() do
+						local bg_val = F:ReadShort()
+						for l = 1, F:ReadShort() do
+							local hash = F:Read(F:ReadShort())
+							InsertMulti(MDL_CACHE[mdl].mesh_data, phys_bone, bg_num, bg_val, GS2ReadMesh(hash))
+						end
 					end
 				end
 			end
 		end
-	end
+	end)
 
 	F:Close()
+
+	if !succ then
+		print("GS2ReadModelData: deleting corrupted file "..hash.." (Error: "..err..")")
+		file.Delete(file_path..".txt")
+		return
+	end
 
 	return MDL_CACHE[mdl]
 end

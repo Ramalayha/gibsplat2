@@ -465,10 +465,14 @@ hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 	if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 	local mdl = ent:GetModel()
 	if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-		THREADS[mdl] = coroutine.create(function()			
+		if GS2ReadModelData(mdl) then
 			GetBoneMeshes(ent, 0)
-		end)
-		coroutine.resume(THREADS[mdl])		
+		else
+			THREADS[mdl] = coroutine.create(function()			
+				GetBoneMeshes(ent, 0)
+			end)
+			coroutine.resume(THREADS[mdl])			
+		end
 	end
 end)
 
@@ -477,18 +481,17 @@ net.Receive("GS2ForceModelPregen", function()
 	for i = 1, count do
 		local mdl = net.ReadString()
 		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-			THREADS[mdl] = coroutine.create(function()	
+			if GS2ReadModelData(mdl) then
 				local ent = ClientsideModel(mdl)		
 				GetBoneMeshes(ent, 0)
 				ent:Remove()
-			end)
-			local hash = util.CRC(mdl)
-			if (file.Exists("materials/gibsplat2/model_data/"..hash..".txt", "GAME") or file.Exists("gibsplat2/model_data/"..hash..".txt", "LUA")) then
-				while (coroutine.status(THREADS[mdl]) != "dead") do
-					coroutine.resume(THREADS[mdl])
-				end	
-				THREADS[mdl] = nil
-			end			
+			else
+				THREADS[mdl] = coroutine.create(function()	
+					local ent = ClientsideModel(mdl)		
+					GetBoneMeshes(ent, 0)
+					ent:Remove()
+				end)				
+			end		
 		end
 		local temp = ClientsideModel(mdl)
 		hook.GetTable()["NetworkEntityCreated"]["GS2Gibs"](temp) --ugly!

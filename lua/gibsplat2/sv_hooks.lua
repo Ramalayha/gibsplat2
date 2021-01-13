@@ -361,25 +361,13 @@ local function FixTrigger(trigger)
 				filter:Spawn()
 			end
 			local current_filter = 	trigger:GetInternalVariable("m_hFilter")
-			if IsValid(current_filter) then
-				if (current_filter:GetClass() == "filter_multi" and current_filter:GetInternalVariable("FilterType") == 0) then
-					for i = 1, 4 do
-						local f = current_filter:GetInternalVariable("Filter0" .. i)
-						if (f == "gs2_filter") then
-							break
-						elseif (f == "") then
-							current_filter:SetSaveValue("Filter0" .. i, "gs2_filter")
-							break						
-						end
-					end					
-				else
-					local new_filter = ents.Create("filter_multi")
-					new_filter:SetKeyValue("FilterType", 0) --FILTER_AND
-					new_filter:SetKeyValue("Filter01", "gs2_filter")
-					new_filter:SetKeyValue("Filter02", current_filter:GetName())
-					new_filter:Spawn()		
-					trigger:SetSaveValue("m_hFilter", new_filter)
-				end
+			if (IsValid(current_filter) and current_filter != filter) then
+				local new_filter = ents.Create("filter_multi")
+				new_filter:SetKeyValue("FilterType", 0) --FILTER_AND
+				new_filter:SetKeyValue("Filter01", "gs2_filter")
+				new_filter:SetKeyValue("Filter02", current_filter:GetName())
+				new_filter:Spawn()		
+				trigger:SetSaveValue("m_hFilter", new_filter)				
 			else
 				trigger:SetSaveValue("m_hFilter", filter)	
 			end	
