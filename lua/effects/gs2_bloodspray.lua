@@ -2,12 +2,10 @@
 	Code borrowed from source sdk with slight modifications
 ]]
 
-local decal_lifetime = CreateClientConVar("gs2_particles_lifetime", 60, true)
-local max_particles = CreateClientConVar("gs2_max_particles", 128)
-local do_effects = CreateClientConVar("gs2_effects", 1)
-
-local DECAL_CHANCE = 0.01
-local LINGER_CHANCE = 0.2
+local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
+local max_particles 	= CreateClientConVar("gs2_max_particles", 128, true)
+local do_effects 		= CreateClientConVar("gs2_effects", 1, true)
+local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.2, true)
 
 local SIZE = 2
 
@@ -109,6 +107,16 @@ local trace = {
 
 local PARTICLES = {}
 
+timer.Create("gs2_gcparticles", 3, 0, function()
+	while PARTICLES[1] do
+		if (!PARTICLES[1].Created or PARTICLES[1].Created + PARTICLES[1]:GetDieTime() < CurTime()) then
+			table.remove(PARTICLES, 1)
+		else
+			break
+		end
+	end
+end)
+
 local function OnCollide(self, pos, norm)
 	if (#PARTICLES >= max_particles:GetInt()) then return end
 	
@@ -123,7 +131,7 @@ local function OnCollide(self, pos, norm)
 
 	local blood_materials = blood[self.Blood]
 
-	if (blood_materials and IsValid(self.Emitter) and math.random() < LINGER_CHANCE) then
+	if (blood_materials and IsValid(self.Emitter) and math.random() < linger_chance:GetFloat()) then
 		local mat = blood_materials[math.random(1, #blood_materials)]
 		
 		local particle = self.Emitter:Add(mat, pos)
@@ -149,6 +157,8 @@ local function OnCollide(self, pos, norm)
 		--color:Mul(blood_color * math.random(0.95, 1))
 
 		--particle:SetColor(color.x, color.y, color.z)
+
+		particle.Created = CurTime()
 
 		table.insert(PARTICLES, particle)
 	end

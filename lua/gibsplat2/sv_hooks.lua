@@ -353,37 +353,37 @@ local filter
 
 local function FixTrigger(trigger)
 	if trigger:GetClass():match("^trigger_") then
-		local spawnflags = trigger:GetInternalVariable("spawnflags")
-		if (bit.band(spawnflags, FL_PHYS) != 0) then
-			if !IsValid(filter) then
-				filter = ents.Create("gs2_filter")
-				filter:SetName("gs2_filter")
-				filter:Spawn()
+		timer.Simple(0, function()
+			if !IsValid(trigger) then return end
+			local spawnflags = trigger:GetInternalVariable("spawnflags")
+			if (bit.band(spawnflags, FL_PHYS) != 0) then
+				if !IsValid(filter) then
+					filter = ents.Create("gs2_filter")
+					filter:SetName("gs2_filter")
+					filter:Spawn()
+				end
+				local current_filter = 	trigger:GetInternalVariable("m_hFilter")
+				if (IsValid(current_filter) and current_filter != filter) then
+					local new_filter = ents.Create("filter_multi")
+					new_filter:SetKeyValue("FilterType", 0) --FILTER_AND
+					new_filter:SetKeyValue("Filter01", "gs2_filter")
+					new_filter:SetKeyValue("Filter02", current_filter:GetName())
+					new_filter:Spawn()		
+					trigger:SetSaveValue("m_hFilter", new_filter)		
+				else
+					trigger:SetSaveValue("m_hFilter", filter)
+				end	
 			end
-			local current_filter = 	trigger:GetInternalVariable("m_hFilter")
-			if (IsValid(current_filter) and current_filter != filter) then
-				local new_filter = ents.Create("filter_multi")
-				new_filter:SetKeyValue("FilterType", 0) --FILTER_AND
-				new_filter:SetKeyValue("Filter01", "gs2_filter")
-				new_filter:SetKeyValue("Filter02", current_filter:GetName())
-				new_filter:Spawn()		
-				trigger:SetSaveValue("m_hFilter", new_filter)				
-			else
-				trigger:SetSaveValue("m_hFilter", filter)	
-			end	
-		end
+		end)
 	end
 end
 
 local function FixAllTriggers()	
+	if IsValid(filter) then return end
 	print("[GS2] Fixing triggers!")
 	for _, trigger in pairs(ents.FindByClass("trigger_*")) do
 		FixTrigger(trigger)
 	end
-end
-
-local function FixAllTriggersDelayed()
-	timer.Simple(1, FixAllTriggers) --gotta wait a bit during InitPostEntity for some reason (gmod bug?)
 end
 
 if enabled:GetBool() then
@@ -397,7 +397,6 @@ if enabled:GetBool() then
 	end
 	hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 	hook.Add("OnEntityCreated", "GS2TriggerFix", FixTrigger)
-	hook.Add("InitPostEntity", "GS2TriggerFix", FixAllTriggersDelayed)
 end
 
 cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
@@ -412,7 +411,6 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 		end
 		hook.Add("EntityTakeDamage", HOOK_NAME, GS2EntityTakeDamage)
 		hook.Add("OnEntityCreated", "GS2TriggerFix", FixTrigger)
-		--hook.Add("InitPostEntity", "GS2TriggerFix", FixTriggers)
 		FixAllTriggers()
 	else
 		PLAYER.CreateRagdoll = oldCreateRagdoll
@@ -421,7 +419,6 @@ cvars.AddChangeCallback("gs2_enabled", function(_, _, new)
 		hook.Remove("OnEntityCreated", HOOK_NAME)
 		hook.Remove("EntityTakeDamage", HOOK_NAME)	
 		hook.Remove("OnEntityCreated", "GS2TriggerFix")
-		--hook.Remove("InitPostEntity", "GS2TriggerFix")
 	end
 end)
 
