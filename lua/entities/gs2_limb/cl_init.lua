@@ -171,7 +171,13 @@ function ENT:Think()
 			local phys_mat = body:GetNWString("GS2PhysMat", "")
 			if phys_mat != "" then
 				if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
-					self.flesh_mat = Material("models/"..phys_mat)
+					self.flesh_mat = "models/"..phys_mat
+					self.flesh_mat_replace = {}
+					for key, mat_name in pairs(self:GetMaterials()) do
+						if mat_name:find("sheet") then
+							table.insert(self.flesh_mat_replace, key - 1)
+						end
+					end
 				else
 					self.flesh_mat = NULL
 				end
@@ -345,10 +351,14 @@ function ENT:Draw()
 			--Draw flesh
 			if !self.flesh_mat or self.flesh_mat == NULL then --Only 1 draw call with no overlay if theres no flesh texture
 				self:DrawModel()	
-			else
-				render_MaterialOverride(self.flesh_mat)
-				self:DrawModel()	
-				render_MaterialOverride()
+			else				
+				for _, id in pairs(self.flesh_mat_replace) do
+					self:SetSubMaterial(id, self.flesh_mat)
+				end
+				self:DrawModel()
+				for _, id in pairs(self.flesh_mat_replace) do
+					self:SetSubMaterial(id)
+				end
 
 				--Draw bulletholes into stencil buffer
 				if body.GS2BulletHoles then

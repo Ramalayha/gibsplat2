@@ -248,7 +248,7 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone, use_collides)
 		if is_conn then	
 			--Vector, Vector, number PhysCollide:TraceBox( Vector origin, Angle angles, Vector rayStart, Vector rayEnd, Vector rayMins, Vector rayMaxs )
 			local phys = self:GetPhysicsObjectNum(phys_bone)
-			if use_collides then
+			if (use_collides and collides) then
 				local collide = collides[phys_bone + 1]				
 				local phys_pos = phys:GetPos()
 				local phys_ang = phys:GetAngles()
