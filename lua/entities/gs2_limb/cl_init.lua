@@ -152,6 +152,13 @@ function ENT:OnRemove()
 	end
 end
 
+local alpha_tags = 
+{
+	"$additive",
+	"$alpha",
+	"$translucent"
+}
+
 function ENT:Think()
 	local body = self:GetBody()
 	local dis_mask = self:GetDisMask()
@@ -174,8 +181,19 @@ function ENT:Think()
 					self.flesh_mat = "models/"..phys_mat
 					self.flesh_mat_replace = {}
 					for key, mat_name in pairs(self:GetMaterials()) do
-						if mat_name:find("sheet") then
-							table.insert(self.flesh_mat_replace, key - 1)
+						local text = file.Read("materials/"..mat_name..".vmt", "GAME")
+						if text then
+							text = text:lower()
+							local has_alpha
+							for _, tag in pairs(alpha_tags) do
+								if text:find(tag) then
+									has_alpha = true
+									break
+								end
+							end
+							if !has_alpha then
+								table.insert(self.flesh_mat_replace, key - 1)
+							end
 						end
 					end
 				else
