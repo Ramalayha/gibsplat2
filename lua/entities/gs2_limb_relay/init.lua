@@ -36,17 +36,28 @@ function ENT:Think()
 	end
 
 	local phys = ent:GetPhysicsObjectNum(phys_bone)
-if phys:GetPos():Length() > 100000 then print("UH OH",phys:GetPos()) end
-	self:SetPos(phys:GetPos())
-	self:SetAngles(phys:GetAngles())
+	if phys:GetPos():Length() > 100000 then 
+		print("UH OH",phys:GetPos())
+	else
+		self:SetPos(phys:GetPos())
+		self:SetAngles(phys:GetAngles())
+	end
 end
 
 function ENT:OnTakeDamage(dmginfo)
 	if (dmginfo:IsExplosionDamage() or dmginfo:IsDamageType(DMG_SONIC)) then
+		local infl = dmginfo:GetInflictor()		
+		local radius = infl:GetInternalVariable("m_DmgRadius")
+
+		local mod = 1
+		if (radius and radius != 0) then
+			local dmgpos = dmginfo:GetDamagePosition()
+			mod = (radius - dmgpos:Distance(self:GetPos())) / radius
+		end
 		local ent = self.TargetEntity
 		local phys_bone = self.TargetPhysBone
 
-		if math.random() < gib_chance:GetFloat() then
+		if (math.random() * mod < gib_chance:GetFloat()) then
 			ent:GS2Gib(phys_bone)
 		else
 			local phys = ent:GetPhysicsObjectNum(phys_bone)

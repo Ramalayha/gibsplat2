@@ -5,17 +5,23 @@
 		"male"
 		{
 			"1"			"/male_shared"
-			"2"			"/m_anm"
-			"3"			"/combine_soldier"			
-			"4"			"police.mdl"
-			"5"			"!zombie"
-			"6"			"!skeleton"
+			"2"			"/m_anm"				
+			"3"			"!police.mdl"
+			"4"			"!zombie"
+			"5"			"!skeleton"
+			"6"			"!combine_soldier"
 		}
 
 		"female"
 		{
 			"1"			"/female_shared"
 			"2"			"/f_anm"
+		}
+
+		"combine"
+		{
+			"1"			"police.mdl"
+			"2"			"/combine_soldier"
 		}
 	}
 
@@ -34,7 +40,22 @@
 			"ValveBiped.Bip01_L_Thigh"		"models/gibsplat2/skeleton/L_Thigh.mdl"
 			"ValveBiped.Bip01_L_Calf"		"models/gibsplat2/skeleton/L_Calf.mdl"
 		}
+		
 		"female"
+		{
+			"ValveBiped.Bip01_Pelvis"		"models/gibsplat2/skeleton/Pelvis.mdl"
+			"ValveBiped.Bip01_Spine2"		"models/gibsplat2/skeleton/Spine2.mdl"
+			"ValveBiped.Bip01_R_UpperArm"	"models/gibsplat2/skeleton/R_UpperArm.mdl"
+			"ValveBiped.Bip01_L_UpperArm"	"models/gibsplat2/skeleton/L_UpperArm.mdl"
+			"ValveBiped.Bip01_L_Forearm"	"models/gibsplat2/skeleton/L_Forearm.mdl"
+			"ValveBiped.Bip01_R_Forearm"	"models/gibsplat2/skeleton/R_Forearm.mdl"
+			"ValveBiped.Bip01_R_Thigh"		"models/gibsplat2/skeleton/R_Thigh.mdl"
+			"ValveBiped.Bip01_R_Calf"		"models/gibsplat2/skeleton/R_Calf.mdl"
+			"ValveBiped.Bip01_L_Thigh"		"models/gibsplat2/skeleton/L_Thigh.mdl"
+			"ValveBiped.Bip01_L_Calf"		"models/gibsplat2/skeleton/L_Calf.mdl"
+		}
+
+		"combine"
 		{
 			"ValveBiped.Bip01_Pelvis"		"models/gibsplat2/skeleton/Pelvis.mdl"
 			"ValveBiped.Bip01_Spine2"		"models/gibsplat2/skeleton/Spine2.mdl"

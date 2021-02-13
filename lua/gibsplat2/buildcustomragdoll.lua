@@ -207,8 +207,8 @@ end
 
 local PCOLLIDE_CACHE = {}
 
-local vec_min = Vector(-1, -1, -1)
-local vec_max = Vector(1, 1, 1)
+local vec_max = Vector(3, 3, 3)
+local vec_min = -vec_max
 
 function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone, use_collides)
 	local mdl = self:GetModel()
@@ -218,7 +218,7 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone, use_collides)
 		collides = PCOLLIDE_CACHE[mdl]
 	end
 
-	local closest_bone = 0
+	local closest_bone
 	local dist = math.huge
 
 	local target_bone = target_phys_bone and self:TranslatePhysBoneToBone(target_phys_bone)
