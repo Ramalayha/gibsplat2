@@ -587,7 +587,7 @@ end
 
 local start
 
-local enabled = GetConVar("gs2_enabled")
+local enabled = CreateConVar("gs2_enabled", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 hook.Add("Think", "GS2Gibs", function()
 	if !enabled:GetBool() then return end

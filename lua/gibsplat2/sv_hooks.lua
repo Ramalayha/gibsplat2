@@ -1,10 +1,8 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 			= CreateConVar("gs2_enabled", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local euphoria 			= CreateConVar("gs2_euphoria", 1, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local euphoria_time		= CreateConVar("gs2_euphoria_time", 20, CLIENT and FCVAR_REPLICATED or bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local enabled 			= CreateConVar("gs2_enabled", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 local ang_zero = Angle(0, 0, 0)
 
@@ -20,26 +18,6 @@ local HOOK_NAME = "GibSplat2"
 local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
 	doll:MakeCustomRagdoll()
-
-	if euphoria:GetBool() then
-		local body_type = GS2GetBodyType(doll:GetModel())
-		if (body_type == "male") then
-			timer.Simple(0, function()
-				if !IsValid(doll) then return end
-				local contr_torso = ents.Create("gs2_ragdoll_controller")
-				contr_torso:SetBody(doll)
-				contr_torso:SetMode(0)
-				contr_torso:SetDuration(euphoria_time:GetFloat())
-				contr_torso:Spawn()
-				
-				local contr_legs = ents.Create("gs2_ragdoll_controller")
-				contr_legs:SetBody(doll)
-				contr_legs:SetMode(1)
-				contr_legs:SetDuration(euphoria_time:GetFloat())
-				contr_legs:Spawn()
-			end)
-		end	
-	end
 
 	if ent.__forcegib then 
 		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib, nil, true)
@@ -344,7 +322,11 @@ local function CreateRagdoll(self)
 	ragdoll:SetAngles(self:GetAngles())
 	ragdoll:Spawn()
 
-	--ragdoll:MakeCustomRagdoll()
+	ragdoll:SetSkin(self:GetSkin())
+
+	for i = 0, self:GetNumBodyGroups() - 1 do
+		ragdoll:SetBodygroup(i, self:GetBodygroup(i))
+	end
 
 	for i = 0, ragdoll:GetPhysicsObjectCount()-1 do
 		local phys = ragdoll:GetPhysicsObjectNum(i)

@@ -192,7 +192,7 @@ function ENT:PhysicsCollide(data, phys_self)
 	end	
 end
 
-local enabled = CreateConVar("gs2_enabled", 0, FCVAR_REPLICATED)
+local enabled = GetConVar("gs2_enabled")
 
 local function Collide(ent1, ent2)
 	local class1 = ent1:GetClass()
