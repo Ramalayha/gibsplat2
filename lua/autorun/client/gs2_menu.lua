@@ -23,6 +23,7 @@ local GS2CVarsAdvanced = {
     ["gs2_max_particles"] = {t = cvInt, name = "Particle Limit", desc = "How many particles can exist at once.", min = 1, max = 500},
     ["gs2_particles_lifetime"] = {t = cvInt, name = "Particle Lifetime", desc = "How long does the particle effects last.", min = 1, max = 500},
     ["gs2_particles_linger_chance"] = {t = cvFloat, name = "Particle Lingerchance", desc = "Controls the chance of particles staying after hitting something.", min = 0, max = 1},
+    ["gs2_pull_limb"] = {t = cvBool, name = "Expensive Joints", desc = "Uncheck to disable joints breaking from stress (improves performance)", min = 0, max = 1},
 }
 
 local function PopulateSBXToolMenu(pnl)

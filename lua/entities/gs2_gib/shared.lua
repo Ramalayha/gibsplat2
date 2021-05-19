@@ -56,7 +56,7 @@ function ENT:InitPhysics()
 			self:SetCustomCollisionCheck(true)		
 			phys_self:SetMaterial("watermelon")
 			self.GS2_dummy = false
-			self:StartMotionController()
+			self:StartMotionController()			
 		end
 	end
 end
@@ -189,6 +189,7 @@ function ENT:PhysicsCollide(data, phys_self)
 				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 			end
 		end
+		self:EmitSound("Watermelon.Impact")
 	end	
 end
 

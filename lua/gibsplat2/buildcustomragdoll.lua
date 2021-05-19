@@ -9,6 +9,7 @@ local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000, FCVAR_A
 local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250, FCVAR_ARCHIVE)
 local less_limbs	= CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
 local gib_chance 	= CreateConVar("gs2_gib_chance", 0.15, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local pull_limb		= CreateConVar("gs2_pull_limb", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 
 local snd_dismember = Sound("physics/body/body_medium_break2.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -332,10 +333,12 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 		end
 		self:SetNWInt("GS2GibMask", mask)
 		
-		for _, const in pairs(self.GS2Joints[phys_bone]) do
-			const.__nosound = true
-			const.__noblood = no_gibs
-			SafeRemoveEntity(const)			
+		if self.GS2Joints[phys_bone] then
+			for _, const in pairs(self.GS2Joints[phys_bone]) do
+				const.__nosound = true
+				const.__noblood = no_gibs
+				SafeRemoveEntity(const)			
+			end
 		end
 		
 		local spectators = {}
@@ -422,6 +425,20 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 				end
 			end)
 		end
+
+		local mdl = self:GetModel()
+
+		if !pull_limb:GetBool() then			
+			local CONST_INFO = GetModelConstraintInfo(mdl)
+
+			for key, const in ipairs(CONST_INFO) do
+				if (const.child == phys_bone or const.parent == phys_bone) then
+					self:RemoveInternalConstraint(key)
+					SafeRemoveEntity(self.GS2Joints[const.child])
+					print(self:GetBoneName(self:TranslatePhysBoneToBone(const.child)))
+				end
+			end
+		end
 		
 		self:CollisionRulesChanged()
 		self:EnableCustomCollisions(true)
@@ -454,8 +471,18 @@ function ENTITY:MakeCustomRagdoll()
 	end
 
 	PutInRagdollPose(self)
-	self:RemoveInternalConstraint()
+	if pull_limb:GetBool() then
+		self:RemoveInternalConstraint()
+	end
 	self:DrawShadow(false)
+	
+	self.GS2Joints = {}
+
+	local mdl = self:GetModel()
+
+	local CONST_INFO = GetModelConstraintInfo(mdl)
+	
+	self.GS2Joints.CONST_INFO = CONST_INFO
 
 	local const_system = self.GS2ConstraintSystem
 
@@ -468,12 +495,8 @@ function ENTITY:MakeCustomRagdoll()
 	end
 
 	SetPhysConstraintSystem(const_system)
-
-	self.GS2Joints = {}
 	
-	local mdl = self:GetModel()
-
-	local CONST_INFO = GetModelConstraintInfo(mdl)
+	local should_activate = pull_limb:GetBool()
 
 	for _, part_info in pairs(CONST_INFO) do
 		local phys_parent = self:GetPhysicsObjectNum(part_info.parent)
@@ -484,7 +507,9 @@ function ENTITY:MakeCustomRagdoll()
 		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
 		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 0.5 * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
 		const_bs:Spawn()
-		const_bs:Activate()
+		if should_activate then
+			const_bs:Activate()
+		end
 		
 		local const_rc = ents_Create("phys_ragdollconstraint")
 		const_rc:SetPos(phys_child:GetPos())
@@ -495,7 +520,9 @@ function ENTITY:MakeCustomRagdoll()
 			const_rc:SetKeyValue(key, value)
 		end
 		const_rc:Spawn()
-		const_rc:Activate()
+		if should_activate then
+			const_rc:Activate()
+		end
 
 		local body_type = GS2GetBodyType(mdl)
 		local skel_parts = skeleton_parts[body_type]
@@ -507,7 +534,9 @@ function ENTITY:MakeCustomRagdoll()
 			const_bs2:SetPhysConstraintObjects(phys_parent, phys_child)
 			const_bs2:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
 			const_bs2:Spawn()
-			const_bs2:Activate()
+			if should_activate then
+				const_bs2:Activate()
+			end
 
 			local const_rc2 = ents_Create("phys_ragdollconstraint")
 			const_rc2:SetPos(phys_child:GetPos())
@@ -522,7 +551,9 @@ function ENTITY:MakeCustomRagdoll()
 				end
 			end
 			const_rc2:Spawn()
-			const_rc2:Activate()
+			if should_activate then
+				const_rc2:Activate()
+			end
 
 			const_bs2:CallOnRemove("GS2Dismember2", function()			
 				if (GibEffects and IsValid(phys_child)) then
@@ -699,7 +730,7 @@ function ENTITY:MakeCustomRagdoll()
 		self.GS2Joints[part_info.parent] = self.GS2Joints[part_info.parent] or {}
 		table_insert(self.GS2Joints[part_info.parent], const_bs2 or const_bs)
 	end
-
+	
 	local limb = ents_Create("gs2_limb")
 	limb:SetBody(self)					
 	limb:SetTargetBone(0)			
@@ -731,15 +762,17 @@ function ENTITY:MakeCustomRagdoll()
 			if (data.DeltaTime < 0.05) then
 				return --Don't run decal code too often
 			end
-				
-			if (speed > 100) then			
-				if self:GS2IsDismembered(phys_bone) then			
+
+			if (speed > 100) then
+				local blood_color = blood_colors[phys:GetMaterial()]		
+				if self:GS2IsDismembered(phys_bone) then
 					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 					if blood_color then
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
 						EF:SetColor(blood_color)
 						util.Effect("BloodImpact", EF)
+						EmitSound("Watermelon.Impact", data.HitPos, self.GS2LimbRelays[phys_bone]:EntIndex())
 					end
 				else	
 					local do_effects = false
@@ -759,7 +792,8 @@ function ENTITY:MakeCustomRagdoll()
 							local EF = EffectData()
 							EF:SetOrigin(data.HitPos)
 							EF:SetColor(blood_color)
-							util.Effect("BloodImpact", EF)
+							util.Effect("BloodImpact", EF)							
+							EmitSound("Watermelon.Impact", data.HitPos, self.GS2LimbRelays[phys_bone]:EntIndex())
 						end
 					end
 				end
