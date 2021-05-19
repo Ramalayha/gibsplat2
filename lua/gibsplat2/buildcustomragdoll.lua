@@ -434,8 +434,7 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 			for key, const in ipairs(CONST_INFO) do
 				if (const.child == phys_bone or const.parent == phys_bone) then
 					self:RemoveInternalConstraint(key)
-					SafeRemoveEntity(self.GS2Joints[const.child])
-					print(self:GetBoneName(self:TranslatePhysBoneToBone(const.child)))
+					SafeRemoveEntity(self.GS2Joints[const.child])					
 				end
 			end
 		end
@@ -782,6 +781,7 @@ function ENTITY:MakeCustomRagdoll()
 						for _, part_info in pairs(CONST_INFO) do
 							if part_info.parent == phys_bone and self:GS2IsDismembered(part_info.child) then
 								do_effects = true
+								EmitSound("Watermelon.Impact", data.HitPos, self.GS2LimbRelays[phys_bone]:EntIndex())
 								break
 							end
 						end
@@ -792,8 +792,7 @@ function ENTITY:MakeCustomRagdoll()
 							local EF = EffectData()
 							EF:SetOrigin(data.HitPos)
 							EF:SetColor(blood_color)
-							util.Effect("BloodImpact", EF)							
-							EmitSound("Watermelon.Impact", data.HitPos, self.GS2LimbRelays[phys_bone]:EntIndex())
+							util.Effect("BloodImpact", EF)						
 						end
 					end
 				end
