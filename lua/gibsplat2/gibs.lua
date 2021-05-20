@@ -52,7 +52,7 @@ local _ShouldGib = {}
 
 local function ShouldGib(phys_mat)
 	if (_ShouldGib[phys_mat] == nil) then
-		_ShouldGib[phys_mat] = file.Exists("materials/models/"..phys_mat..".vmt", "GAME")
+		_ShouldGib[phys_mat] = file.Exists("materials/models/gibsplat2/flesh/"..phys_mat..".vmt", "GAME")
 	end
 	return _ShouldGib[phys_mat]
 end

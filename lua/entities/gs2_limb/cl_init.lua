@@ -177,8 +177,8 @@ function ENT:Think()
 			end
 			local phys_mat = body:GetNWString("GS2PhysMat", "")
 			if phys_mat != "" then
-				if file.Exists("materials/models/"..phys_mat..".vmt", "GAME") then
-					self.flesh_mat = "models/"..phys_mat
+				if file.Exists("materials/models/gibsplat2/flesh/"..phys_mat..".vmt", "GAME") then
+					self.flesh_mat = "models/gibsplat2/flesh/"..phys_mat
 					self.flesh_mat_replace = {}
 					for key, mat_name in pairs(self:GetMaterials()) do
 						local text = file.Read("materials/"..mat_name..".vmt", "GAME")

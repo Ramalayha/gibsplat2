@@ -73,6 +73,111 @@ function GS2WriteGibData(hash, data)
 	F:Close()
 end
 
+local function Tesselate(mesh)
+	for k, vert in pairs(mesh) do
+		for k2, vert2 in pairs(mesh) do
+			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos,0)) then
+				mesh[k2] = vert
+			end
+		end
+	end
+	local new_mesh = {}
+	for vert_index = 1, #mesh - 2, 3 do
+		local v1 = mesh[vert_index]
+		local v2 = mesh[vert_index + 1]
+		local v3 = mesh[vert_index + 2]
+		
+		v1.new = false
+		v2.new = false
+		v3.new = false
+
+		local v12 = {pos = (v1.pos + v2.pos) * 0.375, new = true, extra = v3}
+		local v23 = {pos = (v2.pos + v3.pos) * 0.375, new = true, extra = v1}
+		local v13 = {pos = (v1.pos + v3.pos) * 0.375, new = true, extra = v2}
+
+		table.insert(new_mesh, v1)
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v13)
+
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v2)
+		table.insert(new_mesh, v23)
+
+		table.insert(new_mesh, v23)
+		table.insert(new_mesh, v3)
+		table.insert(new_mesh, v13)
+
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v23)
+		table.insert(new_mesh, v13)
+	end
+
+	local verts = {}
+
+	for key, vert in pairs(new_mesh) do		
+		local exists = false
+		
+		for _, vert2 in pairs(verts) do
+			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos, 0)) then
+				new_mesh[key] = vert2	
+				vert2.extra2 = vert.extra			
+				exists = true
+				break
+			end
+		end
+		
+		if !exists then			
+			table.insert(verts, vert)
+		end
+	end
+
+	for _, vert in pairs(verts) do
+		if vert.new then
+			vert.pos:Add(vert.extra.pos * 1 / 16)
+			vert.pos:Add(vert.extra2.pos * 1 / 16)
+		end
+	end
+
+	for _, vert in pairs(verts) do
+		if !vert.new then			
+			local points = {}
+			for vert_index = 1, #new_mesh - 2, 3 do
+				for offset = 0, 2 do
+					local v1 = new_mesh[vert_index + offset]
+					if (v1 == vert) then
+						local v2 = new_mesh[vert_index + (offset + 1) % 2]
+						local v3 = new_mesh[vert_index + (offset + 2) % 2]
+						points[v2] = true
+						points[v3] = true
+					end
+				end
+			end
+			local n = table.Count(points)
+						
+			local B = 3 / (8 * n)
+			
+			local p = Vector(0, 0, 0)
+			for p0 in pairs(points) do
+				p:Add(p0.pos * B)				
+			end
+
+			local norm = p:GetNormal()
+
+			for p0 in pairs(points) do
+				p0.normal = norm			
+			end
+
+			vert.normal = norm
+
+			vert.pos = vert.pos * (1 - B * n) + p
+		end
+		vert.u = vert.pos.x
+		vert.v = vert.pos.y + vert.pos.z
+	end
+
+	return new_mesh
+end
+
 function GS2ReadGibData(hash, out, size)
 	local file_path = "gibsplat2/gib_data/"..hash
 
@@ -109,18 +214,19 @@ function GS2ReadGibData(hash, out, size)
 			end
 
 			for j = 1, F:ReadLong() do
-				vertex_buffer[j] = F:ReadVector()
+				if CLIENT then
+					vertex_buffer[j] = {pos = F:ReadVector()}
+				else
+					vertex_buffer[j] = F:ReadVector()
+				end
 			end
 
 			for j = 1, F:ReadLong() do
 				local idx = F:ReadLong()
 				index_buffer[j] = idx
 
-				local vert = {pos = vertex_buffer[idx]}
-				vert.normal = (vert.pos - center):GetNormal()
-				vert.u = vert.pos.x / size.x + vert.pos.z / size.z
-				vert.v = vert.pos.y / size.y + vert.pos.z / size.z
-
+				local vert = CLIENT and vertex_buffer[idx] or {pos = vertex_buffer[idx]}
+				
 				triangles[j] = vert
 			end
 					
@@ -134,7 +240,18 @@ function GS2ReadGibData(hash, out, size)
 				center 			= center
 			}
 
-			if CLIENT then 
+			if CLIENT then
+						
+				triangles = Tesselate(triangles)
+			
+				for _, vert in pairs(triangles) do
+					if !vert.modded then
+						vert.modded = true
+						vert.normal = (vert.pos - center):GetNormal()
+						vert.u = vert.pos.x / size.x + vert.pos.z / size.z
+						vert.v = vert.pos.y / size.y + vert.pos.z / size.z
+					end
+				end
 				local M = Mesh()
 				M:BuildFromTriangles(triangles)
 				entry.mesh = M
@@ -273,7 +390,7 @@ function GS2ReadMesh(hash)
 
 			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
-			mesh.body.Material = MATERIAL_CACHE[mat]
+			mesh.body.Material = MATERIAL_CACHE[mat.."_bloody"] or MATERIAL_CACHE[mat]
 
 			mesh.body.tris = ReadTriangles(F)
 
@@ -288,6 +405,13 @@ function GS2ReadMesh(hash)
 
 			local mat = F:Read(len)
 
+			local phys_mat = mat:match("/(.-)$")
+
+			--backwards compatability
+			if !mat:find("gibsplat2") then
+				mat = "models/gibsplat2/flesh/"..phys_mat
+			end
+
 			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
 			mesh.flesh.Material = MATERIAL_CACHE[mat]
@@ -296,6 +420,34 @@ function GS2ReadMesh(hash)
 
 			mesh.flesh.Mesh = Mesh()
 			mesh.flesh.Mesh:BuildFromTriangles(mesh.flesh.tris)
+
+			local mat_path = "models/gibsplat2/overlays/"..phys_mat
+
+			if (mesh.body and phys_mat and file.Exists("materials/"..mat_path..".vmt", "GAME")) then
+				mat = mesh.body.Material
+				local mat_name = mat:GetName().."_bloody"
+				if !MATERIAL_CACHE[mat_name] then
+					local mat_bloody = CreateMaterial(mat_name, "VertexLitGeneric", {["$detail"] = mat_path})
+					for key, value in pairs(mat:GetKeyValues()) do
+						if (key == "$detail") then
+							continue
+						end
+						if (type(value) == "string") then
+							mat_bloody:SetString(key, value)
+						elseif (type(value) == "number") then
+							mat_bloody:SetFloat(key, value)
+						elseif (type(value) == "Vector") then
+							mat_bloody:SetVector(key, value)
+						elseif (type(value) == "ITexture") then
+							mat_bloody:SetTexture(key, value)
+						elseif (type(value) == "VMatrix") then
+							mat_bloody:SetMatrix(key, value)							
+						end
+					end	
+					MATERIAL_CACHE[mat_name] = mat_bloody
+					mesh.body.Material = mat_bloody
+				end
+			end			
 		end
 
 		MESH_CACHE[hash] = mesh

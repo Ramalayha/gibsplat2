@@ -84,7 +84,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 			end
 		end
 
-		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/"..phys_mat)
+		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/gibsplat2/flesh/"..phys_mat)
 				
 		local BONE2PBONE = {}
 		local BONE_PARENT = {}
@@ -139,7 +139,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 						if !MATERIAL_CACHE[mesh.material] then
 							local mat = Material(mesh.material)
-							if (phys_mat and file.Exists("models/gibsplat2/overlays/"..phys_mat, "GAME")) then
+							if (phys_mat and file.Exists("models/gibsplat2/overlays/"..phys_mat..".vmt", "GAME")) then
 								local mat_bloody = CreateMaterial(mesh.material.."_bloody", "VertexLitGeneric", {["$detail"] = mat_path})
 								for key, value in pairs(mat:GetKeyValues()) do
 									if (key == "$detail") then

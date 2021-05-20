@@ -1,0 +1,9 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "Models/gibsplat2/flesh/alienflesh"
+	"$normalmapalphaenvmapmask" "1"
+    "$bumpmap" "models/flesh_nrm"
+    
+	"$nodecal" "0"
+	"$halflambert" 1
+}

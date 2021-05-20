@@ -59,7 +59,7 @@ function ENT:Think()
 	if (self.MeshData.Material == mat_default) then
 		local phys_mat = body:GetNWString("GS2PhysMat", "")
 		if (phys_mat != "") then
-			MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/"..phys_mat)
+			MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/gibsplat2/flesh/"..phys_mat)
 			self.MeshData.Material = MATERIAL_CACHE[phys_mat]
 		end
 	end
