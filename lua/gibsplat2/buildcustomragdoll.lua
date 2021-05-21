@@ -555,7 +555,7 @@ function ENTITY:MakeCustomRagdoll()
 			end
 
 			const_bs2:CallOnRemove("GS2Dismember2", function()			
-				if (GibEffects and IsValid(phys_child)) then
+				if (GibEffects and IsValid(self) and IsValid(phys_child)) then
 					if (!IsValid(const_bs) or !const_bs.__nosound) then
 						self._GS2LastGibSound = self._GS2LastGibSound or 0
 						if (self._GS2LastGibSound + 1 < CurTime()) then
@@ -571,11 +571,11 @@ function ENTITY:MakeCustomRagdoll()
 				
 		const_bs:CallOnRemove("GS2Dismember", function()
 			SafeRemoveEntity(const_rc)
-			if !IsValid(phys_child) then return end
+			if !IsValid(phys_child) or !IsValid(self) then return end
 						
 			local less = less_limbs:GetBool()
 
-			if (GibEffects and !const_bs.__nosound) then
+			if (GibEffects and IsValid(self) and !const_bs.__nosound) then
 				self._GS2LastGibSound = self._GS2LastGibSound or 0
 				if (self._GS2LastGibSound + 1 < CurTime()) then
 					sound_Play(snd_dismember, phys_child:GetPos(), 75, 100, 1)

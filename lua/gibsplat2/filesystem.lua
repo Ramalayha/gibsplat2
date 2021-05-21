@@ -74,13 +74,6 @@ function GS2WriteGibData(hash, data)
 end
 
 local function Tesselate(mesh)
-	for k, vert in pairs(mesh) do
-		for k2, vert2 in pairs(mesh) do
-			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos,0)) then
-				mesh[k2] = vert
-			end
-		end
-	end
 	local new_mesh = {}
 	for vert_index = 1, #mesh - 2, 3 do
 		local v1 = mesh[vert_index]
@@ -90,6 +83,18 @@ local function Tesselate(mesh)
 		v1.new = false
 		v2.new = false
 		v3.new = false
+
+		v1.points = v1.points or {}
+		v1.points[v2] = true
+		v1.points[v3] = true
+
+		v2.points = v2.points or {}
+		v2.points[v1] = true
+		v2.points[v3] = true
+
+		v3.points = v3.points or {}
+		v3.points[v1] = true
+		v3.points[v2] = true
 
 		local v12 = {pos = (v1.pos + v2.pos) * 0.375, new = true, extra = v3}
 		local v23 = {pos = (v2.pos + v3.pos) * 0.375, new = true, extra = v1}
@@ -114,13 +119,13 @@ local function Tesselate(mesh)
 
 	local verts = {}
 
-	for key, vert in pairs(new_mesh) do		
+	for key, vert in ipairs(new_mesh) do		
 		local exists = false
 		
-		for _, vert2 in pairs(verts) do
+		for _, vert2 in ipairs(verts) do
 			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos, 0)) then
-				new_mesh[key] = vert2	
-				vert2.extra2 = vert.extra			
+				new_mesh[key] = vert2
+				vert2.extra2 = vert.extra		
 				exists = true
 				break
 			end
@@ -131,27 +136,17 @@ local function Tesselate(mesh)
 		end
 	end
 
-	for _, vert in pairs(verts) do
+	for _, vert in ipairs(verts) do
 		if vert.new then
 			vert.pos:Add(vert.extra.pos * 1 / 16)
 			vert.pos:Add(vert.extra2.pos * 1 / 16)
 		end
 	end
 
-	for _, vert in pairs(verts) do
+	for _, vert in ipairs(verts) do
 		if !vert.new then			
-			local points = {}
-			for vert_index = 1, #new_mesh - 2, 3 do
-				for offset = 0, 2 do
-					local v1 = new_mesh[vert_index + offset]
-					if (v1 == vert) then
-						local v2 = new_mesh[vert_index + (offset + 1) % 2]
-						local v3 = new_mesh[vert_index + (offset + 2) % 2]
-						points[v2] = true
-						points[v3] = true
-					end
-				end
-			end
+			local points = vert.points
+			
 			local n = table.Count(points)
 						
 			local B = 3 / (8 * n)
@@ -169,10 +164,10 @@ local function Tesselate(mesh)
 
 			vert.normal = norm
 
-			vert.pos = vert.pos * (1 - B * n) + p
+			--vert.pos = vert.pos * (1 - B * n) + p
+			vert.pos:Mul(1 - B * n)
+			vert.pos:Add(p)
 		end
-		vert.u = vert.pos.x
-		vert.v = vert.pos.y + vert.pos.z
 	end
 
 	return new_mesh
@@ -213,21 +208,22 @@ function GS2ReadGibData(hash, out, size)
 				conns[j] = F:ReadShort()
 			end
 
-			for j = 1, F:ReadLong() do
-				if CLIENT then
-					vertex_buffer[j] = {pos = F:ReadVector()}
-				else
-					vertex_buffer[j] = F:ReadVector()
-				end
+			for j = 1, F:ReadLong() do				
+				vertex_buffer[j] = {pos = F:ReadVector()}				
 			end
 
 			for j = 1, F:ReadLong() do
 				local idx = F:ReadLong()
 				index_buffer[j] = idx
 
-				local vert = CLIENT and vertex_buffer[idx] or {pos = vertex_buffer[idx]}
+				local vert = vertex_buffer[idx]
 				
 				triangles[j] = vert
+			end
+
+			--UGLY!!!
+			for key, vert in pairs(vertex_buffer) do
+				vertex_buffer[key] = vert.pos * 1
 			end
 					
 			local entry = {
@@ -240,10 +236,9 @@ function GS2ReadGibData(hash, out, size)
 				center 			= center
 			}
 
-			if CLIENT then
-						
+			if CLIENT then				
 				triangles = Tesselate(triangles)
-			
+				
 				for _, vert in pairs(triangles) do
 					if !vert.modded then
 						vert.modded = true
@@ -264,7 +259,7 @@ function GS2ReadGibData(hash, out, size)
 	end)
 
 	F:Close()
-	
+
 	if !succ then
 		print("GS2ReadGibData: deleting corrupted file "..hash.." (Error: "..err..")")
 		file.Delete(file_path..".txt")

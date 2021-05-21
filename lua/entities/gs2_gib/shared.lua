@@ -54,9 +54,11 @@ function ENT:InitPhysics()
 			self:SetCollisionGroup(COLLISION_GROUP_WEAPON)
 			self:EnableCustomCollisions(true)
 			self:SetCustomCollisionCheck(true)		
-			phys_self:SetMaterial("watermelon")
+			--phys_self:SetMaterial("watermelon")
 			self.GS2_dummy = false
-			self:StartMotionController()			
+			self:StartMotionController()
+			
+			phys_self:SetDragCoefficient(0)	
 		end
 	end
 end
