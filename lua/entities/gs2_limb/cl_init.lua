@@ -142,6 +142,19 @@ function ENT:Initialize()
 
 	self:DrawShadow(false)
 	self:DestroyShadow()
+
+	local phys_bone = self:GetTargetBone()
+
+	self.mat_restore = {}
+
+	if (phys_bone != 0) then
+		for key, mat in pairs(self:GetMaterials()) do
+			local mat_bloody = "!"..mat.."_bloody"
+			if !Material(mat_bloody):IsError() then
+				self.mat_restore[key - 1] = mat_bloody
+			end
+		end
+	end
 end
 
 function ENT:OnRemove()
@@ -375,7 +388,7 @@ function ENT:Draw()
 				end
 				self:DrawModel()
 				for _, id in pairs(self.flesh_mat_replace) do
-					self:SetSubMaterial(id)
+					self:SetSubMaterial(id, self.mat_restore[id]) --if self.mat_restore[id] == nil then it will restore to default
 				end
 
 				--Draw bulletholes into stencil buffer

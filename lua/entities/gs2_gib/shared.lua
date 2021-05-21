@@ -1,6 +1,7 @@
 include("gibsplat2/gibs.lua")
 
 local gib_expensive = CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
+local gib_chance	= GetConVar("gs2_gib_chance")
 
 ENT.Type = "anim"
 ENT.Base = "base_anim"
@@ -136,22 +137,16 @@ function ENT:IsTouching(other)
 	end
 end
 
-local squish_snds = {
-	"physics/flesh/flesh_squishy_impact_hard1.wav",
-	"physics/flesh/flesh_squishy_impact_hard2.wav",
-	"physics/flesh/flesh_squishy_impact_hard3.wav",
-	"physics/flesh/flesh_squishy_impact_hard4.wav"
-}
-
 function ENT:PhysicsCollide(data, phys_self)
 	local speed = data.Speed
-	if (self.Created and speed > 1000 and CurTime() - self.Created > 1) then
+	if (self.Created and speed > 1500 and CurTime() - self.Created > 1) then
 		self:Remove()
 		return
 	end
+	local phys_self = self:GetPhysicsObject()
 	if SERVER then
-		if (!data.HitEntity:IsWorld() and !data.HitEntity:IsRagdoll() and (phys_self:GetEnergy() == 0 or phys_self:GetEnergy() > 10000)) then --0 energy = jammed in something
-			if (math.random() > 0.6 or phys_self:GetPos():Distance(data.HitPos) > self:BoundingRadius() * 0.7) then
+		if (!data.HitEntity:IsWorld() and !data.HitEntity:IsRagdoll() and phys_self:GetEnergy() == 0) then --0 energy = jammed in something
+			if (math.random() > gib_chance:GetFloat() or phys_self:GetPos():Distance(data.HitPos) > self:BoundingRadius() * 0.7) then
 				self:Remove()
 			else	
 				local color = self.GS2BloodColor
@@ -191,6 +186,17 @@ function ENT:PhysicsCollide(data, phys_self)
 				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 			end
 		end
+		
+		if (phys_self:GetVolume() > 500) then
+			util.Decal("Blood", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+			local EF = EffectData()
+				EF:SetOrigin(self:LocalToWorld(phys_self:GetMassCenter()))
+				EF:SetColor(color)
+			for i = 1, 5 do
+				util.Effect("BloodImpact", EF)
+			end
+		end
+
 		self:EmitSound("Watermelon.Impact")
 	end	
 end

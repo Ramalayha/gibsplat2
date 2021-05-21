@@ -678,8 +678,14 @@ if CLIENT then
 		end
 		table.Empty(G_GIBS)
 		for _, gib in ipairs(ents_GetAll()) do			
-			if (gib:EntIndex() == -1 and gib:GetClass():find("^gs2_gib")) then
-				gib:Remove()
+			if gib:GetClass():find("^gs2_gib") then
+				if CLIENT then
+					if (gib:EntIndex() == -1) then
+						gib:Remove()
+					end
+				else
+					gib:Remove()
+				end
 			end
 		end
 	end

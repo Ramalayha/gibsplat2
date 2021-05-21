@@ -322,6 +322,8 @@ local function CreateRagdoll(self)
 	ragdoll:SetAngles(self:GetAngles())
 	ragdoll:Spawn()
 
+	ragdoll:SetCollisionGroup(COLLISION_GROUP_WEAPON)
+
 	ragdoll:SetSkin(self:GetSkin())
 
 	for i = 0, self:GetNumBodyGroups() - 1 do

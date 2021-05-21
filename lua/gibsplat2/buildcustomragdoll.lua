@@ -404,9 +404,11 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 				
 				local pos = phys:LocalToWorld((min + max) / 2)	
 				local EF = EffectData()				
-				EF:SetOrigin(pos)
-				EF:SetColor(blood_color)						
-				util.Effect("BloodImpact", EF)				
+					EF:SetOrigin(pos)
+					EF:SetColor(blood_color)						
+				for i = 1, 5 do
+					util.Effect("BloodImpact", EF)
+				end			
 			end	
 				
 			phys:SetContents(CONTENTS_EMPTY)
@@ -597,7 +599,9 @@ function ENTITY:MakeCustomRagdoll()
 
 				util.Decal("Blood", phys_pos + dir, phys_pos - dir)
 				util.Decal("Blood", phys_pos - dir, phys_pos + dir)
-				util.Effect("BloodImpact", EF)				
+				for i = 1, 5 do
+					util.Effect("BloodImpact", EF)
+				end			
 			end
 			
 			if !IsValid(self.GS2Skeleton) then
@@ -770,7 +774,9 @@ function ENTITY:MakeCustomRagdoll()
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
 						EF:SetColor(blood_color)
-						util.Effect("BloodImpact", EF)
+						for i = 1, 5 do
+							util.Effect("BloodImpact", EF)
+						end
 						EmitSound("Watermelon.Impact", data.HitPos, self.GS2LimbRelays[phys_bone]:EntIndex())
 					end
 				else	
@@ -792,7 +798,9 @@ function ENTITY:MakeCustomRagdoll()
 							local EF = EffectData()
 							EF:SetOrigin(data.HitPos)
 							EF:SetColor(blood_color)
-							util.Effect("BloodImpact", EF)						
+							for i = 1, 5 do
+								util.Effect("BloodImpact", EF)
+							end
 						end
 					end
 				end
