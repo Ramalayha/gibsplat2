@@ -1,6 +1,6 @@
 include("shared.lua")
 
-local gib_chance = CreateConVar("gs2_gib_chance", 0.3)
+local gib_chance = GetConVar("gs2_gib_chance")
 
 function ENT:Initialize()
 	local ent = self.TargetEntity

@@ -1,70 +1,71 @@
-local cvBool = 1
-local cvFloat = 2
-local cvInt = 3
-local cvFunc = 4
+local function PopulateGS2Menu(pnl)
+    pnl:CheckBox("Enabled", "gs2_enabled")
+    pnl:ControlHelp("Enable or disable the addon.")
 
-local GS2CVarsMain = {
-    ["gs2_enabled"] = {t = cvBool, name = "Enabled", desc = "Enable or disable the addon."},
-    ["ai_serverragdolls"] = {t = cvBool, name = "Keep Corpses", desc = "This must be enabled for gibs to work."},
-    ["gs2_cleargibs"] = {t = cvFunc, name = "Cleanup Gibs", desc = "Cleans up all clientside gibs."},
-}
-local GS2CVarsAdvanced = {
-    ["gs2_default_ragdolls"] = {t = cvBool, name = "Default Ragdolls", desc = "Gibs for all or only default models."},
-    ["gs2_player_ragdolls"] = {t = cvBool, name = "Player Ragdolls", desc = "Should player ragdolls be gibbable."},
-    ["gs2_effects"] = {t = cvBool, name = "Effects", desc = "Enable or disable particle effects."},
-    ["gs2_gib_chance"] = {t = cvFloat, name = "Gib Chance", desc = "Chances of gibs appearing from a ragdoll."},
-    ["gs2_gib_expensive"] = {t = cvBool, name = "Expensive Gibs", desc = "Controls if gibs use detailed physics mesh.", min = 0, max = 1},
-    ["gs2_gib_sv"] = {t = cvBool, name = "Serverside Gibs", desc = "Sets gibs to be serverside and overrides clientside setting."},
-    ["gs2_gib_cl"] = {t = cvBool, name = "Clientside Gibs", desc = "Sets gibs to be clientside."},
-    ["gs2_gib_factor"] = {t = cvFloat, name = "Gib Spawnrate", desc = "How many gibs should spawn"},
-    ["gs2_gib_lifetime"] = {t = cvInt, name = "Gib Lifetime", desc = "How long do the gibs appear for.", min = 0, max = 1000},
-    ["gs2_gib_merge_chance"] = {t = cvFloat, name = "Gib Merging", desc = "Controls the chance of small gibs sticking together"},
-    ["gs2_less_limbs"] = {t = cvBool, name = "Limit Limbs", desc = "Limits the number of limbs that are gibbed."},
-    ["gs2_max_gibs"] = {t = cvInt, name = "Gib Limit", desc = "How many gibs can be there at once.", min = 1, max = 100},
-    ["gs2_max_particles"] = {t = cvInt, name = "Particle Limit", desc = "How many particles can exist at once.", min = 1, max = 500},
-    ["gs2_particles_lifetime"] = {t = cvInt, name = "Particle Lifetime", desc = "How long does the particle effects last.", min = 1, max = 500},
-    ["gs2_particles_linger_chance"] = {t = cvFloat, name = "Particle Lingerchance", desc = "Controls the chance of particles staying after hitting something.", min = 0, max = 1},
-    ["gs2_pull_limb"] = {t = cvBool, name = "Expensive Joints", desc = "Uncheck to disable joints breaking from stress (improves performance)", min = 0, max = 1},
-}
+    pnl:CheckBox("Keep Corpses", "ai_serverragdolls")
+    pnl:ControlHelp("This needs to be on to be able to gib NPCs.")
 
-local function PopulateSBXToolMenu(pnl)
+    if LocalPlayer():IsAdmin() then
+        pnl:Button("Cleanup Gibs", "gs2_cleargibs_sv")
+    else
+        pnl:Button("Cleanup Gibs", "gs2_cleargibs")
+    end
+    
+    pnl:CheckBox("Default Ragdolls", "gs2_default_ragdolls")
+    pnl:ControlHelp("Controls if all ragdolls should be gibbable.")
 
-    local function addBoolOption(pnl, cv, name, desc)
-        pnl:CheckBox(name, cv)
-        pnl:ControlHelp(desc)
-    end
-    local function addFuncOption(pnl, cmd, name, desc)
-        pnl:Button(name, cmd)
-    end
-    local function addIntOption(pnl, cv, name, desc, min, max)
-        pnl:NumSlider(name, cv, min, max)
-        pnl:ControlHelp(desc)
-    end
-    local function addFloatOption(pnl, cv, name, desc)
-        pnl:NumSlider(name, cv, 0, 1, 3)
-        pnl:ControlHelp(desc)
-    end
+    pnl:CheckBox("Player Ragdolls", "gs2_player_ragdolls")
+    pnl:ControlHelp("Controls if player ragdolls should be gibbable.")
 
-    -- First add in the settings from GS2CVarsMain.
-    for cv, dt in pairs(GS2CVarsMain) do
-        if dt.t == cvBool then addBoolOption(pnl, cv, dt.name, dt.desc) end
-        if dt.t == cvFunc then addFuncOption(pnl, cv, dt.name, dt.desc) end
-    end
+    pnl:CheckBox("Effects", "gs2_effects")
+    pnl:ControlHelp("Turn blood pouring effect on or off.")
 
-    -- Populate with other settings. The way the table is setup we got to loop over the table twice to maintain some order
-    for cv, dt in pairs(GS2CVarsAdvanced) do
-        if dt.t == cvBool then addBoolOption(pnl, cv, dt.name, dt.desc) end
-    end
-    for cv, dt in pairs(GS2CVarsAdvanced) do
-        if dt.t == cvFloat then addFloatOption(pnl, cv, dt.name, dt.desc) end
-        if dt.t == cvInt then addIntOption(pnl, cv, dt.name, dt.desc, dt.min, dt.max) end
-    end
+    pnl:CheckBox("Expensive Gibs", "gs2_gib_expensive")
+    pnl:ControlHelp("Controls if gibs should use a detailed physics mesh.")
 
+    pnl:CheckBox("Serverside Gibs", "gs2_gib_sv")
+    pnl:ControlHelp("Controls if gibs should be created server-side.")
+
+    pnl:CheckBox("Clientside Gibs", "gs2_gib_cl")
+    pnl:ControlHelp("Controls if gibs should be created client-side (if server-side gibs are on this does nothing)")
+
+    --this is broken :(
+    --pnl:CheckBox("Less Limbs", "gs2_less_limbs")
+    --pnl:ControlHelp("Limits the amount of pieces a ragdoll can be cut into.")
+
+    pnl:CheckBox("Expensive Joints", "gs2_pull_limb")
+    pnl:ControlHelp("Controls wheter joints can break from stress.")
+
+    --int options
+
+    pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 100)
+    pnl:ControlHelp("Controls how many gibs can exist in the map.")
+
+    pnl:NumSlider("Particle Limit", "gs2_max_particles", 0, 500)
+    pnl:ControlHelp("Controls how many particles can exist in the map.")
+
+    --float options
+    pnl:NumSlider("Gib Chance", "gs2_gib_chance", 0, 1, 3)
+    pnl:ControlHelp("The chance of a ragdoll gibbing from taking damage.")
+
+    pnl:NumSlider("Gib Spawnrate", "gs2_gib_factor", 0, 1, 3)
+    pnl:ControlHelp("Controls how many gibs to spawn.")
+
+    pnl:NumSlider("Gib Merge Chance", "gs2_gib_merge_chance", 0, 1, 3)
+    pnl:ControlHelp("The chance of smaller gibs sticking together.")
+
+    pnl:NumSlider("Gib Lifetime", "gs2_gib_lifetime", 0, 1000)
+    pnl:ControlHelp("Controls how long gibs stay before disappearing.")
+
+    pnl:NumSlider("Particle Lifetime", "gs2_particles_lifetime", 1, 500, 3)
+    pnl:ControlHelp("Controls how long a particle stays.")
+
+    pnl:NumSlider("Particle Linger Chance", "gs2_particles_linger_chance", 0, 1, 3)
+    pnl:ControlHelp("The chance of a particle sticking to a surface.")
 end
 
 -- Check if sandbox is active gamemode and add in the settings
 if engine.ActiveGamemode() == "sandbox" then
-
     hook.Add("AddToolMenuCategories", "GibSplat2Category", function() 
         spawnmenu.AddToolCategory("Utilities", "GibSplat2", "GibSplat 2")
     end)
@@ -73,8 +74,7 @@ if engine.ActiveGamemode() == "sandbox" then
         spawnmenu.AddToolMenuOption("Utilities", "GibSplat2", "GS2Settings", "Settings", "", "", function(pnl)
             pnl:ClearControls()
             pnl:Help("Here you can change the GibSplat 2 settings.")
-            PopulateSBXToolMenu(pnl)
+            PopulateGS2Menu(pnl)
         end)
     end)
-
 end

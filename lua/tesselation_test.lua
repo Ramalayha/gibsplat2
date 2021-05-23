@@ -1,11 +1,4 @@
-function Tesselate(mesh)
-	for k, vert in pairs(mesh) do
-		for k2, vert2 in pairs(mesh) do
-			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos,0)) then
-				mesh[k2] = vert
-			end
-		end
-	end
+function Tesselate(mesh)	
 	local new_mesh = {}
 	for vert_index = 1, #mesh - 2, 3 do
 		local v1 = mesh[vert_index]
@@ -19,6 +12,18 @@ function Tesselate(mesh)
 		local v12 = {pos = (v1.pos + v2.pos) * 0.375, new = true, extra = v3}
 		local v23 = {pos = (v2.pos + v3.pos) * 0.375, new = true, extra = v1}
 		local v13 = {pos = (v1.pos + v3.pos) * 0.375, new = true, extra = v2}
+
+		v1.points = v1.points or {}
+		v1.points[v12] = true
+		v1.points[v13] = true
+
+		v2.points = v2.points or {}
+		v2.points[v12] = true
+		v2.points[v23] = true
+
+		v3.points = v3.points or {}
+		v3.points[v13] = true
+		v3.points[v23] = true
 
 		table.insert(new_mesh, v1)
 		table.insert(new_mesh, v12)
@@ -77,8 +82,10 @@ function Tesselate(mesh)
 					end
 				end
 			end
+			
+			--points = vert.points
 			local n = table.Count(points)
-						
+				
 			local B = 3 / (8 * n)
 			
 			local p = Vector(0, 0, 0)
@@ -94,10 +101,10 @@ function Tesselate(mesh)
 
 			vert.normal = norm
 
-			vert.pos = vert.pos * (1 - B * n) + p
+			--vert.pos = vert.pos * (1 - B * n) + p
+			vert.pos:Mul(1 - B * n)
+			vert.pos:Add(p)
 		end
-		vert.u = vert.pos.x
-		vert.v = vert.pos.y + vert.pos.z
 	end
 
 	return new_mesh
@@ -129,7 +136,7 @@ for k,v in pairs(convex) do
 	end
 end
 
-for i = 1, 0 do
+for i = 1, 1 do
 	convex = Tesselate(convex)
 end
 

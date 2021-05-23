@@ -1,7 +1,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
-ENT.LifeTime = CreateConVar("gs2_gib_lifetime", 30) --after not moving for this amount of time the gib will fade away
+ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",

@@ -307,21 +307,16 @@ function GS2GetBodyType(mdl)
 	return MDLTYPE_CACHE[mdl] or ""
 end
 
-local gib_factor 		= CreateConVar("gs2_gib_factor", 0.3, FCVAR_ARCHIVE)
-local gib_merge_chance 	= CreateConVar("gs2_gib_merge_chance", 0.7, FCVAR_ARCHIVE)
-local gib_custom		= CreateConVar("gs2_gib_custom", 1, FCVAR_ARCHIVE)
-local gib_expensive 	= CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
-local max_gibs			= CreateConVar("gs2_max_gibs", 32, FCVAR_ARCHIVE)
+local gib_factor 		= GetConVar("gs2_gib_factor")
+local gib_merge_chance 	= GetConVar("gs2_gib_merge_chance")
+local gib_custom		= GetConVar("gs2_gib_custom")
+local gib_expensive 	= GetConVar("gs2_gib_expensive")
+local max_gibs			= GetConVar("gs2_max_gibs")
 
-local generate_all		= CreateConVar("gs2_gib_generate_all", 0, FCVAR_ARCHIVE)
+local generate_all		= GetConVar("gs2_gib_generate_all")
 
-local sv_gibs_def = 1
-/*if SERVER and !game.SinglePlayer() then
-	sv_gibs_def = 0
-end*/
-
-local sv_gibs			= CreateConVar("gs2_gib_sv", sv_gibs_def, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local cl_gibs 			= CreateClientConVar("gs2_gib_cl", 1, FCVAR_ARCHIVE)
+local sv_gibs			= GetConVar("gs2_gib_sv")
+local cl_gibs 			= GetConVar("gs2_gib_cl")
 
 local GIB_CONN_DATA = {}
 
@@ -587,7 +582,7 @@ end
 
 local start
 
-local enabled = CreateConVar("gs2_enabled", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local enabled = GetConVar("gs2_enabled")
 
 hook.Add("Think", "GS2Gibs", function()
 	if !enabled:GetBool() then return end
@@ -616,7 +611,7 @@ hook.Add("Think", "GS2Gibs", function()
 	end	
 end)
 
-local player_ragdolls = CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
+local player_ragdolls = GetConVar("gs2_player_ragdolls")
 
 if SERVER then
 	hook.Add("OnEntityCreated", "GS2Gibs", function(ent)
@@ -636,6 +631,19 @@ if SERVER then
 			end
 		end)
 	end)
+
+	local function RemoveGibs(ply)
+		if !ply:IsAdmin() then return end
+		for _, gib in ipairs(ents_GetAll()) do			
+			if gib:GetClass():find("^gs2_gib") then
+				SafeRemoveEntity(gib)
+			end
+		end
+		table.Empty(G_GIBS)
+		ply:ConCommand("gs2_cleargibs") --clear clientside gibs too
+	end
+
+	concommand.Add("gs2_cleargibs_sv", RemoveGibs)
 end
 if CLIENT then
 	local form = [[GS2: Building gibs for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
@@ -673,21 +681,14 @@ if CLIENT then
 	end)
 
 	local function RemoveGibs()
-		for _, gib in pairs(G_GIBS) do
-			SafeRemoveEntity(gib)
-		end
-		table.Empty(G_GIBS)
 		for _, gib in ipairs(ents_GetAll()) do			
 			if gib:GetClass():find("^gs2_gib") then
-				if CLIENT then
-					if (gib:EntIndex() == -1) then
-						gib:Remove()
-					end
-				else
-					gib:Remove()
-				end
+				if (gib:EntIndex() == -1) then
+					SafeRemoveEntity(gib)
+				end		
 			end
 		end
+		table.Empty(G_GIBS)
 	end
 
 	hook.Add("PostCleanupMap", HOOK_NAME, RemoveGibs)

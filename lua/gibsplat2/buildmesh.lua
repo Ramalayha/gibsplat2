@@ -16,7 +16,7 @@ local THREADS = {}
 
 local PERCENT = 0
 
-local iterations = CreateClientConVar("gs2_mesh_iterations", 10, true, false, "How many times per frame the mesh generation code should run (higher = quicker generation, lower = smaller fps spikes)")
+local iterations = GetConVar("gs2_mesh_iterations")
 
 local function SafeYield()
 	if coroutine.running() then
@@ -458,7 +458,7 @@ hook.Add("HUDPaint", "GS2BuildMesh", function()
 	end			
 end)
 
-local player_ragdolls = CreateConVar("gs2_player_ragdolls", 0, FCVAR_REPLICATED)
+local player_ragdolls = GetConVar("gs2_player_ragdolls")
 
 hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 	if !enabled:GetBool() then return end

@@ -84,7 +84,7 @@ local function Tesselate(mesh)
 		v2.new = false
 		v3.new = false
 
-		v1.points = v1.points or {}
+		/*v1.points = v1.points or {}
 		v1.points[v2] = true
 		v1.points[v3] = true
 
@@ -94,7 +94,7 @@ local function Tesselate(mesh)
 
 		v3.points = v3.points or {}
 		v3.points[v1] = true
-		v3.points[v2] = true
+		v3.points[v2] = true*/
 
 		local v12 = {pos = (v1.pos + v2.pos) * 0.375, new = true, extra = v3}
 		local v23 = {pos = (v2.pos + v3.pos) * 0.375, new = true, extra = v1}
@@ -145,8 +145,19 @@ local function Tesselate(mesh)
 
 	for _, vert in ipairs(verts) do
 		if !vert.new then			
-			local points = vert.points
-			
+			local points = {}
+			for vert_index = 1, #new_mesh - 2, 3 do
+				for offset = 0, 2 do
+					local v1 = new_mesh[vert_index + offset]
+					if (v1 == vert) then
+						local v2 = new_mesh[vert_index + (offset + 1) % 2]
+						local v3 = new_mesh[vert_index + (offset + 2) % 2]
+						points[v2] = true
+						points[v3] = true
+					end
+				end
+			end
+			--local points = vert.points
 			local n = table.Count(points)
 						
 			local B = 3 / (8 * n)

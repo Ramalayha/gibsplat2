@@ -5,7 +5,7 @@
 local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
 local max_particles 	= CreateClientConVar("gs2_max_particles", 128, true)
 local do_effects 		= CreateClientConVar("gs2_effects", 1, true)
-local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.2, true)
+local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.1, true)
 
 local SIZE = 2
 
@@ -20,11 +20,11 @@ local blood_colors = {
 
 local blood = {
 	[BLOOD_COLOR_RED] = {
-		"decals/flesh/blood1",
-		"decals/flesh/blood2",
-		"decals/flesh/blood3",
-		"decals/flesh/blood4",
-		"decals/flesh/blood5"
+		"decals/flesh2/blood1",
+		"decals/flesh2/blood2",
+		"decals/flesh2/blood3",
+		"decals/flesh2/blood4",
+		"decals/flesh2/blood5"
 	},
 	[BLOOD_COLOR_YELLOW] = {
 		"decals/alienflesh/blood1",

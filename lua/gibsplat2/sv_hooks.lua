@@ -1,8 +1,8 @@
 util.AddNetworkString("GS2Dissolve")
 
-local enabled 			= CreateConVar("gs2_enabled", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local player_ragdolls 	= CreateConVar("gs2_player_ragdolls", 0, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local default_ragdolls 	= CreateConVar("gs2_default_ragdolls", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local enabled 			= GetConVar("gs2_enabled")
+local player_ragdolls 	= GetConVar("gs2_player_ragdolls")
+local default_ragdolls 	= GetConVar("gs2_default_ragdolls")
 
 local ang_zero = Angle(0, 0, 0)
 
@@ -75,7 +75,7 @@ local function IsKindaBullet(dmginfo)
 			dmginfo:IsDamageType(DMG_BUCKSHOT) --this doesnt count as bullet damage for some reason
 end
 
-local gib_chance = CreateConVar("gs2_gib_chance", 0.15, FCVAR_REPLICATED)
+local gib_chance = GetConVar("gs2_gib_chance")
 
 local function ShouldGib(dmginfo)
 	local chance = gib_chance:GetFloat()

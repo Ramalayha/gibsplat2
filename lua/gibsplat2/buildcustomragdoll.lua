@@ -4,12 +4,12 @@ local VERSION = 3
 
 local HOOK_NAME = "GibSplat2"
 
-local min_strength 	= CreateConVar("gs2_min_constraint_strength", 4000, FCVAR_ARCHIVE)
-local max_strength 	= CreateConVar("gs2_max_constraint_strength", 15000, FCVAR_ARCHIVE)
-local strength_mul 	= CreateConVar("gs2_constraint_strength_multiplier", 250, FCVAR_ARCHIVE)
-local less_limbs	= CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
-local gib_chance 	= CreateConVar("gs2_gib_chance", 0.15, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-local pull_limb		= CreateConVar("gs2_pull_limb", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
+local min_strength 	= GetConVar("gs2_min_constraint_strength")
+local max_strength 	= GetConVar("gs2_max_constraint_strength")
+local strength_mul 	= GetConVar("gs2_constraint_strength_multiplier")
+local less_limbs	= GetConVar("gs2_less_limbs")
+local gib_chance 	= GetConVar("gs2_gib_chance")
+local pull_limb		= GetConVar("gs2_pull_limb")
 
 local snd_dismember = Sound("physics/body/body_medium_break2.wav")
 local snd_gib 		= Sound("physics/flesh/flesh_bloody_break.wav")
@@ -679,7 +679,7 @@ function ENTITY:MakeCustomRagdoll()
 					EF:SetAngles(ang_zero)
 					EF:SetHitBox(bone)
 					EF:SetColor(blood_color)
-					EF:SetScale(phys_child:GetVolume() / 200)
+					EF:SetScale(phys_child:GetVolume() / 300)
 					util.Effect("gs2_bloodspray", EF)
 				end
 			end
@@ -714,7 +714,7 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetAngles(lang)
 				EF:SetHitBox(self:TranslatePhysBoneToBone(part_info.parent))
 				EF:SetColor(blood_color)
-				EF:SetScale(phys_parent:GetVolume() / 200)
+				EF:SetScale(phys_parent:GetVolume() / 300)
 				util.Effect("gs2_bloodspray", EF)
 
 				--RestorePose(self)

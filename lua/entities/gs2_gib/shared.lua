@@ -1,12 +1,12 @@
 include("gibsplat2/gibs.lua")
 
-local gib_expensive = CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
+local gib_expensive = GetConVar("gs2_gib_expensive")
 local gib_chance	= GetConVar("gs2_gib_chance")
 
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
-ENT.LifeTime = CreateConVar("gs2_gib_lifetime", 300) --after not moving for this amount of time the gib will fade away
+ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
