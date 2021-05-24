@@ -4,7 +4,7 @@ CreateConVar("gs2_default_ragdolls", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED)
 CreateConVar("gs2_gib_sv", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 CreateConVar("gs2_gib_chance", 0.15, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 CreateConVar("gs2_pull_limb", 1, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
-CreateConVar("gs2_gib_chance", 0.15, FCVAR_REPLICATED)
+CreateConVar("gs2_gib_chance", 0.15, bit.bor(FCVAR_ARCHIVE, FCVAR_REPLICATED))
 CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
 CreateConVar("gs2_gib_lifetime", 300) --after not moving for this amount of time the gib will fade away
 
@@ -22,6 +22,6 @@ if SERVER then
 end
 
 if CLIENT then
-	CreateClientConVar("gs2_gib_cl", 1, FCVAR_ARCHIVE)
+	CreateClientConVar("gs2_gib_cl", 1, true)
 	CreateClientConVar("gs2_mesh_iterations", 10, true, false, "How many times per frame the mesh generation code should run (higher = quicker generation, lower = smaller fps spikes)")
 end

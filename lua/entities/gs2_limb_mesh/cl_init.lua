@@ -125,6 +125,15 @@ function ENT:Draw()
 	
 	if (!self.Mesh or !self.Mesh.Mesh) then return end
 
+	local mat = self.Mesh.Material
+
+	if mat:GetShader():find("^Eye") then
+		mat:SetVector("$irisu", vector_origin)
+		mat:SetVector("$irisv", vector_origin)
+		mat:SetVector("$glintu", vector_origin)
+		mat:SetVector("$glintv", vector_origin)
+	end
+
 	self:DrawModel()
 
 	if (self.meshes.flesh and body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone]) then

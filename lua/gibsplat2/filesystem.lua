@@ -396,7 +396,7 @@ function GS2ReadMesh(hash)
 
 			MATERIAL_CACHE[mat] = MATERIAL_CACHE[mat] or Material(mat)
 
-			mesh.body.Material = MATERIAL_CACHE[mat.."_bloody"] or MATERIAL_CACHE[mat]
+			mesh.body.Material = MATERIAL_CACHE[mat]
 
 			mesh.body.tris = ReadTriangles(F)
 
@@ -450,9 +450,10 @@ function GS2ReadMesh(hash)
 							mat_bloody:SetMatrix(key, value)							
 						end
 					end	
-					MATERIAL_CACHE[mat_name] = mat_bloody
-					mesh.body.Material = mat_bloody
+
+					MATERIAL_CACHE[mat_name] = mat_bloody					
 				end
+				mesh.body.Material = MATERIAL_CACHE[mat_name]
 			end			
 		end
 
