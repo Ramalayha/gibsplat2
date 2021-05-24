@@ -23,6 +23,9 @@ local function PopulateGS2Menu(pnl)
     pnl:CheckBox("Expensive Gibs", "gs2_gib_expensive")
     pnl:ControlHelp("Controls if gibs should use a detailed physics mesh.")
 
+    pnl:CheckBox("Custom Gibs", "gs2_gib_custom")
+    pnl:ControlHelp("Controls wheter to use custom model gibs or not (ribs etc)")
+
     pnl:CheckBox("Serverside Gibs", "gs2_gib_sv")
     pnl:ControlHelp("Controls if gibs should be created server-side.")
 

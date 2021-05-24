@@ -24,6 +24,14 @@ local decals = {
 	[BLOOD_COLOR_ANTLION_WORKER] = "YellowBlood"
 }
 
+local decals_big = {
+	[BLOOD_COLOR_RED] = "Blood",
+	[BLOOD_COLOR_YELLOW] = "YellowBlood",
+	[BLOOD_COLOR_GREEN] = "YellowBlood",
+	[BLOOD_COLOR_ANTLION] = "YellowBlood",
+	[BLOOD_COLOR_ANTLION_WORKER] = "YellowBlood"
+}
+
 local HOOK_NAME = "GibSplat2"
 
 function ENT:SetupDataTables()
@@ -185,18 +193,22 @@ function ENT:PhysicsCollide(data, phys_self)
 				util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
 				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
 			end
-		end
-		
-		if (phys_self:GetVolume() > 500) then
-			util.Decal("Blood", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-			local EF = EffectData()
-				EF:SetOrigin(self:LocalToWorld(phys_self:GetMassCenter()))
-				EF:SetColor(color)
-			for i = 1, 5 do
-				util.Effect("BloodImpact", EF)
+
+			if (phys_self:GetVolume() > 500) then			
+				local decal = decals_big[color]
+				if decal then
+					util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+					util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+				end
+				local EF = EffectData()
+					EF:SetOrigin(self:LocalToWorld(phys_self:GetMassCenter()))
+					EF:SetColor(color)
+				for i = 1, 5 do
+					util.Effect("BloodImpact", EF)
+				end
 			end
 		end
-
+		
 		self:EmitSound("Watermelon.Impact")
 	end	
 end
