@@ -1,0 +1,6 @@
+{
+	"title"		:	"GibSplat 2",
+	"type"		:	"effects",
+	"tags"		:	[ "realism" ],
+	"ignore"	:	[ ".git/*" ]
+}
