@@ -128,10 +128,7 @@ function ENT:Draw()
 	local mat = self.Mesh.Material
 
 	if mat:GetShader():find("^Eye") then
-		mat:SetVector("$irisu", vector_origin)
-		mat:SetVector("$irisv", vector_origin)
-		mat:SetVector("$glintu", vector_origin)
-		mat:SetVector("$glintv", vector_origin)
+		mat:SetVector("$irisu", vector_origin) --fixes black eyes somehow!
 	end
 
 	self:DrawModel()

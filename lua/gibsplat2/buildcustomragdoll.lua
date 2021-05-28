@@ -17,6 +17,7 @@ local snd_snap = Sound("physics/body/body_medium_break3.wav")
 
 local decals = {
 	flesh = "Blood",
+	no_decal = "Blood", --metrocop head
 	zombieflesh = "Blood",
 	alienflesh = "YellowBlood",
 	antlion = "YellowBlood"
@@ -24,6 +25,7 @@ local decals = {
 
 local blood_colors = {
 	flesh = BLOOD_COLOR_RED,
+	no_decal = BLOOD_COLOR_RED, --metrocop head
 	zombieflesh = BLOOD_COLOR_RED,
 	alienflesh = BLOOD_COLOR_YELLOW,
 	antlion = BLOOD_COLOR_YELLOW
@@ -284,16 +286,9 @@ end
 
 local _ShouldGib = {}
 
-local whitelist = {
-	"flesh",
-	"zombieflesh",
-	"alienflesh",
-	"antlion"
-}
-
 local function ShouldGib(phys_mat)
 	if (_ShouldGib[phys_mat] == nil) then
-		_ShouldGib[phys_mat] = table.HasValue(whitelist, phys_mat)
+		_ShouldGib[phys_mat] = file.Exists("materials/models/gibsplat2/flesh/"..phys_mat..".vmt", "GAME")
 	end
 	return _ShouldGib[phys_mat]
 end
