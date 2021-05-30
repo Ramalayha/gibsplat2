@@ -2,10 +2,17 @@
 	Code borrowed from source sdk with slight modifications
 ]]
 
+game.AddParticles("particles/gs2_particles.pcf")
+
+PrecacheParticleSystem("blood_fluid_BI")
+PrecacheParticleSystem("blood_fluid_02")
+
 local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
-local max_particles 	= CreateClientConVar("gs2_max_particles", 128, true)
+local max_particles 	= CreateClientConVar("gs2_max_particles", 10000, true)
 local do_effects 		= CreateClientConVar("gs2_effects", 1, true)
 local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.1, true)
+local legacy_effects	= CreateClientConVar("gs2_legacy_effects", 0, true)
+local bloodpool_size	= CreateClientConVar("gs2_bloodpool_size", 10, true)
 
 local SIZE = 2
 
@@ -42,6 +49,8 @@ local blood = {
 	}
 }
 
+local snd_path = Sound("ambient/water/water_flow_loop1.wav")
+
 function EFFECT:Init(data)
 	if !do_effects:GetBool() then return end
 	
@@ -61,6 +70,8 @@ function EFFECT:Init(data)
 		return
 	end
 
+	self.Body.Blood_Pools = {}
+
 	self.PhysBone = self.Body:TranslateBoneToPhysBone(self.Bone)
 
 	self.mask = bit_lshift(1, self.PhysBone)
@@ -71,19 +82,38 @@ function EFFECT:Init(data)
 		return
 	end
 
-	local bone_pos = matrix:GetTranslation()
-	local bone_ang = matrix:GetAngles()
-
-	--self:SetRenderBounds(Vector(-1, -1, -1), Vector(1, 1, 1))
-	self:SetPos(bone_pos)
-
-	self:SetParent(self.Body)
-	self:SetParentPhysNum(self.Body:TranslateBoneToPhysBone(self.Bone))
-
-	self.Emitter = ParticleEmitter(bone_pos, false)
-	self.Emitter3D = ParticleEmitter(bone_pos, true)
-
+	self:FollowBone(self.Body, self.Bone)
+	
+	self:SetLocalAngles(self.LocalAng)
+	self:SetLocalPos(self.LocalPos)
+	
 	self.last_sim = CurTime()
+
+	local attach = self.Body.GS2Limbs[self.PhysBone]
+	if !IsValid(attach) then
+		attach = self.Body
+	end
+
+	local snd = CreateSound(attach, snd_path)
+	snd:PlayEx(0.6, 80)
+	snd:FadeOut(self.DieTime)
+	self.Sound = snd
+	
+	attach:CallOnRemove("gs2_bloodspray_killsound", function()
+		snd:Stop()
+	end)
+
+	if !legacy_effects:GetBool() then
+		self.PE = CreateParticleSystem(self, "blood_fluid_BI", PATTACH_ABSORIGIN)
+		return
+	end
+
+	--old code
+
+	local pos = self:GetPos()
+
+	self.Emitter = ParticleEmitter(pos, false)
+	self.Emitter3D = ParticleEmitter(pos, true)
 
 	self.Particles = {}
 
@@ -110,7 +140,9 @@ local PARTICLES = {}
 timer.Create("gs2_gcparticles", 3, 0, function()
 	while PARTICLES[1] do
 		if (!PARTICLES[1].Created or PARTICLES[1].Created + PARTICLES[1]:GetDieTime() < CurTime()) then
-			table.remove(PARTICLES, 1)
+			local part = table.remove(PARTICLES, 1)
+			part:SetLifeTime(0)
+			part:SetDieTime(0)
 		else
 			break
 		end
@@ -118,8 +150,51 @@ timer.Create("gs2_gcparticles", 3, 0, function()
 end)
 
 local function OnCollide(self, pos, norm)
-	if (#PARTICLES >= max_particles:GetInt()) then return end
-	
+	while (#PARTICLES >= max_particles:GetInt()) do
+		local part = table.remove(PARTICLES, 1)
+		part:SetLifeTime(0)
+		part:SetDieTime(0)
+	end
+		
+	local last_particle = self.Effect.last_particle
+
+	if (last_particle and IsValid(self.Effect) and IsValid(self.Effect.Body) and norm.z > 0.7) then
+		local blood_pools = self.Effect.Body.Blood_Pools
+		if (pos:DistToSqr(last_particle:GetPos()) < last_particle:GetEndSize() ^ 2 and math.random() < 0.1) then
+			blood_pools[last_particle] = true			
+		end
+		local new_pos = Vector(0, 0, 0)
+		local div = 0
+		for pool in pairs(blood_pools) do
+			local size = pool:GetEndSize()
+			
+			if (pos:DistToSqr(pool:GetPos()) < size * size) then
+				if (size >= bloodpool_size:GetFloat()) then
+					div = div + 1
+					local pos = pos * 1
+					pos:Sub(pool:GetPos())
+					pos:Normalize()
+					pos:Mul(SIZE * math.Rand(1, 8))
+					pos:Add(pool:GetPos())
+					new_pos:Add(pos)
+				else
+					local old_size = pool.Size
+					local area = old_size * old_size
+					area = area + (SIZE * math.Rand(0.5, 1)) ^ 2
+					local size = math.sqrt(area)
+					pool.Size = size
+					pool:SetStartSize(old_size / 3)
+					pool:SetEndSize(size)
+					return
+				end
+			end
+		end
+		if (div > 0) then
+			new_pos:Div(div)
+			pos = new_pos
+		end
+	end
+
 	trace.start = pos + norm
 	trace.endpos = pos - norm
 
@@ -128,6 +203,9 @@ local function OnCollide(self, pos, norm)
 	if (!tr.Hit or tr.HitNoDraw or tr.HitSky or (IsValid(tr.Entity) and !tr.Entity:IsWorld())) then
 		return
 	end
+
+	self:SetCollide(false)
+	self:SetDieTime(0)
 
 	local blood_materials = blood[self.Blood]
 
@@ -141,16 +219,27 @@ local function OnCollide(self, pos, norm)
 
 		particle:SetAngles(ang)
 
-		local size = math.Rand(0.5, 1)
-		particle:SetStartSize(SIZE * size)
-		particle:SetEndSize(SIZE * size)
+		local size = SIZE * math.Rand(0.5, 1)
+		particle.Size = size
+		particle:SetStartSize(size)
+		particle:SetEndSize(size)
 
 		particle:SetStartAlpha(255)
 		particle:SetEndAlpha(255)
 		--particle:SetRoll(math.random(0, 360))
 		
 		particle:SetLifeTime(0)
-		particle:SetDieTime(decal_lifetime:GetFloat())
+		
+		if IsValid(self.Effect) then
+			local die_time = self.Effect.DieTime * 1.3
+			particle:SetDieTime(die_time)
+			timer.Simple(die_time - 0.05, function()
+				particle:SetDieTime(decal_lifetime:GetFloat() - particle:GetDieTime())
+				particle:SetStartSize(particle:GetEndSize())
+			end)
+		else
+			particle:SetDieTime(decal_lifetime:GetFloat())
+		end
 
 		local color = render.GetLightColor(pos + norm)
 		
@@ -161,23 +250,21 @@ local function OnCollide(self, pos, norm)
 		particle.Created = CurTime()
 
 		table.insert(PARTICLES, particle)
-	end
 
-	self:SetCollide(false)
-	self:SetDieTime(0)
+		self.Effect.last_particle = particle
+	end
 end
 
 function EFFECT:Think()
-	if !do_effects:GetBool() then return false end
-	--line 162 is not an error dammit!
+	if !do_effects:GetBool() then 
+		if self.Sound then
+			self.Sound:Stop() 
+		end
+		return false 
+	end
+
 	local cur_time = CurTime()
 
-	if !IsValid(self.Emitter) then
-		if self.Emitter3D then
-			self.Emitter3D:Finish()
-		end
-		return false
-	end
 	if (!IsValid(self.Body) or
 	 	cur_time - self.Created > self.DieTime or
 	 	!self.Body.GS2Limbs or bit_band(self.mask, self.Body:GetNWInt("GS2GibMask")) != 0) then
@@ -186,135 +273,174 @@ function EFFECT:Think()
 		local Emitter3D = self.Emitter3D
 
 		timer.Simple(10 ,function() --give some time for particles to hit the ground
-		 	Emitter:Finish()	
 		 	if Emitter3D then
 		 		Emitter3D:Finish()
 		 	end
 		end)
+		if Emitter then
+	 		Emitter:Finish()
+	 	end	
+		if self.PE then
+			self.PE:StopEmission(true)
+		end
+		if self.Sound then
+			self.Sound:Stop() 
+		end
 		return false
 	end
 
-	local matrix = self.Body:GetBoneMatrix(self.Bone)
+	if !legacy_effects:GetBool() then
+		if (!self.PE or self.PE:IsFinished() or !IsValid(self.Body)) then
+			if self.PE then
+				self.PE:StopEmission(true)
+			end
+			if self.Sound then
+				self.Sound:Stop() 
+			end
+			return false
+		end
 
-	local bone_pos, bone_ang = LocalToWorld(self.LocalPos, self.LocalAng, matrix:GetTranslation(), matrix:GetAngles())
+		local point = self:GetPos()
 
-	self.last_bone_pos = self._last_bone_pos or bone_pos
+		self.PE:SetControlPoint(0, point)
+		self.PE:SetControlPointOrientation(0, self:GetForward(), self:GetRight(), self:GetUp())
+	else
+		if !IsValid(self.Emitter) then
+			if self.Emitter3D then
+				self.Emitter3D:Finish()
+			end
+			if self.Sound then
+				self.Sound:Stop() 
+			end
+			return false
+		end
 
-	local bone_vel = bone_pos - self.last_bone_pos
-	bone_vel:Div(cur_time - self.last_sim)
-	self.last_sim = cur_time
+		local matrix = self.Body:GetBoneMatrix(self.Bone)
 
-	local bone_dir = -bone_ang:Forward()
+		local pos = self:GetPos()
+		local ang = self:GetAngles()
 
-	local right = bone_dir:Cross(Vector(0, 0, 1))
-	local up = right:Cross(bone_dir)
+		self.last_pos = self._last_pos or pos
 
-	for i = 1, 4 do --14
-		local pos = bone_pos
-		 + right * math.Rand(-0.5, 0.5)
-		 + up * math.Rand(0.5, 0.5)
+		local vel = pos - self.last_pos
+		vel:Div(cur_time - self.last_sim)
+		self.last_sim = cur_time
 
-		local dir = bone_dir + VectorRand(-0.3, 0.3)
+		local dir = -ang:Forward()
 
-		local vel = dir * math.Rand(4, 40) * 10 * (0.7 + 0.3 * math.sin((cur_time - self.Created) * 3)) * (self.Created + self.DieTime - cur_time) / self.DieTime
-		
-		--vel = vel * (0.5 + math.sin(self.Created - cur_time) * 0.5)
+		local right = dir:Cross(Vector(0, 0, 1))
+		local up = right:Cross(dir)
 
-		local particle = self.Emitter:Add("effects/blood_drop", pos + Angle(0, math.Rand(0, 360), 0):Forward() * self.Radius)
+		for i = 1, 4 do --14
+			local pos = pos
+			 + right * math.Rand(-0.5, 0.5)
+			 + up * math.Rand(0.5, 0.5)
 
-		table.insert(self.Particles, particle)
+			local dir = dir + VectorRand(-0.3, 0.3)
 
-		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(bone_vel + vel)
-		particle:SetStartSize(SIZE * math.Rand(0.2, 0.3) * 5)
-		particle:SetStartLength(math.Rand(1.25, 2.75) * 5)
-		particle:SetLifeTime(0)
-		particle:SetDieTime(math.Rand(0.5, 1))
+			local vel = dir * math.Rand(4, 40) * 10 * (0.7 + 0.3 * math.sin((cur_time - self.Created) * 3)) * (self.Created + self.DieTime - cur_time) / self.DieTime
+			
+			--vel = vel * (0.5 + math.sin(self.Created - cur_time) * 0.5)
 
-		local color = render.GetLightColor(pos)
-		
-		color = color * self.BloodColor
+			local particle = self.Emitter:Add("effects/blood_drop", pos + Angle(0, math.Rand(0, 360), 0):Forward() * self.Radius)
 
-		particle:SetColor(color.x, color.y, color.z)
+			table.insert(self.Particles, particle)
 
-		particle:SetCollide(true)
+			particle:SetGravity(Vector(0, 0, -600))
+			particle:SetVelocity(vel + vel)
+			particle:SetStartSize(SIZE * math.Rand(0.2, 0.3) * 5)
+			particle:SetStartLength(math.Rand(1.25, 2.75) * 5)
+			particle:SetLifeTime(0)
+			particle:SetDieTime(math.Rand(0.5, 1))
 
-		particle.Blood = self.Blood
-		particle.Emitter = self.Emitter3D
-		particle:SetCollideCallback(OnCollide)
-	end
+			local color = render.GetLightColor(pos)
+			
+			color = color * self.BloodColor
 
-	for i = 1, 8 do --24
-		local pos = bone_pos
-		 + right * math.Rand(-0.5, 0.5)
-		 + up * math.Rand(0.5, 0.5)
+			particle:SetColor(color.x, color.y, color.z)
 
-		local dir = bone_dir + VectorRand(-1, 1)
-		--dir.z = dir.z + math.Rand(0, 1)
+			particle:SetCollide(true)
 
-		local vel = dir * math.Rand(2, 25) * 5 * (self.Created + self.DieTime - cur_time) / self.DieTime
-		
-		--vel = vel * (1 + math.sin((self.Created - cur_time) * 10))
+			particle.Effect = self
+			particle.Blood = self.Blood
+			particle.Emitter = self.Emitter3D
+			particle:SetCollideCallback(OnCollide)
+		end
 
-		local particle = self.Emitter:Add("effects/blood_drop", pos)
+		for i = 1, 8 do --24
+			local pos = pos
+			 + right * math.Rand(-0.5, 0.5)
+			 + up * math.Rand(0.5, 0.5)
 
-		table.insert(self.Particles, particle)
+			local dir = dir + VectorRand(-1, 1)
+			--dir.z = dir.z + math.Rand(0, 1)
 
-		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(bone_vel + vel)
-		particle:SetStartSize(SIZE * math.Rand(0.025, 0.05))
-		particle:SetStartLength(math.Rand(2.5, 3.75))
-		particle:SetLifeTime(0)
-		particle:SetDieTime(math.Rand(5, 10))
+			local vel = dir * math.Rand(2, 25) * 5 * (self.Created + self.DieTime - cur_time) / self.DieTime
+			
+			--vel = vel * (1 + math.sin((self.Created - cur_time) * 10))
 
-		local color = render.GetLightColor(pos)
-		
-		color = color * self.BloodColor
+			local particle = self.Emitter:Add("effects/blood_drop", pos)
 
-		particle:SetColor(color.x, color.y, color.z)
+			table.insert(self.Particles, particle)
 
-		particle:SetCollide(true)
+			particle:SetGravity(Vector(0, 0, -600))
+			particle:SetVelocity(vel + vel)
+			particle:SetStartSize(SIZE * math.Rand(0.025, 0.05))
+			particle:SetStartLength(math.Rand(2.5, 3.75))
+			particle:SetLifeTime(0)
+			particle:SetDieTime(math.Rand(5, 10))
 
-		particle.Blood = self.Blood
-		particle.Emitter = self.Emitter3D
-		particle:SetCollideCallback(OnCollide)
-	end
+			local color = render.GetLightColor(pos)
+			
+			color = color * self.BloodColor
 
-	for i = 1, 10 do --6
-		local pos = bone_pos + bone_dir
-		 + right * math.Rand(-1, 1)
-		 + up * math.Rand(-1, 1)
+			particle:SetColor(color.x, color.y, color.z)
 
-		local vel = bone_dir * math.Rand(10, 20) + VectorRand(-0.5, 0.5)
+			particle:SetCollide(true)
 
-		local particle = self.Emitter:Add("effects/blood_puff", pos + Angle(math.Rand(0, 360), 0, 0):Forward() * self.Radius)
+			particle.Effect = self
+			particle.Blood = self.Blood
+			particle.Emitter = self.Emitter3D
+			particle:SetCollideCallback(OnCollide)
+		end
 
-		particle:SetGravity(Vector(0, 0, -600))
-		particle:SetVelocity(bone_vel + vel)
+		for i = 1, 10 do --6
+			local pos = pos + dir
+			 + right * math.Rand(-1, 1)
+			 + up * math.Rand(-1, 1)
 
-		local size = math.Rand(1, 1.5)
-		particle:SetStartSize(SIZE * size)	
-		particle:SetEndSize(SIZE * size * 4)
+			local vel = dir * math.Rand(10, 20) + VectorRand(-0.5, 0.5)
 
-		particle:SetStartAlpha(math.random(150, 200))
-		particle:SetEndAlpha(0)
-		particle:SetRoll(math.random(0, 360))
-		particle:SetRollDelta(0)
+			local particle = self.Emitter:Add("effects/blood_puff", pos + Angle(math.Rand(0, 360), 0, 0):Forward() * self.Radius)
 
-		particle:SetLifeTime(0)
-		particle:SetDieTime(math.Rand(0.01, 0.03))
+			particle:SetGravity(Vector(0, 0, -600))
+			particle:SetVelocity(vel + vel)
 
-		local color = render.GetLightColor(pos)
+			local size = math.Rand(1, 1.5)
+			particle:SetStartSize(SIZE * size)	
+			particle:SetEndSize(SIZE * size * 4)
 
-		color = color * self.BloodColor
+			particle:SetStartAlpha(math.random(150, 200))
+			particle:SetEndAlpha(0)
+			particle:SetRoll(math.random(0, 360))
+			particle:SetRollDelta(0)
 
-		particle:SetColor(color.x, color.y, color.z)
+			particle:SetLifeTime(0)
+			particle:SetDieTime(math.Rand(0.01, 0.03))
 
-		particle:SetCollide(true)
+			local color = render.GetLightColor(pos)
 
-		particle.Blood = self.Blood
-		particle.Emitter = self.Emitter3D
-		particle:SetCollideCallback(OnCollide)
+			color = color * self.BloodColor
+
+			particle:SetColor(color.x, color.y, color.z)
+
+			particle:SetCollide(true)
+
+			particle.Effect = self
+			particle.Blood = self.Blood
+			particle.Emitter = self.Emitter3D
+			particle:SetCollideCallback(OnCollide)
+		end
 	end
 
  	return true
