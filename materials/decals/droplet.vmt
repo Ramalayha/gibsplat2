@@ -1,0 +1,64 @@
+"unlitgeneric"
+{
+"$basetexture" "decals/droplet"
+ 
+ 
+
+
+"$decal" "1"
+ 
+"$phong" "1"
+"$phongexponenttexture" "decals/droplet"
+"$phongexponent" "700"
+"$phongboost" "50"
+"$phongfresnelranges" "[1.2 1.5 2.0]"
+"$diffuseexp" "1.0"
+"$allowdiffusemodulation" "1"
+"$dudvmap"  "decals/droplet_nrm"
+"$bumpmap"  "decals/droplet_nrm"
+"$blendmodulatetexture" "decals/droplet"
+ 
+
+"$allowfencerenderstatehack" "1"
+
+ "$nocull" "1"
+
+"$flashlightnolambert" "1"
+
+ 	$alpha 1
+	$alphatest 1
+	$alphatestreference 0.5
+
+
+"$ssbump" "1"	
+"$decalscale" "0.07"
+
+	$vertexcolor 1
+	$vertexalpha 1
+
+"$normalmap" "decals/droplet_nrm"
+"$normalmap2" "decals/droplet_nrm"
+ 
+
+
+}
+
+
+// Copyright © 2020 by GalaxyHighMarshal, All rights reserved.
+// All trademarks are property of their respective owners.
+// No parts of this coding or any of its contents may be reproduced, copied, modified or adapted, without the prior written consent of the author, unless otherwise indicated for stand-alone materials. Doing so would be violating
+// https://store.steampowered.com/subscriber_agreement/ 
+// I Have Spoken
+
+
+
+
+
+
+
+
+
+
+
+
+

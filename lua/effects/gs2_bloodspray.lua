@@ -9,9 +9,9 @@ PrecacheParticleSystem("blood_fluid_02")
 
 local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
 local max_particles 	= CreateClientConVar("gs2_max_particles", 10000, true)
-local do_effects 		= CreateClientConVar("gs2_effects", 1, true)
 local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.1, true)
-local legacy_effects	= CreateClientConVar("gs2_legacy_effects", 0, true)
+local new_effects		= CreateClientConVar("gs2_new_effects", 1, true)
+local old_effects		= CreateClientConVar("gs2_old_effects", 1, true)
 local bloodpool_size	= CreateClientConVar("gs2_bloodpool_size", 10, true)
 
 local SIZE = 2
@@ -49,11 +49,13 @@ local blood = {
 	}
 }
 
+local blood_particles = {
+	[BLOOD_COLOR_RED] = "blood_fluid_BI"
+}
+
 local snd_path = Sound("ambient/water/water_flow_loop1.wav")
 
 function EFFECT:Init(data)
-	if !do_effects:GetBool() then return end
-	
 	self.LocalPos = data:GetOrigin()
 	self.LocalAng = data:GetAngles()
 
@@ -83,7 +85,7 @@ function EFFECT:Init(data)
 	end
 
 	self:FollowBone(self.Body, self.Bone)
-	
+	self.LocalAng:RotateAroundAxis(self.LocalAng:Right(), 180)
 	self:SetLocalAngles(self.LocalAng)
 	self:SetLocalPos(self.LocalPos)
 	
@@ -103,32 +105,31 @@ function EFFECT:Init(data)
 		snd:Stop()
 	end)
 
-	if !legacy_effects:GetBool() then
-		self.PE = CreateParticleSystem(self, "blood_fluid_BI", PATTACH_ABSORIGIN)
-		return
+	if (new_effects:GetBool() and blood_particles[self.Blood]) then
+		self.PE = CreateParticleSystem(self, blood_particles[self.Blood], PATTACH_ABSORIGIN)
 	end
 
-	--old code
+	if old_effects:GetBool() then
+		local pos = self:GetPos()
 
-	local pos = self:GetPos()
+		self.Emitter = ParticleEmitter(pos, false)
+		self.Emitter3D = ParticleEmitter(pos, true)
 
-	self.Emitter = ParticleEmitter(pos, false)
-	self.Emitter3D = ParticleEmitter(pos, true)
+		self.Particles = {}
 
-	self.Particles = {}
-
-	for hbg = 0, self.Body:GetHitBoxGroupCount() - 1 do
-		for hb = 0, self.Body:GetHitBoxCount(hbg) - 1 do
-			if (self.Body:GetHitBoxBone(hb, hbg) == self.Bone) then
-				local min, max = self.Body:GetHitBoxBounds(hb, hbg)
-				min.x = 0
-				max.x = 0
-				self.Radius = min:Distance(max) * 0.2
-				return
+		for hbg = 0, self.Body:GetHitBoxGroupCount() - 1 do
+			for hb = 0, self.Body:GetHitBoxCount(hbg) - 1 do
+				if (self.Body:GetHitBoxBone(hb, hbg) == self.Bone) then
+					local min, max = self.Body:GetHitBoxBounds(hb, hbg)
+					min.x = 0
+					max.x = 0
+					self.Radius = min:Distance(max) * 0.2
+					return
+				end
 			end
 		end
+		self.Radius = 0
 	end
-	self.Radius = 0
 end
 
 local trace = {
@@ -256,13 +257,6 @@ local function OnCollide(self, pos, norm)
 end
 
 function EFFECT:Think()
-	if !do_effects:GetBool() then 
-		if self.Sound then
-			self.Sound:Stop() 
-		end
-		return false 
-	end
-
 	local cur_time = CurTime()
 
 	if (!IsValid(self.Body) or
@@ -289,8 +283,8 @@ function EFFECT:Think()
 		return false
 	end
 
-	if !legacy_effects:GetBool() then
-		if (!self.PE or self.PE:IsFinished() or !IsValid(self.Body)) then
+	if new_effects:GetBool() then
+		if !IsValid(self.Body) then
 			if self.PE then
 				self.PE:StopEmission(true)
 			end
@@ -299,12 +293,9 @@ function EFFECT:Think()
 			end
 			return false
 		end
+	end
 
-		local point = self:GetPos()
-
-		self.PE:SetControlPoint(0, point)
-		self.PE:SetControlPointOrientation(0, self:GetForward(), self:GetRight(), self:GetUp())
-	else
+	if old_effects:GetBool() then
 		if !IsValid(self.Emitter) then
 			if self.Emitter3D then
 				self.Emitter3D:Finish()
@@ -326,7 +317,7 @@ function EFFECT:Think()
 		vel:Div(cur_time - self.last_sim)
 		self.last_sim = cur_time
 
-		local dir = -ang:Forward()
+		local dir = ang:Forward()
 
 		local right = dir:Cross(Vector(0, 0, 1))
 		local up = right:Cross(dir)

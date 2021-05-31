@@ -12,7 +12,7 @@ if SERVER then
 	CreateConVar("gs2_gib_factor", 0.3, FCVAR_ARCHIVE)
 	CreateConVar("gs2_gib_merge_chance", 0.7, FCVAR_ARCHIVE)
 	CreateConVar("gs2_gib_custom", 1, FCVAR_ARCHIVE)
-	CreateConVar("gs2_gib_expensive", 0, FCVAR_ARCHIVE)
+	CreateConVar("gs2_gib_expensive", 1, FCVAR_ARCHIVE)
 	CreateConVar("gs2_max_gibs", 32, FCVAR_ARCHIVE)
 	CreateConVar("gs2_gib_generate_all", 0, FCVAR_ARCHIVE)
 	CreateConVar("gs2_min_constraint_strength", 4000, FCVAR_ARCHIVE)

@@ -1,0 +1,7 @@
+"UnlitGeneric"
+{
+	$basetexture "particles/alienflesh/blood3"
+	$vertexcolor 1
+	$vertexalpha 1
+	$translucent 1
+}

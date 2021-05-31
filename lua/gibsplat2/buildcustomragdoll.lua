@@ -256,8 +256,9 @@ function ENTITY:GS2GetClosestPhysBone(pos, target_phys_bone, use_collides)
 				local phys_pos = phys:GetPos()
 				local phys_ang = phys:GetAngles()
 				local lpos = phys:WorldToLocal(pos)
-				local hitpos, _, d = collide:TraceBox(phys_pos, phys_ang, pos, pos, vec_min, vec_max)
-				if hitpos then					
+				local hitpos = collide:TraceBox(phys_pos, phys_ang, pos, phys_pos, vector_origin, vector_origin)
+				if hitpos then
+					local d = hitpos:DistToSqr(pos)		
 					if (d < dist) then
 						dist = d
 						closest_bone = phys_bone	
@@ -745,7 +746,7 @@ function ENTITY:MakeCustomRagdoll()
 		self:AddCallback("PhysicsCollide", function(self, data)
 			local phys = data.PhysObject
 			local phys_bone
-			for i = 0, self:GetPhysicsObjectCount()-1 do
+			for i = 0, self:GetPhysicsObjectCount() - 1 do
 				if (self:GetPhysicsObjectNum(i) == phys) then
 					phys_bone = i
 					break
@@ -761,7 +762,10 @@ function ENTITY:MakeCustomRagdoll()
 				return --Don't run decal code too often
 			end
 
-			if (speed > 100) then
+			self.LastCollide = self.LastCollide or CurTime()
+
+			if (speed > 100 and CurTime() - self.LastCollide > 0.05) then
+				self.LastCollide = CurTime()
 				local blood_color = blood_colors[phys:GetMaterial()]		
 				if self:GS2IsDismembered(phys_bone) then
 					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)

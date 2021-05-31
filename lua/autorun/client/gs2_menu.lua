@@ -1,3 +1,39 @@
+local defaults =
+{
+    ["gs2_bloodpool_size"] = "10",
+    ["gs2_old_effects"] = "1",
+    ["gs2_new_effects"] = "1",
+    ["gs2_particles_linger_chance"] = "0.1",
+    ["gs2_max_particles"] = "10000",
+    ["gs2_particles_lifetime"] = "60",
+    ["gs2_mesh_iterations"] = "10",
+    ["gs2_gib_cl"] = "1",
+    ["gs2_less_limbs"] = "0",
+    ["gs2_constraint_strength_multiplier"] = "250",
+    ["gs2_max_constraint_strength"] = "15000",
+    ["gs2_min_constraint_strength"] = "4000",
+    ["gs2_gib_generate_all"] = "0",
+    ["gs2_max_gibs"] = "32",
+    ["gs2_gib_custom"] = "1",
+    ["gs2_gib_merge_chance"] = "0.7",
+    ["gs2_gib_factor"] = "0.3",
+    ["gs2_gib_lifetime"] = "300",
+    ["gs2_gib_expensive"] = "0",
+    ["gs2_pull_limb"] = "1",
+    ["gs2_gib_chance"] = "0.15",
+    ["gs2_gib_sv"] = "1",
+    ["gs2_default_ragdolls"] = "1"
+}
+
+concommand.Add("gs2_reset_cvars", function()
+    for cvar, val in pairs(defaults) do
+        local CV = GetConVar(cvar)
+        if CV then
+            RunConsoleCommand(cvar, CV:GetDefault())
+        end
+    end
+end)
+
 local function PopulateGS2Menu(pnl)
     pnl:CheckBox("Enabled", "gs2_enabled")
     pnl:ControlHelp("Enable or disable the addon.")
@@ -11,14 +47,19 @@ local function PopulateGS2Menu(pnl)
         pnl:Button("Cleanup Gibs", "gs2_cleargibs")
     end
     
+    pnl:Button("Reset Settings", "gs2_reset_cvars")
+
     pnl:CheckBox("Default Ragdolls", "gs2_default_ragdolls")
     pnl:ControlHelp("Controls if all ragdolls should be gibbable.")
 
     pnl:CheckBox("Player Ragdolls", "gs2_player_ragdolls")
     pnl:ControlHelp("Controls if player ragdolls should be gibbable.")
 
-    pnl:CheckBox("Effects", "gs2_effects")
-    pnl:ControlHelp("Turn blood pouring effect on or off.")
+    pnl:CheckBox("Lua Effects", "gs2_old_effects")
+    pnl:ControlHelp("Turn Lua based particle effects on or off.")
+
+    pnl:CheckBox("Effects", "gs2_new_effects")
+    pnl:ControlHelp("Turn particle effects on or off.")
 
     pnl:CheckBox("Expensive Gibs", "gs2_gib_expensive")
     pnl:ControlHelp("Controls if gibs should use a detailed physics mesh.")
