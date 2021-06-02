@@ -45,6 +45,8 @@ function ENT:Initialize()
 	self.Created = CurTime()
 	self:DrawShadow(false)
 	self:DestroyShadow()
+
+	self.GS2Decals = {}
 end
 
 function ENT:SetBody(body, phys_bone)
@@ -69,6 +71,10 @@ function ENT:SetMesh(meshes)
 	if (meshes.body and meshes.flesh and meshes.flesh.Material:IsError()) then
 		meshes.flesh.Material = meshes.body.Material
 	end
+end
+
+function ENT:GetMesh()
+	return self.meshes
 end
 
 function ENT:Think()
@@ -100,6 +106,8 @@ local mat_def = Material("debug/wireframe")
 local lhack_matrix = Matrix()
 
 function ENT:Draw()
+	self:UpdateRenderPos()
+	local matrix = self.Mesh and self.Mesh.Matrix
 	local body = self.Body
 	body.RenderOverride = null
 	if body.GS2Dissolving then
@@ -112,6 +120,7 @@ function ENT:Draw()
 	if self.meshes.flesh then
 		self.is_flesh = true
 		self.Mesh = self.meshes.flesh
+		self.Mesh.Matrix = matrix
 		self:DrawModel()
 	end
 
@@ -131,76 +140,23 @@ function ENT:Draw()
 		mat:SetVector("$irisu", vector_origin) --fixes black eyes somehow!
 	end
 
+	self.Mesh.Matrix = matrix
 	self:DrawModel()
 
-	if (self.meshes.flesh and body.GS2BulletHoles and body.GS2BulletHoles[self.PhysBone]) then
-		--The stencil stuff looks weird from some angles but what can you do ¯\_(ツ)_/¯
-		render_SetStencilEnable(true)
-		render_ClearStencil()
-
-		render_SetStencilReferenceValue(0xFF)
-
-		render_SetStencilFailOperation(STENCIL_KEEP)		
-		render_SetStencilWriteMask(1)
-
-		render_OverrideDepthEnable(true, false)
-		render_OverrideColorWriteEnable(true, false)
-
-		local bone_pos, bone_ang = body:GetBonePosition(self.Bone)
-
-		for key, hole in pairs(body.GS2BulletHoles[self.PhysBone]) do
-			if !IsValid(hole) then
-				body.GS2BulletHoles[self.PhysBone][key] = nil
-				continue
-			end			
-				
-			local pos, ang = LocalToWorld(hole:GetLPos(), hole:GetLAng(), bone_pos, bone_ang)
-
-			hole:SetRenderOrigin(pos)
-			hole:SetRenderAngles(ang)
-
-			render_SetStencilCompareFunction(STENCIL_ALWAYS)
-			render_SetStencilPassOperation(STENCIL_KEEP)
-			render_SetStencilZFailOperation(STENCIL_REPLACE)
-			render_SetStencilWriteMask(1)
-
-			render_CullMode(MATERIAL_CULLMODE_CW)
-			hole:DrawModel()
-			render_CullMode(MATERIAL_CULLMODE_CCW)
-
-			render_SetStencilCompareFunction(STENCIL_EQUAL)
-			render_SetStencilPassOperation(STENCIL_REPLACE)
-			render_SetStencilZFailOperation(STENCIL_KEEP)
-
-			render_SetStencilTestMask(1)
-			render_SetStencilWriteMask(2)	
-			
-			hole:DrawModel()	
-			
-			hole:SetNoDraw(true)
+	for key, decal in pairs(self.GS2Decals) do
+		if !decal.Mesh then
+			self.GS2Decals[key] = nil
+		else
+			self.Mesh = decal
+			self.Mesh.Matrix = matrix
+			self:DrawModel()
 		end
-		
-		render_OverrideDepthEnable(false)
-		render_OverrideColorWriteEnable(false)
-
-		render_SetStencilZFailOperation(STENCIL_KEEP)
-		render_SetStencilTestMask(2)
-
-		render_MaterialOverride(self.meshes.flesh.Material)
-
-		self:DrawModel()
-
-		render_MaterialOverride()
-
-		render_SetStencilEnable(false)
-	else
-		self:DrawModel()
 	end
 
 	render_SetColorModulation(1, 1, 1)
 end
 
-function ENT:GetRenderMesh()
+function ENT:UpdateRenderPos()
 	if self.Mesh and IsValid(self.Body) then
 		self.Body:SetupBones()	
 		local matrix = self.Body:GetBoneMatrix(self.Bone)
@@ -214,7 +170,35 @@ function ENT:GetRenderMesh()
 			lhack_matrix:Translate(-bone_pos)
 
 			self.Mesh.Matrix = lhack_matrix * matrix			
+		end		
+	end
+end
+
+function ENT:GetRenderMesh()	
+	return self.Mesh	
+end
+
+function ENT:AddDecal(tris, mat, pos, norm, size)
+	local mesh_decal, tris = GetDecalMesh(tris, pos, norm, size, size)
+	if mesh_decal then
+		local decal = {
+			Mesh = mesh_decal,
+			Material = Material(mat)
+		}
+		table.insert(self.GS2Decals, decal)
+		return decal
+	end
+end
+
+function ENT:OnRemove()
+	for _, mesh in pairs(self.meshes) do
+		if IsValid(mesh.Mesh) then
+			mesh.Mesh:Destroy()
 		end
-		return self.Mesh
+	end
+	for _, decal in pairs(self.GS2Decals) do
+		if IsValid(decal.Mesh) then
+			decal.Mesh:Destroy()
+		end
 	end
 end

@@ -2,6 +2,7 @@ include("shared.lua")
 
 include("gibsplat2/constraintinfo.lua")
 include("gibsplat2/buildmesh.lua")
+include("gibsplat2/decal_util.lua")
 
 local STUMP_DEPTH_FACTOR = 0.7
 
@@ -174,6 +175,7 @@ local alpha_tags =
 
 function ENT:Think()
 	local body = self:GetBody()
+
 	local dis_mask = self:GetDisMask()
 	local gib_mask = self:GetGibMask()
 
@@ -337,17 +339,27 @@ function ENT:UpdateRenderInfo()
 		
 	if is_lonely then
 		--If no other parts are attached generate a mesh to optimize
+		local bone = body:TranslatePhysBoneToBone(self_phys_bone)
+		local bone_pos, bone_ang = body:GetBonePosition(bone)
 		local meshes = GetBoneMeshes(body, self_phys_bone)
 		if (table.Count(meshes) > 0) then
 			self.GS2RenderMeshes = {}
 			for key, mesh in pairs(meshes) do				
 				local M = ents.CreateClientside("gs2_limb_mesh")
 				M:SetBody(body, self_phys_bone)	
-				M:SetMesh(mesh)							
+				M:SetMesh(mesh)				
 				M:Spawn()
 
 				M.GS2ParentLimb = self
 				self.GS2RenderMeshes[key] = M
+
+				if (mesh.body) then	
+					if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then						
+						for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do						
+							M:AddDecal(mesh.body.tris, util.DecalMaterial("Blood"), bh:GetLPos(), bh:GetLAng(), 1)
+						end
+					end
+				end
 			end
 		end	
 		if self.BBID then
@@ -391,74 +403,6 @@ function ENT:Draw()
 					self:SetSubMaterial(id, self.mat_restore[id]) --if self.mat_restore[id] == nil then it will restore to default
 				end
 
-				--Draw bulletholes into stencil buffer
-				if body.GS2BulletHoles then
-					local self_bone = body:TranslatePhysBoneToBone(self:GetTargetBone())
-					render_SetStencilEnable(true)
-					render_ClearStencil()
-
-					render_SetStencilReferenceValue(0xFF)
-
-					render_SetStencilFailOperation(STENCIL_KEEP)		
-					render_SetStencilWriteMask(1)
-
-					render_OverrideDepthEnable(true, false)
-					render_OverrideColorWriteEnable(true, false)
-
-					for phys_bone, bullet_holes in pairs(body.GS2BulletHoles) do
-						local bone = body:TranslatePhysBoneToBone(phys_bone)
-						local parent = bone
-						repeat
-							if (parent == self_bone) then
-								break
-							end
-							parent = self:GetBoneParent(parent)
-						until (parent == -1)
-						
-						if (parent != -1) then
-							local bone_pos, bone_ang = body:GetBonePosition(bone)
-							for key, hole in pairs(bullet_holes) do
-								if !IsValid(hole) then
-									bullet_holes[key] = nil
-									continue
-								end			
-								
-								local pos, ang = LocalToWorld(hole:GetLPos(), hole:GetLAng(), bone_pos, bone_ang)
-
-								hole:SetRenderOrigin(pos)
-								hole:SetRenderAngles(ang)
-								
-								render_SetStencilCompareFunction(STENCIL_ALWAYS)
-								render_SetStencilPassOperation(STENCIL_KEEP)
-								render_SetStencilZFailOperation(STENCIL_REPLACE)
-								render_SetStencilWriteMask(1)
-
-								render_CullMode(MATERIAL_CULLMODE_CW)
-								hole:DrawModel()
-								render_CullMode(MATERIAL_CULLMODE_CCW)
-
-								render_SetStencilCompareFunction(STENCIL_EQUAL)
-								render_SetStencilPassOperation(STENCIL_REPLACE)
-								render_SetStencilZFailOperation(STENCIL_KEEP)
-
-								render_SetStencilTestMask(1)
-								render_SetStencilWriteMask(2)	
-								
-								hole:DrawModel()	
-								
-								hole:SetNoDraw(true)
-							end
-						end
-					end
-					
-					render_OverrideDepthEnable(false)
-					render_OverrideColorWriteEnable(false)
-
-					render_SetStencilCompareFunction(STENCIL_NOTEQUAL)
-					render_SetStencilZFailOperation(STENCIL_KEEP)
-					render_SetStencilTestMask(2)
-				end				
-
 				--Draw skin
 				self.SkinPass = true
 				self:SetupBones()
@@ -469,6 +413,41 @@ function ENT:Draw()
 			end
 
 			render_SetColorModulation(1, 1, 1)
+		end
+
+		if !self.HasDecals then
+			self.HasDecals = true
+			if body.GS2BulletHoles then
+				for phys_bone, holes in pairs(body.GS2BulletHoles) do
+					for _, hole in pairs(holes) do
+						if IsValid(hole) then
+							hole:ApplyDecal(self)
+						end
+					end
+				end		
+			end
+			local phys_bone = self:GetTargetBone()
+			if (phys_bone != 0) then
+				local bone = body:TranslatePhysBoneToBone(phys_bone)
+				
+				local bone_parent = body:GetBoneParent(bone)
+
+				if bone_parent then
+					local bone_pos = body:GetBonePosition(bone)
+
+					local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
+					bone_dir:Normalize()
+				
+					/*local F = bone_ang:Forward()
+					local R = bone_ang:Right()
+					local U = bone_ang:Up()*/
+					
+					for _, limb in pairs(body.GS2Limbs) do
+						ApplyDecal("Blood", limb, bone_pos - bone_dir, bone_dir, 5)
+						ApplyDecal("Blood", limb, bone_pos + bone_dir, -bone_dir, 5)
+					end
+				end
+			end
 		end
 	end
 end
