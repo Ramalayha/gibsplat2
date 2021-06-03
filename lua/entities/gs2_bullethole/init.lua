@@ -3,6 +3,8 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+local overlap_count = GetConVar("r_decal_overlap_count") --default is 3
+
 function ENT:Initialize()
 	self:GetBody():DeleteOnRemove(self)
 
@@ -34,7 +36,7 @@ function ENT:Initialize()
 		end
 	end
 
-	if (close > 4) then
+	if (close > overlap_count:GetInt()) then
 		table.remove(body.GS2BulletHoles[phys_bone], key):Remove()
 	end
 

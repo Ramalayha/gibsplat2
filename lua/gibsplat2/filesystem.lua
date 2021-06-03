@@ -320,7 +320,7 @@ local function ReadTriangles(F)
 		tris[i] = VERTEX_BUFFER[F:ReadLong()]
 	end
 
-	return tris
+	return tris, VERTEX_BUFFER
 end
 
 local function GS2WriteMesh(hash, mesh)
@@ -398,7 +398,7 @@ function GS2ReadMesh(hash)
 
 			mesh.body.Material = MATERIAL_CACHE[mat]
 
-			mesh.body.tris = ReadTriangles(F)
+			mesh.body.tris, mesh.body.vertexes = ReadTriangles(F)
 
 			mesh.body.Mesh = Mesh()
 			mesh.body.Mesh:BuildFromTriangles(mesh.body.tris)
@@ -422,7 +422,7 @@ function GS2ReadMesh(hash)
 
 			mesh.flesh.Material = MATERIAL_CACHE[mat]
 
-			mesh.flesh.tris = ReadTriangles(F)
+			mesh.flesh.tris, mesh.flesh.vertexes = ReadTriangles(F)
 
 			mesh.flesh.Mesh = Mesh()
 			mesh.flesh.Mesh:BuildFromTriangles(mesh.flesh.tris)

@@ -24,4 +24,5 @@ end
 if CLIENT then
 	CreateClientConVar("gs2_gib_cl", 1, true)
 	CreateClientConVar("gs2_mesh_iterations", 10, true, false, "How many times per frame the mesh generation code should run (higher = quicker generation, lower = smaller fps spikes)")
+	--CreateClientConVar("gs2_max_decals_transfer", 5, true)
 end

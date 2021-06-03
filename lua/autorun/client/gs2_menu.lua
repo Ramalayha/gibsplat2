@@ -22,7 +22,8 @@ local defaults =
     ["gs2_pull_limb"] = "1",
     ["gs2_gib_chance"] = "0.15",
     ["gs2_gib_sv"] = "1",
-    ["gs2_default_ragdolls"] = "1"
+    ["gs2_default_ragdolls"] = "1",
+    ["gs2_max_decals_transfer"] = "5"
 }
 
 concommand.Add("gs2_reset_cvars", function()
@@ -81,6 +82,9 @@ local function PopulateGS2Menu(pnl)
     pnl:ControlHelp("Controls wheter joints can break from stress.")
 
     --int options
+
+    pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
+    pnl:ControlHelp("Maximum number of decals to transfer to a mesh part.")
 
     pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 100)
     pnl:ControlHelp("Controls how many gibs can exist in the map.")

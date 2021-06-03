@@ -42,20 +42,21 @@ function ENT:ApplyDecal(target)
 	local norm = pos - bone_pos
 	norm:Normalize()
 
-	ApplyDecal("Blood", target, pos, norm)
+	local mat = util.DecalMaterial("Impact.Flesh2")
+
+	ApplyDecal(mat, target, pos, norm)
 
 	if (target == body.GS2Limbs[self:GetTargetBone()] and target.GS2RenderMeshes) then
 		self.Decals = {}
 		for _, rm in pairs(target.GS2RenderMeshes) do
-			local mesh = rm:GetMesh()
-			local mat = "decals/flesh/blood1"
+			local mesh = rm:GetMesh()		
 			if mesh.body then
-				local decal = rm:AddDecal(mesh.body.tris, mat, self:GetLPos(), self:GetLAng(), 1)
+				local decal = rm:AddDecal(mesh.body, mat, self:GetLPos(), self:GetLAng(), 1)
 				if decal then
 					table.insert(self.Decals, decal)
 				end
 			elseif mesh.flesh then
-				local decal = rm:AddDecal(mesh.flesh.tris, mat, self:GetLPos(), self:GetLAng(), 1)
+				local decal = rm:AddDecal(mesh.flesh, mat, self:GetLPos(), self:GetLAng(), 1)
 				if decal then
 					table.insert(self.Decals, decal)
 				end

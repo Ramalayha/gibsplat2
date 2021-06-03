@@ -106,6 +106,13 @@ local mat_def = Material("debug/wireframe")
 local lhack_matrix = Matrix()
 
 function ENT:Draw()
+	if (!self.meshes.body or !IsValid(self.meshes.body.Mesh)) then
+		if (!self.meshes.flesh or !IsValid(self.meshes.flesh.Mesh)) then
+			SafeRemoveEntityDelayed(self, 0)
+			return
+		end
+	end
+
 	self:UpdateRenderPos()
 	local matrix = self.Mesh and self.Mesh.Matrix
 	local body = self.Body
@@ -178,8 +185,14 @@ function ENT:GetRenderMesh()
 	return self.Mesh	
 end
 
-function ENT:AddDecal(tris, mat, pos, norm, size)
-	local mesh_decal, tris = GetDecalMesh(tris, pos, norm, size, size)
+function ENT:AddDecal(mesh, mat, pos, norm, size)
+	if (self.do_decals == nil) then
+		self.do_decals = mesh.Material and mesh.Material:GetShader():find("Generic$") or false
+	end
+	if (self.do_decals == false) then
+		return
+	end
+	local mesh_decal, tris = GetDecalMesh(mesh, pos, norm, size, size)
 	if mesh_decal then
 		local decal = {
 			Mesh = mesh_decal,

@@ -54,6 +54,8 @@ matrix_zero:Scale(vec_zero)
 local dummy = ClientsideModel("models/error.mdl")
 dummy:SetNoDraw(true)
 
+local max_decals = CreateClientConVar("gs2_max_decals_transfer", 5, true)
+
 net.Receive("GS2Dissolve", function()
 	local ent = net.ReadEntity()
 	if !IsValid(ent) then
@@ -156,6 +158,8 @@ function ENT:Initialize()
 			end
 		end
 	end
+
+	self:UpdateRenderInfo()
 end
 
 function ENT:OnRemove()
@@ -228,8 +232,8 @@ function ENT:Think()
 
 		local pos = body:GetBonePosition(body:TranslatePhysBoneToBone(self_phys_bone or 0))
 		if pos then
-			--self:SetPos(pos)
-			--self:SetRenderOrigin(pos)
+			self:SetPos(pos)
+			self:SetRenderOrigin(pos)
 			self:SetupBones()
 		end
 
@@ -354,11 +358,21 @@ function ENT:UpdateRenderInfo()
 				self.GS2RenderMeshes[key] = M
 
 				if (mesh.body) then	
-					if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then						
-						for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do						
-							M:AddDecal(mesh.body.tris, util.DecalMaterial("Blood"), bh:GetLPos(), bh:GetLAng(), 1)
+					if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then
+						local count = 0
+						for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do
+							if IsValid(bh) then						
+								M:AddDecal(mesh.body, util.DecalMaterial("BloodSimple"), bh:GetLPos(), bh:GetLAng(), 1)
+								count = count + 1
+								if (count >= max_decals:GetInt()) then
+									break
+								end
+							else
+								body.GS2BulletHoles[self_phys_bone][key] = nil
+							end
 						end
 					end
+					M:AddDecal(mesh.body, util.DecalMaterial("BloodSimple"), vector_origin, Angle(0, 0, math.Rand(-180, 180)), 3, -0.1)					
 				end
 			end
 		end	
@@ -366,7 +380,7 @@ function ENT:UpdateRenderInfo()
 			self:RemoveCallback("BuildBonePositions", self.BBID)
 			self.BBID = nil			
 		end
-		self:SetNoDraw(true)
+		--self:SetNoDraw(true)
 	else		
 		body:SetupBones()
 		--Update bone info
@@ -418,13 +432,28 @@ function ENT:Draw()
 		if !self.HasDecals then
 			self.HasDecals = true
 			if body.GS2BulletHoles then
-				for phys_bone, holes in pairs(body.GS2BulletHoles) do
-					for _, hole in pairs(holes) do
-						if IsValid(hole) then
-							hole:ApplyDecal(self)
+				if self.GS2RenderMeshes then
+					local count = 0
+					for phys_bone, holes in pairs(body.GS2BulletHoles) do
+						for _, hole in pairs(holes) do
+							if IsValid(hole) then
+								hole:ApplyDecal(self)
+								count = count + 1
+								if (count >= max_decals:GetInt()) then
+									break
+								end
+							end
+						end
+					end	
+				else
+					for phys_bone, holes in pairs(body.GS2BulletHoles) do
+						for _, hole in pairs(holes) do
+							if IsValid(hole) then
+								hole:ApplyDecal(self)								
+							end
 						end
 					end
-				end		
+				end	
 			end
 			local phys_bone = self:GetTargetBone()
 			if (phys_bone != 0) then
@@ -433,23 +462,76 @@ function ENT:Draw()
 				local bone_parent = body:GetBoneParent(bone)
 
 				if bone_parent then
-					local bone_pos = body:GetBonePosition(bone)
+					local bone_pos, bone_ang = body:GetBonePosition(bone)
+
+					local offset = bone_ang:Right() * 5
 
 					local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
 					bone_dir:Normalize()
-				
-					/*local F = bone_ang:Forward()
-					local R = bone_ang:Right()
-					local U = bone_ang:Up()*/
-					
+					--debugoverlay.Axis(bone_pos, bone_dir:Angle(), 5, 10, true)
 					for _, limb in pairs(body.GS2Limbs) do
-						ApplyDecal("Blood", limb, bone_pos - bone_dir, bone_dir, 5)
-						ApplyDecal("Blood", limb, bone_pos + bone_dir, -bone_dir, 5)
+						if !IsValid(limb) then
+							continue
+						end
+						local limb_phys_bone = limb:GetTargetBone()
+						local limb_bone = body:TranslatePhysBoneToBone(limb_phys_bone)
+
+						if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
+							if (limb == self) then
+								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir - offset, bone_dir + offset, 5)
+								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir + offset, bone_dir - offset, 5)
+							else
+								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir + offset, -bone_dir - offset, 5)
+								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir - offset, -bone_dir + offset, 5)						
+							end
+							--this is too laggy!
+							--[[if (limb != self and limb.GS2Decals) then							
+								for _, decal in pairs(limb.GS2Decals) do
+									local pos, ang = LocalToWorld(decal.LPos, decal.LAng, body:GetBonePosition(limb_bone))
+									local dir = ang:Forward()
+									
+									if self.GS2RenderMeshes then									
+										for _, M in pairs(self.GS2RenderMeshes) do
+											local mesh = M:GetMesh()
+											if mesh.body then
+												M:AddDecal(mesh.body.tris, decal.Material, decal.LPos, decal.LAng, decal.Size)
+											end
+											if mesh.flesh then
+												M:AddDecal(mesh.flesh.tris, decal.Material, decal.LPos, decal.LAng, decal.Size)
+											end
+										end	
+										self:SetNoDraw(true)								
+									else								
+										self:ApplyDecal(decal.Material, pos - dir, dir, decal.Size)
+										self:ApplyDecal(decal.Material, pos + dir, -dir, decal.Size)
+									end
+								end
+							end]]
+						end
 					end
 				end
 			end
 		end
 	end
+end
+
+function ENT:ApplyDecal(mat, pos, norm, size)
+	ApplyDecal(mat, self, pos, norm, size)
+	self.GS2Decals = self.GS2Decals or {}
+
+	local body = self:GetBody()
+
+	local phys_bone = self:GetTargetBone()
+	local bone = body:TranslatePhysBoneToBone(phys_bone)
+
+	local lpos, lang = WorldToLocal(pos, norm:Angle(), body:GetBonePosition(bone))
+
+	table.insert(self.GS2Decals, {
+		LPos = lpos,
+		LAng = lang,
+		Material = mat,
+		Size = size
+	})
 end
 
 local vec_inf = Vector()/0
