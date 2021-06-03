@@ -351,7 +351,7 @@ function ENT:UpdateRenderInfo()
 			for key, mesh in pairs(meshes) do				
 				local M = ents.CreateClientside("gs2_limb_mesh")
 				M:SetBody(body, self_phys_bone)	
-				M:SetMesh(mesh)				
+				M:SetMesh(mesh)	
 				M:Spawn()
 
 				M.GS2ParentLimb = self

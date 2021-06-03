@@ -3,22 +3,6 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
-game.AddDecal("BloodSmall", {
-	"decals/flesh/blood1",
-	"decals/flesh/blood2",
-	"decals/flesh/blood3",
-	"decals/flesh/blood4",
-	"decals/flesh/blood5"
-})
-
-game.AddDecal("YellowBloodSmall", {
-	"decals/alienflesh/shot1",
-	"decals/alienflesh/shot2",
-	"decals/alienflesh/shot3",
-	"decals/alienflesh/shot4",
-	"decals/alienflesh/shot5"
-})
-
 local ang_zero = Angle(0, 0, 0)
 
 function ENT:Initialize()

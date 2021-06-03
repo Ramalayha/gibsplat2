@@ -14,7 +14,15 @@ game.AddDecal("BloodSmall", {
 	"decals/flesh2/blood3",
 	"decals/flesh2/blood4",
 	"decals/flesh2/blood5",
-	"decals/flesh2/blood6"
+	--"decals/flesh2/blood6"
+})
+
+game.AddDecal("YellowBloodSmall", {
+	"decals/alienflesh/shot1",
+	"decals/alienflesh/shot2",
+	"decals/alienflesh/shot3",
+	"decals/alienflesh/shot4",
+	"decals/alienflesh/shot5"
 })
 
 local decals = {

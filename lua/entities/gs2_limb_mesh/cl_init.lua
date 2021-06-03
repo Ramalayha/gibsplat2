@@ -106,11 +106,21 @@ local mat_def = Material("debug/wireframe")
 local lhack_matrix = Matrix()
 
 function ENT:Draw()
-	if (!self.meshes.body or !IsValid(self.meshes.body.Mesh)) then
-		if (!self.meshes.flesh or !IsValid(self.meshes.flesh.Mesh)) then
-			SafeRemoveEntityDelayed(self, 0)
+	if (self.meshes.body and !self.meshes.body.Mesh:IsValid()) then
+		--try recreate it		
+		self.meshes.body.Mesh = Mesh()
+		self.meshes.body.Mesh:BuildFromTriangles(self.meshes.body.tris)
+		if !self.meshes.body.Mesh:IsValid() then
 			return
 		end
+	end
+	if (self.meshes.flesh and !self.meshes.flesh.Mesh:IsValid()) then
+		--try recreate it		
+		self.meshes.flesh.Mesh = Mesh()
+		self.meshes.flesh.Mesh:BuildFromTriangles(self.meshes.flesh.tris)
+		if !self.meshes.flesh.Mesh:IsValid() then
+			return
+		end		
 	end
 
 	self:UpdateRenderPos()
