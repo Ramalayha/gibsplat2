@@ -196,12 +196,10 @@ function ENT:GetRenderMesh()
 end
 
 function ENT:AddDecal(mesh, mat, pos, norm, size)
-	if (self.do_decals == nil) then
-		self.do_decals = mesh.Material and mesh.Material:GetShader():find("Generic$") or false
-	end
-	if (self.do_decals == false) then
+	if (!mesh.Material or !mesh.Material:GetShader():find("Generic$")) then
 		return
 	end
+	
 	local mesh_decal, tris = GetDecalMesh(mesh, pos, norm, size, size)
 	if mesh_decal then
 		local decal = {

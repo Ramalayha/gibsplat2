@@ -1,5 +1,7 @@
 --sv_cheats 1;god;impulse 101;lua_openscript gs2.lua
 
+util.AddNetworkString("GS2ApplyDecal")
+
 local VERSION = 3
 
 local HOOK_NAME = "GibSplat2"
@@ -768,7 +770,15 @@ function ENTITY:MakeCustomRagdoll()
 				self.LastCollide = CurTime()
 				local blood_color = blood_colors[phys:GetMaterial()]		
 				if self:GS2IsDismembered(phys_bone) then
-					util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+					if decals[phys_mat] then
+						util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
+						net.Start("GS2ApplyDecal")
+							net.WriteEntity(self)
+							net.WriteString(decals[phys_mat])
+							net.WriteVector(data.HitPos)
+							net.WriteNormal(data.HitNormal)
+						net.Broadcast()
+					end
 					if blood_color then
 						local EF = EffectData()
 						EF:SetOrigin(data.HitPos)
@@ -780,7 +790,7 @@ function ENTITY:MakeCustomRagdoll()
 					end
 				else	
 					local do_effects = false
-					if (speed > 500) then
+					if (speed > 400) then
 						do_effects = true
 					else
 						for _, part_info in pairs(CONST_INFO) do
@@ -792,7 +802,15 @@ function ENTITY:MakeCustomRagdoll()
 						end
 					end
 					if do_effects then
-						util.Decal(decals[phys_mat] or "", data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
+						if decals[phys_mat] then
+							util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
+							net.Start("GS2ApplyDecal")
+								net.WriteEntity(self)
+								net.WriteString(decals[phys_mat])
+								net.WriteVector(data.HitPos)
+								net.WriteNormal(data.HitNormal)
+							net.Broadcast()
+						end
 						if blood_color then
 							local EF = EffectData()
 							EF:SetOrigin(data.HitPos)

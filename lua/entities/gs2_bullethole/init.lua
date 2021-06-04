@@ -30,9 +30,13 @@ function ENT:Initialize()
 	local first
 	local close = 0
 	for key, bh in pairs(body.GS2BulletHoles[phys_bone]) do
-		if (bh:GetPos():DistToSqr(self:GetPos()) < 4) then
-			first = first or key
-			close = close + 1
+		if IsValid(bh) then
+			if (bh:GetPos():DistToSqr(self:GetPos()) < 4) then
+				first = first or key
+				close = close + 1
+			end
+		else
+			body.GS2BulletHoles[phys_bone][key] = nil
 		end
 	end
 

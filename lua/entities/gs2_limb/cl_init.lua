@@ -74,6 +74,22 @@ net.Receive("GS2Dissolve", function()
 	end
 end)
 
+net.Receive("GS2ApplyDecal", function()
+	local body = net.ReadEntity()
+	if !IsValid(body) then return end
+	local mat = net.ReadString()
+	local pos = net.ReadVector()
+	local norm = net.ReadNormal()
+	
+	for key, limb in pairs(body.GS2Limbs) do
+		if IsValid(limb) then
+			limb:ApplyDecal(util.DecalMaterial(mat.."Simple"), pos, norm, 1, 3)
+		else
+			body.GS2Limbs[key] = nil
+		end
+	end
+end)
+
 local function BuildBones(self, num_bones)
 	local body = self:GetBody()
 	if !IsValid(body) then
@@ -515,7 +531,7 @@ function ENT:Draw()
 	end
 end
 
-function ENT:ApplyDecal(mat, pos, norm, size)
+function ENT:ApplyDecal(mat, pos, norm, size, mesh_size)
 	ApplyDecal(mat, self, pos, norm, size)
 	self.GS2Decals = self.GS2Decals or {}
 
@@ -532,6 +548,17 @@ function ENT:ApplyDecal(mat, pos, norm, size)
 		Material = mat,
 		Size = size
 	})
+
+	if self.GS2RenderMeshes then
+		for _, M in pairs(self.GS2RenderMeshes) do
+			if M.meshes.body then
+				M:AddDecal(M.meshes.body, mat, lpos, lang, mesh_size or size)
+			end	
+			if M.meshes.flesh then
+				M:AddDecal(M.meshes.flesh, mat, lpos, lang, mesh_size or size)
+			end	
+		end
+	end
 end
 
 local vec_inf = Vector()/0

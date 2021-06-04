@@ -275,7 +275,7 @@ function EFFECT:Think()
 	 		Emitter:Finish()
 	 	end	
 		if self.PE then
-			self.PE:StopEmission(true)
+			self.PE:StopEmission()
 		end
 		if self.Sound then
 			self.Sound:Stop() 
@@ -286,12 +286,8 @@ function EFFECT:Think()
 	if new_effects:GetBool() then
 		if !IsValid(self.Body) then
 			if self.PE then
-				self.PE:StopEmission(true)
-			end
-			if self.Sound then
-				self.Sound:Stop() 
-			end
-			return false
+				self.PE:StopEmission()
+			end			
 		end
 	end
 
@@ -302,6 +298,9 @@ function EFFECT:Think()
 			end
 			if self.Sound then
 				self.Sound:Stop() 
+			end
+			if self.PE then
+				self.PE:StopEmission()
 			end
 			return false
 		end
