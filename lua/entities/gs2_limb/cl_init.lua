@@ -480,7 +480,7 @@ function ENT:Draw()
 				if bone_parent then
 					local bone_pos, bone_ang = body:GetBonePosition(bone)
 
-					local offset = bone_ang:Right() * 5
+					local offset = vector_origin--bone_ang:Up() * 5
 
 					local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
 					bone_dir:Normalize()
@@ -492,38 +492,23 @@ function ENT:Draw()
 						local limb_phys_bone = limb:GetTargetBone()
 						local limb_bone = body:TranslatePhysBoneToBone(limb_phys_bone)
 
-						if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
-							if (limb == self) then
-								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir - offset, bone_dir + offset, 5)
-								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir + offset, bone_dir - offset, 5)
-							else
-								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir + offset, -bone_dir - offset, 5)
-								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir - offset, -bone_dir + offset, 5)						
-							end
-							--this is too laggy!
-							--[[if (limb != self and limb.GS2Decals) then							
-								for _, decal in pairs(limb.GS2Decals) do
-									local pos, ang = LocalToWorld(decal.LPos, decal.LAng, body:GetBonePosition(limb_bone))
-									local dir = ang:Forward()
-									
-									if self.GS2RenderMeshes then									
-										for _, M in pairs(self.GS2RenderMeshes) do
-											local mesh = M:GetMesh()
-											if mesh.body then
-												M:AddDecal(mesh.body.tris, decal.Material, decal.LPos, decal.LAng, decal.Size)
-											end
-											if mesh.flesh then
-												M:AddDecal(mesh.flesh.tris, decal.Material, decal.LPos, decal.LAng, decal.Size)
-											end
-										end	
-										self:SetNoDraw(true)								
-									else								
-										self:ApplyDecal(decal.Material, pos - dir, dir, decal.Size)
-										self:ApplyDecal(decal.Material, pos + dir, -dir, decal.Size)
-									end
+						--if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
+						if (limb == self) then
+							limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 - offset, -bone_dir - offset, 5)
+							--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 + offset, -bone_dir + offset, 5)
+						else
+							local parent = body:GetBoneParent(bone)
+							repeat
+								if (parent == limb_bone) then
+									break
 								end
-							end]]
-						end
+								parent = body:GetBoneParent(parent)
+							until (parent == -1)
+							if (parent != -1) then
+								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 + offset, bone_dir + offset, 5)
+								--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 - offset, bone_dir - offset, 5)						
+							end
+						end					
 					end
 				end
 			end

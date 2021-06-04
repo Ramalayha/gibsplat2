@@ -97,7 +97,7 @@ function EFFECT:Init(data)
 	end
 
 	local snd = CreateSound(attach, snd_path)
-	snd:PlayEx(0.6, 80)
+	snd:PlayEx(0.5, 80)
 	snd:FadeOut(self.DieTime)
 	self.Sound = snd
 	
