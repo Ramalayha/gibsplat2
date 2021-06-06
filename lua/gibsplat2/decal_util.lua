@@ -139,7 +139,9 @@ function GetDecalMesh(input, pos, ang, w, h, threshold)
 		vert.valid = false
 		if (vert.normal:Dot(dir) < threshold) then
 			if (vert.pos:DistToSqr(pos) < s2) then
-				vert.valid = true				
+				vert.valid = true	
+				vert.oldu = vert.u
+				vert.oldv = vert.v			
 			end
 		end		
 	end
@@ -178,6 +180,13 @@ function GetDecalMesh(input, pos, ang, w, h, threshold)
 	if (#tris_out != 0) then
 		local M = Mesh()
 		M:BuildFromTriangles(tris_out)
+
+		--restore UVs
+		for _, vert in ipairs(input.vertexes) do
+			vert.u = vert.oldu or vert.u
+			vert.v = vert.oldv or vert.v				
+		end
+
 		return M, tris_out
 	end
 end
