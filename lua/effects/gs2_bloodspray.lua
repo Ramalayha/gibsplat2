@@ -11,7 +11,7 @@ local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
 local max_particles 	= CreateClientConVar("gs2_max_particles", 10000, true)
 local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.1, true)
 local new_effects		= CreateClientConVar("gs2_new_effects", 1, true)
-local old_effects		= CreateClientConVar("gs2_old_effects", 1, true)
+local old_effects		= CreateClientConVar("gs2_old_effects", 0, true)
 local bloodpool_size	= CreateClientConVar("gs2_bloodpool_size", 10, true)
 
 local SIZE = 2
@@ -48,12 +48,34 @@ local blood = {
 		"decals/alienflesh/blood5"
 	}
 }
-
+--[[
+fade osc: 0.3
+fade osc: 0.4
+]]
 local blood_particles = {
-	[BLOOD_COLOR_RED] = "blood_fluid_BI"
+	[BLOOD_COLOR_RED] = "blood_fluid_BI",
+	[BLOOD_COLOR_YELLOW] = "blood_fluid_BI_green",
+	[BLOOD_COLOR_GREEN] = "blood_fluid_BI_green"
 }
 
 local snd_path = Sound("ambient/water/water_flow_loop1.wav")
+
+sound.Add({
+	name = "gs2_bloodsquirt",
+	channel = CHAN_BODY,
+	volume = 1,
+	level = 80,
+	pitch = 100,
+	sound = {
+		"gibsplat2/blood_squish1.wav",
+		"gibsplat2/blood_squish2.wav",
+		"gibsplat2/blood_squish3.wav",
+		"gibsplat2/blood_squish4.wav",
+		"gibsplat2/blood_squish5.wav"
+	}
+})
+
+local PEFFECTS = {}
 
 function EFFECT:Init(data)
 	self.LocalPos = data:GetOrigin()
@@ -96,17 +118,34 @@ function EFFECT:Init(data)
 		attach = self.Body
 	end
 
-	local snd = CreateSound(attach, snd_path)
-	snd:PlayEx(0.5, 80)
-	snd:FadeOut(self.DieTime)
-	self.Sound = snd
-	
-	attach:CallOnRemove("gs2_bloodspray_killsound", function()
-		snd:Stop()
-	end)
+	if old_effects:GetBool() then
+		local snd = CreateSound(attach, snd_path)
+		snd:PlayEx(0.5, 80)
+		snd:FadeOut(self.DieTime)
+		self.Sound = snd
 
+		attach:CallOnRemove("GS2"..math.random(), function()
+			snd:Stop()
+		end)
+	end
+	
 	if (new_effects:GetBool() and blood_particles[self.Blood]) then
 		self.PE = CreateParticleSystem(self, blood_particles[self.Blood], PATTACH_ABSORIGIN)
+		table.insert(PEFFECTS, self.PE)
+		if !self.Sound then
+			local snd = CreateSound(attach, "gs2_bloodsquirt")
+			self.Sound = snd
+			local TID = "GS2"..math.random()
+			self.TimerID = TID
+			timer.Create(self.TimerID, 0.4, 0, function()
+				snd:Stop()
+				snd:PlayEx(0.5, 80)
+			end)
+			attach:CallOnRemove(TID, function()
+				timer.Destroy(TID)
+				snd:Stop()
+			end)
+		end
 	end
 
 	if old_effects:GetBool() then
@@ -267,11 +306,11 @@ function EFFECT:Think()
 		local Emitter3D = self.Emitter3D
 
 		timer.Simple(10 ,function() --give some time for particles to hit the ground
-		 	if Emitter3D then
+		 	if IsValid(Emitter3D) then
 		 		Emitter3D:Finish()
 		 	end
 		end)
-		if Emitter then
+		if IsValid(Emitter) then
 	 		Emitter:Finish()
 	 	end	
 		if self.PE then
@@ -280,7 +319,11 @@ function EFFECT:Think()
 		if self.Sound then
 			self.Sound:Stop() 
 		end
-		return false
+		if (self.PE and !self.PE:IsFinished()) then
+			return true
+		else
+			return false
+		end
 	end
 
 	if new_effects:GetBool() then
@@ -302,7 +345,11 @@ function EFFECT:Think()
 			if self.PE then
 				self.PE:StopEmission()
 			end
-			return false
+			if (self.PE and !self.PE:IsFinished()) then
+				return true
+			else
+				return false
+			end
 		end
 
 		local matrix = self.Body:GetBoneMatrix(self.Bone)
@@ -448,5 +495,11 @@ hook.Add("PostCleanupMap", "GS2ClearParticles", function()
 			particle:SetDieTime(0)
 		end
 		PARTICLES[key] = nil
+	end
+	for key, effect in pairs(PEFFECTS) do
+		if IsValid(effect) then
+			effect:StopEmissionAndDestroyImmediately()
+		end
+		PEFFECTS[key] = nil
 	end
 end)

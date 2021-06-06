@@ -774,9 +774,9 @@ function ENTITY:MakeCustomRagdoll()
 						util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
 						net.Start("GS2ApplyDecal")
 							net.WriteEntity(self)
-							net.WriteString(decals[phys_mat])
+							net.WriteString(phys_mat)
 							net.WriteVector(data.HitPos)
-							net.WriteNormal(data.HitNormal)
+							net.WriteVector(-data.HitNormal)
 						net.Broadcast()
 					end
 					if blood_color then
@@ -808,7 +808,7 @@ function ENTITY:MakeCustomRagdoll()
 								net.WriteEntity(self)
 								net.WriteString(decals[phys_mat])
 								net.WriteVector(data.HitPos)
-								net.WriteNormal(data.HitNormal)
+								net.WriteNormal(-data.HitNormal)
 							net.Broadcast()
 						end
 						if blood_color then

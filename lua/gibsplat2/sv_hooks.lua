@@ -42,11 +42,44 @@ local function GS2CreateEntityRagdoll(ent, doll)
 
 		timer.Simple(0, function()
 			if IsValid(doll) then
-				for phys_bone = 0, doll:GetPhysicsObjectCount()-1 do
-					doll:GS2Gib(phys_bone)					
-				end
-			end	
+				local tr = {
+					output = {},				
+					start = dmgpos,
+					ignoreworld = true
+				}
+				for phys_bone = 0, doll:GetPhysicsObjectCount() - 1 do
+					doll:GS2Gib(phys_bone)
+
+					if (math.random() < 0.3) then
+						local phys = doll:GetPhysicsObjectNum(phys_bone)
+						if IsValid(phys) then
+							tr.endpos = phys:GetPos()
+							
+							util.TraceLine(tr)
+							if tr.output.Hit then
+								net.Start("GS2ApplyDecal")
+									net.WriteEntity(doll)
+									net.WriteString(phys:GetMaterial())
+									net.WriteVector(tr.output.HitPos)
+									net.WriteVector(-tr.output.HitNormal)
+								net.Broadcast()
+							end
+						end
+					end					
+				end								
+			end				
 		end)
+	end
+	if ent.GS2Decals then
+		for phys_bone, decals in pairs(ent.GS2Decals) do
+			for _, pos in pairs(decals) do
+				local hole = ents.Create("gs2_bullethole")
+				hole:SetBody(doll)
+				hole:SetTargetBone(phys_bone)			
+				hole:SetPos(pos)					
+				hole:Spawn()				
+			end
+		end		
 	end
 end
 
@@ -241,8 +274,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 					local hole = ents.Create("gs2_bullethole")
 					hole:SetBody(ent)
 					hole:SetTargetBone(phys_bone)			
-					hole:SetPos(dmg_pos)
-					hole:SetAngles(AngleRand())		
+					hole:SetPos(dmg_pos)					
 					hole:Spawn()
 					
 					local pos = phys:GetPos()
@@ -280,6 +312,13 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then
 				ent.__forcegib = dmg_pos
+			else
+				ent.GS2Decals = ent.GS2Decals or {}
+				local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos)
+				if (phys_bone) then
+					ent.GS2Decals[phys_bone] = ent.GS2Decals[phys_bone] or {}
+					table.insert(ent.GS2Decals[phys_bone], dmg_pos)
+				end
 			end
 		else
 			local att = dmginfo:GetAttacker()

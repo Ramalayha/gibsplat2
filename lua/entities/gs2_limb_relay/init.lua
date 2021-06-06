@@ -49,20 +49,39 @@ function ENT:OnTakeDamage(dmginfo)
 		local infl = dmginfo:GetInflictor()		
 		local radius = infl:GetInternalVariable("m_DmgRadius")
 
+		local dmgpos = dmginfo:GetDamagePosition()
+
 		local mod = 1
-		if (radius and radius != 0) then
-			local dmgpos = dmginfo:GetDamagePosition()
+		if (radius and radius != 0) then			
 			mod = (radius - dmgpos:Distance(self:GetPos())) / radius
 		end
 		local ent = self.TargetEntity
 		local phys_bone = self.TargetPhysBone
 
-		if (math.random() * mod < gib_chance:GetFloat()) then
-			ent:GS2Gib(phys_bone)
-		else
-			local phys = ent:GetPhysicsObjectNum(phys_bone)
+		ent:GS2Gib(phys_bone)
+		
+		local phys = ent:GetPhysicsObjectNum(phys_bone)
 
-			phys:ApplyForceOffset(dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())
+		phys:ApplyForceOffset(dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())
+		
+		if (math.random() < 0.3) then
+			local ent = self.TargetEntity
+
+			local tr = {
+				start = dmgpos,
+				endpos = phys:GetPos()
+			}
+
+			tr = util.TraceLine(tr)
+
+			if tr.Hit then
+				net.Start("GS2ApplyDecal")
+					net.WriteEntity(ent)
+					net.WriteString(phys:GetMaterial())
+					net.WriteVector(tr.HitPos)
+					net.WriteVector(-tr.HitNormal)
+				net.Broadcast()
+			end
 		end
 	end
 end

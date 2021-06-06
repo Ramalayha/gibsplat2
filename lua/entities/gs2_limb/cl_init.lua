@@ -74,16 +74,27 @@ net.Receive("GS2Dissolve", function()
 	end
 end)
 
+local decals = {
+	flesh = "BloodSimple",
+	no_decal = "BloodSimple", --metrocop head
+	zombieflesh = "BloodSimple",
+	alienflesh = "YellowBlood",
+	antlion = "YellowBlood"
+}
+
 net.Receive("GS2ApplyDecal", function()
 	local body = net.ReadEntity()
 	if !IsValid(body) then return end
+
 	local mat = net.ReadString()
+	if !decals[mat] then return end
+
 	local pos = net.ReadVector()
-	local norm = net.ReadNormal()
+	local norm = net.ReadVector()
 	
 	for key, limb in pairs(body.GS2Limbs) do
 		if IsValid(limb) then
-			limb:ApplyDecal(util.DecalMaterial(mat.."Simple"), pos, norm, 1, 3)
+			limb:ApplyDecal(util.DecalMaterial(decals[mat]), pos, norm, 1, 3)
 		else
 			body.GS2Limbs[key] = nil
 		end

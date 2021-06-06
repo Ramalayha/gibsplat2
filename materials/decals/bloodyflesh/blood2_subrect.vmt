@@ -1,0 +1,76 @@
+refract
+{
+ 	$basetexture "decals/bloodyflesh/blood2"
+ 
+
+	$albedo "decals/bloodyflesh/blood2"
+
+	$staticblendtexture "decals/bloodyflesh/blood2"
+	$alphamasktexture "decals/bloodyflesh/blood2"
+
+	$basetexturetransform "[1 0 0 00 1 0 00 0 1 00 0 0 1]"
+	$texturealpha 1
+	$blur 1
+
+	"$phong" "1"
+	"$phongexponenttexture" "decals/bloodyflesh/blood2"
+	"$phongexponent" "700"
+	"$phongboost" "50"
+	"$phongfresnelranges" "[0.2 0.5 1.0]"
+
+	$warpparam 1	
+
+	$alpha 1
+	$alphatest 1
+	$alphatestreference 0.1
+	$decal 1
+	$nocull 1
+	
+	$bluramount 0
+	
+ 
+	
+	$localrefract 1
+	$localrefractdepth 100
+	$fadeoutonsilhouette 0
+ 
+
+	$refract 1
+	$normalmap "decals/bloodyflesh/blood2"
+  "$reflecttexture" "_rt_WaterReflection"
+"$reflectamount" "5"
+"$refractamount" "100"
+ 
+"$refracttinttexture" "decals/ins_blood/blood_burst_rtt"
+"$refracttint" "[20.86 0.65 0.65]"
+ 
+"$basealphaenvmapmask" "1"
+"$envmaplightscale" "1"
+ 
+
+	$vertexcolor 1
+	$vertexalpha 1
+
+	$decalscale 0.010
+	$decalscalevariation 0.010
+	$forcealphawrite 1
+	$forcerefract 1
+	$nowritez 0
+	$vertexcolormodulate 1
+	$writez 1
+}
+
+
+
+// Copyright © 2020 by GalaxyHighMarshal, All rights reserved.
+// All trademarks are property of their respective owners.
+// No parts of this coding or any of its contents may be reproduced, copied, modified or adapted, without the prior written consent of the author, unless otherwise indicated for stand-alone materials. Doing so would be violating
+// https://store.steampowered.com/subscriber_agreement/ 
+// I Have Spoken
+
+
+
+
+
+
+

@@ -4,5 +4,5 @@
 	"$Pos"		"448 0"
 	"$Size"		"64 64"
 	"$decalscale" 	0.1
-	"$modelmaterial" "decals/flesh2/blood2"
+	"$modelmaterial" "decals/flesh/blood2"
 }

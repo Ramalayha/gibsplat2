@@ -19,10 +19,6 @@ function ENT:Initialize()
 
 	local norm = -(bone_pos - pos):GetNormal()
 
-	for _, limb in pairs(body.GS2Limbs) do
-		self:ApplyDecal(limb)
-	end
-
 	table.insert(body.GS2BulletHoles[phys_bone], self)
 end
 
@@ -61,6 +57,19 @@ function ENT:ApplyDecal(target)
 					table.insert(self.Decals, decal)
 				end
 			end
+		end
+	end
+end
+
+function ENT:Think()
+	if !self.DidDecals then
+		self.DidDecals = true
+		local body = self:GetBody()
+		if !IsValid(body) then
+			return
+		end
+		for _, limb in pairs(body.GS2Limbs) do
+			self:ApplyDecal(limb)
 		end
 	end
 end
