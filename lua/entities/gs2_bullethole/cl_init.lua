@@ -38,23 +38,30 @@ function ENT:ApplyDecal(target)
 	local norm = pos - bone_pos
 	norm:Normalize()
 
-	local mat = util.DecalMaterial("Impact.Flesh2")
+	local phys_mat = body:GetNWString("GS2PhysMat")
 
-	ApplyDecal(mat, target, pos, norm)
+	if phys_mat then
+		local mat = util.DecalMaterial("impact."..phys_mat)
 
-	if (target == body.GS2Limbs[self:GetTargetBone()] and target.GS2RenderMeshes) then
-		self.Decals = {}
-		for _, rm in pairs(target.GS2RenderMeshes) do
-			local mesh = rm:GetMesh()		
-			if mesh.body then
-				local decal = rm:AddDecal(mesh.body, mat, self:GetLPos(), self:GetLAng(), 1)
-				if decal then
-					table.insert(self.Decals, decal)
-				end
-			elseif mesh.flesh then
-				local decal = rm:AddDecal(mesh.flesh, mat, self:GetLPos(), self:GetLAng(), 1)
-				if decal then
-					table.insert(self.Decals, decal)
+		if mat then
+			ApplyDecal(mat, target, pos, norm)
+
+			if (target == body.GS2Limbs[self:GetTargetBone()] and target.GS2RenderMeshes) then
+				local size = 1 + math.log(Material(mat):GetTexture("$basetexture"):Width(), 2) - 6 --log2(64) = 6
+				self.Decals = {}
+				for _, rm in pairs(target.GS2RenderMeshes) do
+					local mesh = rm:GetMesh()		
+					if mesh.body then
+						local decal = rm:AddDecal(mesh.body, mat, self:GetLPos(), self:GetLAng(), size)
+						if decal then
+							table.insert(self.Decals, decal)
+						end
+					elseif mesh.flesh then
+						local decal = rm:AddDecal(mesh.flesh, mat, self:GetLPos(), self:GetLAng(), size)
+						if decal then
+							table.insert(self.Decals, decal)
+						end
+					end
 				end
 			end
 		end

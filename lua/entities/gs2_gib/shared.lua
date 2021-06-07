@@ -9,20 +9,12 @@ ENT.Base = "base_anim"
 ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
 game.AddDecal("BloodSmall", {
-	"decals/flesh2/blood1",
-	"decals/flesh2/blood2",
-	"decals/flesh2/blood3",
-	"decals/flesh2/blood4",
-	"decals/flesh2/blood5",
+	"decals/flesh/blood1",
+	"decals/flesh/blood2",
+	"decals/flesh/blood3",
+	"decals/flesh/blood4",
+	"decals/flesh/blood5",
 	--"decals/flesh2/blood6"
-})
-
-game.AddDecal("YellowBloodSmall", {
-	"decals/alienflesh/shot1",
-	"decals/alienflesh/shot2",
-	"decals/alienflesh/shot3",
-	"decals/alienflesh/shot4",
-	"decals/alienflesh/shot5"
 })
 
 local decals = {

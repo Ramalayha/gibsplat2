@@ -1,15 +1,15 @@
 local MAT_CACHE = {}
 
 function ApplyDecal(mat, ent, pos, norm, size)
-	if !IsValid(ent) then
+	if (!IsValid(ent) or !mat) then
 		return	
 	end
 	local size = size or 1
-		
+	
 	MAT_CACHE[mat] = MAT_CACHE[mat] or Material(mat)
 	mat = MAT_CACHE[mat]
 
-	util.DecalEx(mat, ent, pos, norm, color_white, 1, 1)
+	util.DecalEx(mat, ent, pos, norm, color_white, size, size)
 end
 
 local function IsInBox(p, min, max)

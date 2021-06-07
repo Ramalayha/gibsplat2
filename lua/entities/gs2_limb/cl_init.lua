@@ -75,9 +75,9 @@ net.Receive("GS2Dissolve", function()
 end)
 
 local decals = {
-	flesh = "BloodSimple",
-	no_decal = "BloodSimple", --metrocop head
-	zombieflesh = "BloodSimple",
+	flesh = "Blood",
+	no_decal = "Blood", --metrocop head
+	zombieflesh = "Blood",
 	alienflesh = "YellowBlood",
 	antlion = "YellowBlood"
 }
@@ -85,6 +85,8 @@ local decals = {
 net.Receive("GS2ApplyDecal", function()
 	local body = net.ReadEntity()
 	if !IsValid(body) then return end
+
+	if !body.GS2Limbs then return end
 
 	local mat = net.ReadString()
 	if !decals[mat] then return end
@@ -385,21 +387,24 @@ function ENT:UpdateRenderInfo()
 				self.GS2RenderMeshes[key] = M
 
 				if (mesh.body) then	
-					if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then
-						local count = 0
-						for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do
-							if IsValid(bh) then						
-								M:AddDecal(mesh.body, util.DecalMaterial("BloodSimple"), bh:GetLPos(), bh:GetLAng(), 1)
-								count = count + 1
-								if (count >= max_decals:GetInt()) then
-									break
+					local phys_mat = body:GetNWString("GS2PhysMat")
+					if (phys_mat and decals[phys_mat]) then
+						if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then
+							local count = 0
+							for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do
+								if IsValid(bh) then						
+									M:AddDecal(mesh.body, util.DecalMaterial(decals[phys_mat]), bh:GetLPos(), bh:GetLAng(), 1)
+									count = count + 1
+									if (count >= max_decals:GetInt()) then
+										break
+									end
+								else
+									body.GS2BulletHoles[self_phys_bone][key] = nil
 								end
-							else
-								body.GS2BulletHoles[self_phys_bone][key] = nil
 							end
 						end
+						M:AddDecal(mesh.body, util.DecalMaterial(decals[phys_mat]), vector_origin, Angle(0, 0, math.Rand(-180, 180)), 3, -0.1)					
 					end
-					M:AddDecal(mesh.body, util.DecalMaterial("BloodSimple"), vector_origin, Angle(0, 0, math.Rand(-180, 180)), 3, -0.1)					
 				end
 			end
 		end	
@@ -483,43 +488,47 @@ function ENT:Draw()
 				end	
 			end
 			local phys_bone = self:GetTargetBone()
-			if (phys_bone != 0) then
-				local bone = body:TranslatePhysBoneToBone(phys_bone)
-				
-				local bone_parent = body:GetBoneParent(bone)
+			local phys_mat = body:GetNWString("GS2PhysMat")
+			if (phys_mat and decals[phys_mat]) then
+				if (phys_bone != 0) then
 
-				if bone_parent then
-					local bone_pos, bone_ang = body:GetBonePosition(bone)
+					local bone = body:TranslatePhysBoneToBone(phys_bone)
+					
+					local bone_parent = body:GetBoneParent(bone)
 
-					local offset = vector_origin--bone_ang:Up() * 5
+					if bone_parent then
+						local bone_pos, bone_ang = body:GetBonePosition(bone)
 
-					local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
-					bone_dir:Normalize()
-					--debugoverlay.Axis(bone_pos, bone_dir:Angle(), 5, 10, true)
-					for _, limb in pairs(body.GS2Limbs) do
-						if !IsValid(limb) then
-							continue
-						end
-						local limb_phys_bone = limb:GetTargetBone()
-						local limb_bone = body:TranslatePhysBoneToBone(limb_phys_bone)
+						local offset = vector_origin--bone_ang:Up() * 5
 
-						--if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
-						if (limb == self) then
-							limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 - offset, -bone_dir - offset, 5)
-							--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 + offset, -bone_dir + offset, 5)
-						else
-							local parent = body:GetBoneParent(bone)
-							repeat
-								if (parent == limb_bone) then
-									break
-								end
-								parent = body:GetBoneParent(parent)
-							until (parent == -1)
-							if (parent != -1) then
-								limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 + offset, bone_dir + offset, 5)
-								--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 - offset, bone_dir - offset, 5)						
+						local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
+						bone_dir:Normalize()
+						--debugoverlay.Axis(bone_pos, bone_dir:Angle(), 5, 10, true)
+						for _, limb in pairs(body.GS2Limbs) do
+							if !IsValid(limb) then
+								continue
 							end
-						end					
+							local limb_phys_bone = limb:GetTargetBone()
+							local limb_bone = body:TranslatePhysBoneToBone(limb_phys_bone)
+
+							--if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
+							if (limb == self) then
+								limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos - bone_dir * 2 - offset, -bone_dir - offset, 5)
+								--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 + offset, -bone_dir + offset, 5)
+							else
+								local parent = body:GetBoneParent(bone)
+								repeat
+									if (parent == limb_bone) then
+										break
+									end
+									parent = body:GetBoneParent(parent)
+								until (parent == -1)
+								if (parent != -1) then
+									limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos + bone_dir * 2 + offset, bone_dir + offset, 5)
+									--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 - offset, bone_dir - offset, 5)						
+								end
+							end					
+						end
 					end
 				end
 			end

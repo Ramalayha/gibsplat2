@@ -34,18 +34,18 @@ local blood = {
 		"decals/flesh2/blood5"
 	},
 	[BLOOD_COLOR_YELLOW] = {
-		"decals/alienflesh/blood1",
-		"decals/alienflesh/blood2",
-		"decals/alienflesh/blood3",
-		"decals/alienflesh/blood4",
-		"decals/alienflesh/blood5"
+		"decals/alienflesh/shot1",
+		"decals/alienflesh/shot2",
+		"decals/alienflesh/shot3",
+		"decals/alienflesh/shot4",
+		"decals/alienflesh/shot5"
 	},
 	[BLOOD_COLOR_GREEN] = {
-		"decals/alienflesh/blood1",
-		"decals/alienflesh/blood2",
-		"decals/alienflesh/blood3",
-		"decals/alienflesh/blood4",
-		"decals/alienflesh/blood5"
+		"decals/alienflesh/shot1",
+		"decals/alienflesh/shot2",
+		"decals/alienflesh/shot3",
+		"decals/alienflesh/shot4",
+		"decals/alienflesh/shot5"
 	}
 }
 --[[

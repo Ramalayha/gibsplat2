@@ -196,7 +196,7 @@ function ENT:GetRenderMesh()
 end
 
 function ENT:AddDecal(mesh, mat, pos, norm, size)
-	if (!mesh.Material or !mesh.Material:GetShader():find("Generic$")) then
+	if (!mat or !mesh.Material) then
 		return
 	end
 	
