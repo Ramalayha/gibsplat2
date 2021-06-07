@@ -105,6 +105,10 @@ local mat_def = Material("debug/wireframe")
 
 local lhack_matrix = Matrix()
 
+local wireframe_decals = GetConVar("r_modelwireframedecal")
+
+local mat_wf = Material("models/wireframe")
+
 function ENT:Draw()
 	if (self.meshes.body and !self.meshes.body.Mesh:IsValid()) then
 		--try recreate it		
@@ -160,15 +164,23 @@ function ENT:Draw()
 	self.Mesh.Matrix = matrix
 	self:DrawModel()
 
+	if wireframe_decals:GetBool() then
+		render_MaterialOverride(mat_wf)
+		render_SetColorModulation(0.3, 1, 1)
+	end
+
 	for key, decal in pairs(self.GS2Decals) do
 		if !decal.Mesh then
 			self.GS2Decals[key] = nil
 		else
 			self.Mesh = decal
 			self.Mesh.Matrix = matrix
+
 			self:DrawModel()
 		end
 	end
+
+	render_MaterialOverride()
 
 	render_SetColorModulation(1, 1, 1)
 end
@@ -199,13 +211,22 @@ function ENT:AddDecal(mesh, mat, pos, norm, size)
 	if (!mat or !mesh.Material) then
 		return
 	end
-	
-	local mesh_decal, tris = GetDecalMesh(mesh, pos, norm, size, size)
-	if mesh_decal then
+	mat = Material(mat)
+	local mmat = mat:GetString("$modelmaterial")
+	if mmat then
+		mat = Material(mmat)
+	end
+
+	local scale = mat:GetFloat("$decalscale")
+
+--mat = Material("models/wireframe")
+	local mesh_decal, tris = GetDecalMesh(mesh, pos, norm, size, size, scale)
+	if mesh_decal then		
 		local decal = {
 			Mesh = mesh_decal,
-			Material = Material(mat)
+			Material = mat
 		}
+		
 		table.insert(self.GS2Decals, decal)
 		return decal
 	end

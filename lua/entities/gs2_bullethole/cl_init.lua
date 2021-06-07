@@ -47,7 +47,7 @@ function ENT:ApplyDecal(target)
 			ApplyDecal(mat, target, pos, norm)
 
 			if (target == body.GS2Limbs[self:GetTargetBone()] and target.GS2RenderMeshes) then
-				local size = 1 + math.log(Material(mat):GetTexture("$basetexture"):Width(), 2) - 6 --log2(64) = 6
+				local size = 1-- + math.log(Material(mat):GetTexture("$basetexture"):Width(), 2) - 6 --log2(64) = 6
 				self.Decals = {}
 				for _, rm in pairs(target.GS2RenderMeshes) do
 					local mesh = rm:GetMesh()		

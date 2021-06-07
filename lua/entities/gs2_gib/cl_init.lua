@@ -1,4 +1,5 @@
 include("shared.lua")
+include("gibsplat2/decal_util.lua")
 
 local IsValid = IsValid
 
@@ -75,3 +76,24 @@ end
 function ENT:GetRenderMesh()
 	return self.MeshData
 end
+
+function ENT:MakeDecal(mat, ent, pos, norm, rad)
+	local size = rad / 10
+
+	ApplyDecal(util.DecalMaterial(mat), ent, pos, -norm, size)
+end
+
+net.Receive(ENT.NetMsg, function()
+	local self = net.ReadEntity()
+	if (!IsValid(self) or !self.MakeDecal) then return end
+
+	local ent = net.ReadEntity()
+	if (!IsValid(ent) and !ent:IsWorld()) then return end
+
+	local mat = net.ReadString()
+	local pos = net.ReadVector()
+	local norm = net.ReadNormal()
+	local rad = net.ReadFloat()
+
+	self:MakeDecal(mat, ent, pos, norm, rad)
+end)

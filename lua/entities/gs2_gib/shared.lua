@@ -8,6 +8,8 @@ ENT.Base = "base_anim"
 
 ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
+ENT.NetMsg = "GS2MakeDecal"
+
 game.AddDecal("BloodSmall", {
 	"decals/flesh/blood1",
 	"decals/flesh/blood2",
@@ -18,14 +20,6 @@ game.AddDecal("BloodSmall", {
 })
 
 local decals = {
-	[BLOOD_COLOR_RED] = "BloodSmall",
-	[BLOOD_COLOR_YELLOW] = "YellowBlood",
-	[BLOOD_COLOR_GREEN] = "YellowBlood",
-	[BLOOD_COLOR_ANTLION] = "YellowBlood",
-	[BLOOD_COLOR_ANTLION_WORKER] = "YellowBlood"
-}
-
-local decals_big = {
 	[BLOOD_COLOR_RED] = "Blood",
 	[BLOOD_COLOR_YELLOW] = "YellowBlood",
 	[BLOOD_COLOR_GREEN] = "YellowBlood",
@@ -162,8 +156,7 @@ function ENT:PhysicsCollide(data, phys_self)
 				if color then
 					local decal = decals[color]
 					if decal then
-						util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-						util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+						self:MakeDecal(decal, data.HitEntity, data.HitPos, data.HitNormal, self:BoundingRadius())						
 					end
 				end
 				local phys = data.HitObject
@@ -191,16 +184,10 @@ function ENT:PhysicsCollide(data, phys_self)
 		if color then
 			local decal = decals[color]
 			if decal then
-				util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+				self:MakeDecal(decal, data.HitEntity, data.HitPos, data.HitNormal, self:BoundingRadius())
 			end
 
-			if (phys_self:GetVolume() > 500) then			
-				local decal = decals_big[color]
-				if decal then
-					util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-					util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
-				end
+			if (phys_self:GetVolume() > 500) then				
 				local EF = EffectData()
 					EF:SetOrigin(self:LocalToWorld(phys_self:GetMassCenter()))
 					EF:SetColor(color)

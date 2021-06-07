@@ -3,6 +3,8 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+util.AddNetworkString(ENT.NetMsg)
+
 local ang_zero = Angle(0, 0, 0)
 
 function ENT:Initialize()
@@ -56,4 +58,15 @@ function ENT:Use(ply)
 		self:EmitSound("npc/barnacle/barnacle_crunch3.wav")
 		self:Remove()
 	end
+end
+
+function ENT:MakeDecal(mat, ent, pos, norm, rad)
+	net.Start(self.NetMsg)
+		net.WriteEntity(self)		
+		net.WriteEntity(ent)
+		net.WriteString(mat)
+		net.WriteVector(pos)
+		net.WriteNormal(norm)
+		net.WriteFloat(rad)
+	net.Broadcast()
 end

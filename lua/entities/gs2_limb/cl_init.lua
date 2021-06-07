@@ -555,6 +555,7 @@ function ENT:ApplyDecal(mat, pos, norm, size, mesh_size)
 	})
 
 	if self.GS2RenderMeshes then
+		mat = Material(mat):GetString("$modelmaterial") or mat
 		for _, M in pairs(self.GS2RenderMeshes) do
 			if M.meshes.body then
 				M:AddDecal(M.meshes.body, mat, lpos, lang, mesh_size or size)

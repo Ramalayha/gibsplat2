@@ -1,7 +1,7 @@
 local MAT_CACHE = {}
 
 function ApplyDecal(mat, ent, pos, norm, size)
-	if (!IsValid(ent) or !mat) then
+	if !mat then
 		return	
 	end
 	local size = size or 1
@@ -9,7 +9,15 @@ function ApplyDecal(mat, ent, pos, norm, size)
 	MAT_CACHE[mat] = MAT_CACHE[mat] or Material(mat)
 	mat = MAT_CACHE[mat]
 
+	local scale = mat:GetFloat("$decalscale") or 1
+
+	mat:SetFloat("$decalscale", 1)
+
+	size = size * scale
+
 	util.DecalEx(mat, ent, pos, norm, color_white, size, size)
+
+	mat:SetFloat("$decalscale", scale)
 end
 
 local function IsInBox(p, min, max)
@@ -113,18 +121,14 @@ end
 
 local table_insert = table.insert
 
-function GetDecalMesh(input, pos, ang, w, h, threshold)
+function GetDecalMesh(input, pos, ang, w, h, scale)
 	local tris_in = input.tris
 	local tris_out = {}
 
-	threshold = math.abs(threshold or 0)
-
 	local dir = ang:Forward()
 
-	w = w * 2
-	h = h * 2
-
-	local s2 = (w + w) ^ 2
+	w = w * 4
+	h = h * 4
 
 	local min = Vector(0, -w, -h)
 	local max = -min
@@ -137,12 +141,10 @@ function GetDecalMesh(input, pos, ang, w, h, threshold)
 	for _, vert in ipairs(input.vertexes) do
 		vert.lpos = nil
 		vert.valid = false
-		if (vert.normal:Dot(dir) < threshold) then
-			if (vert.pos:DistToSqr(pos) < s2) then
-				vert.valid = true	
-				vert.oldu = vert.u
-				vert.oldv = vert.v			
-			end
+		if (vert.normal:Dot(dir) > 0) then
+			vert.valid = true	
+			vert.oldu = vert.u
+			vert.oldv = vert.v		
 		end		
 	end
 
@@ -151,7 +153,7 @@ function GetDecalMesh(input, pos, ang, w, h, threshold)
 		local v2 = tris_in[vert_index + 1]
 		local v3 = tris_in[vert_index + 2]
 
-		if (v1.valid or v2.valid or v3.valid) then
+		if (v1.valid or v2.valid or v3.valid) then			
 			v1.lpos = v1.lpos or W2L * v1.pos
 			v2.lpos = v2.lpos or W2L * v2.pos
 			v3.lpos = v3.lpos or W2L * v3.pos
@@ -188,5 +190,11 @@ function GetDecalMesh(input, pos, ang, w, h, threshold)
 		end
 
 		return M, tris_out
+	else
+		--restore UVs
+		for _, vert in ipairs(input.vertexes) do
+			vert.u = vert.oldu or vert.u
+			vert.v = vert.oldv or vert.v				
+		end
 	end
 end
