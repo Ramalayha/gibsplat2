@@ -56,3 +56,14 @@ function ENT:OnRemove()
 	EF:SetOrigin(self:LocalToWorld(self:OBBCenter()))
 	util.Effect("BloodImpact", EF)
 end
+
+function ENT:MakeDecal(mat, ent, pos, norm, rad)
+	net.Start(self.NetMsg)
+		net.WriteEntity(self)		
+		net.WriteEntity(ent)
+		net.WriteString(mat)
+		net.WriteVector(pos)
+		net.WriteNormal(norm)
+		net.WriteFloat(rad)
+	net.Broadcast()
+end

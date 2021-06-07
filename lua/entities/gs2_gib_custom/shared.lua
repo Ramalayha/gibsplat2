@@ -3,8 +3,10 @@ ENT.Base = "base_anim"
 
 ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
+ENT.NetMsg = "GS2MakeDecal"
+
 local decals = {
-	[BLOOD_COLOR_RED] = "BloodSmall",
+	[BLOOD_COLOR_RED] = "Blood",
 	[BLOOD_COLOR_YELLOW] = "YellowBlood",
 	[BLOOD_COLOR_GREEN] = "YellowBlood",
 	[BLOOD_COLOR_ANTLION] = "YellowBlood",
@@ -34,8 +36,7 @@ function ENT:PhysicsCollide(data, phys_self)
 				if color then
 					local decal = decals[color]
 					if decal then
-						util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-						util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+						self:MakeDecal(decal, data.HitEntity, data.HitPos, data.HitNormal, self:BoundingRadius())						
 					end
 				end
 				local phys = data.HitObject
@@ -63,8 +64,7 @@ function ENT:PhysicsCollide(data, phys_self)
 		if color then
 			local decal = decals[color]
 			if decal then
-				util.Decal(decal, data.HitPos + data.HitNormal, data.HitPos - data.HitNormal)
-				util.Decal(decal, data.HitPos - data.HitNormal, data.HitPos + data.HitNormal)
+				self:MakeDecal(decal, data.HitEntity, data.HitPos, data.HitNormal, self:BoundingRadius())						
 			end
 		end
 	end

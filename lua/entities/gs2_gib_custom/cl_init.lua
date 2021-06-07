@@ -34,3 +34,9 @@ function ENT:Draw()
 		SafeRemoveEntityDelayed(self, 0)
 	end
 end
+
+function ENT:MakeDecal(mat, ent, pos, norm, rad)
+	local size = rad / 10
+
+	ApplyDecal(util.DecalMaterial(mat), ent, pos, -norm, size)
+end
