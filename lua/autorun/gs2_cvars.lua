@@ -18,6 +18,7 @@ if SERVER then
 	CreateConVar("gs2_max_constraint_strength", 15000, FCVAR_ARCHIVE)
 	CreateConVar("gs2_constraint_strength_multiplier", 250, FCVAR_ARCHIVE)
 	CreateConVar("gs2_less_limbs", 0, FCVAR_ARCHIVE)
+	CreateConVar("gs2_gib_chance_explosion_multiplier", 10, FCVAR_ARCHIVE)
 end
 
 if CLIENT then

@@ -1,9 +1,10 @@
 local MAT_CACHE = {}
 
 function ApplyDecal(mat, ent, pos, norm, size)
-	if !mat then
-		return	
-	end
+	if !mat then return	end
+
+	if (!IsValid(ent) and !ent:IsWorld()) then return end
+
 	local size = size or 1
 	
 	MAT_CACHE[mat] = MAT_CACHE[mat] or Material(mat)

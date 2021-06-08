@@ -10,15 +10,6 @@ ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
 ENT.NetMsg = "GS2MakeDecal"
 
-game.AddDecal("BloodSmall", {
-	"decals/flesh/blood1",
-	"decals/flesh/blood2",
-	"decals/flesh/blood3",
-	"decals/flesh/blood4",
-	"decals/flesh/blood5",
-	--"decals/flesh2/blood6"
-})
-
 local decals = {
 	[BLOOD_COLOR_RED] = "Blood",
 	[BLOOD_COLOR_YELLOW] = "YellowBlood",

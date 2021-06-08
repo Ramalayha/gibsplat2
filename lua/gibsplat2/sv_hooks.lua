@@ -15,6 +15,28 @@ local blood_colors = {
 
 local HOOK_NAME = "GibSplat2"
 
+local var_funcs = {}
+
+for key, value in pairs(FindMetaTable("CTakeDamageInfo")) do
+	if key:find("^Get") then
+		table.insert(var_funcs, key:match("^Get(.-)$"))
+	end
+end
+
+local function GetDamageInfoVars(dmginfo)
+	local output = {}
+	for _, func in pairs(var_funcs) do
+		output[func] = dmginfo["Get"..func](dmginfo)
+	end
+	return output
+end
+
+local function SetDamageInfoVars(dmginfo, vars)
+	for var, value in pairs(vars) do
+		dmginfo["Set"..var](dmginfo, value)
+	end
+end
+
 local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
 	doll:MakeCustomRagdoll()
@@ -26,49 +48,12 @@ local function GS2CreateEntityRagdoll(ent, doll)
 			doll:GS2Gib(phys_bone, false, true)
 		end
 	end
-	if (ent.__lastdmgpos and ent.__lastdmgtime == CurTime()) then
-		local dmg_pos = ent.__lastdmgpos
-		local dmg_force = ent.__lastdmgforce
-		local phys_count = doll:GetPhysicsObjectCount()
-
-		doll:GetPhysicsObjectNum(0):ApplyForceOffset(-dmg_force, dmg_pos)
-
-		dmg_force:Div(phys_count)
-
-		for phys_bone = 0, phys_count-1 do
-			local phys = doll:GetPhysicsObjectNum(phys_bone)
-			phys:ApplyForceOffset(dmg_force, dmg_pos)
-		end
-
-		timer.Simple(0, function()
-			if IsValid(doll) then
-				local tr = {
-					output = {},				
-					start = dmgpos,
-					ignoreworld = true
-				}
-				for phys_bone = 0, doll:GetPhysicsObjectCount() - 1 do
-					doll:GS2Gib(phys_bone)
-
-					if (math.random() < 0.3) then
-						local phys = doll:GetPhysicsObjectNum(phys_bone)
-						if IsValid(phys) then
-							tr.endpos = phys:GetPos()
-							
-							util.TraceLine(tr)
-							if tr.output.Hit then
-								net.Start("GS2ApplyDecal")
-									net.WriteEntity(doll)
-									net.WriteString(phys:GetMaterial())
-									net.WriteVector(tr.output.HitPos)
-									net.WriteVector(-tr.output.HitNormal)
-								net.Broadcast()
-							end
-						end
-					end					
-				end								
-			end				
-		end)
+	if (ent.__lastdmginfovars and ent.__lastdmgtime == CurTime()) then
+		local dmginfo = DamageInfo()
+		SetDamageInfoVars(dmginfo, ent.__lastdmginfovars)
+		for _, relay in pairs(doll.GS2LimbRelays) do
+			relay:TakeDamageInfo(dmginfo)
+		end		
 	end
 	if ent.GS2Decals then
 		for phys_bone, decals in pairs(ent.GS2Decals) do
@@ -306,8 +291,7 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			dmginfo:SetDamageType(bit.band(dmg_type, bit.bnot(DMG_SLASH)))			
 		end
 		if dmginfo:IsExplosionDamage() then
-			ent.__lastdmgpos = dmginfo:GetDamagePosition()
-			ent.__lastdmgforce = dmginfo:GetDamageForce()
+			ent.__lastdmginfovars = GetDamageInfoVars(dmginfo)
 			ent.__lastdmgtime = CurTime()
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then

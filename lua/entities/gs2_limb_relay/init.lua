@@ -1,6 +1,7 @@
 include("shared.lua")
 
 local gib_chance = GetConVar("gs2_gib_chance")
+local multiplier = GetConVar("gs2_gib_chance_explosion_multiplier")
 
 function ENT:Initialize()
 	local ent = self.TargetEntity
@@ -16,6 +17,8 @@ function ENT:Initialize()
 	self:SetCustomCollisionCheck(true)
 	
 	self:DrawShadow(false)
+
+	self:Think() --update position
 end
 
 function ENT:UpdateTransmitState()
@@ -47,22 +50,30 @@ end
 function ENT:OnTakeDamage(dmginfo)
 	if (dmginfo:IsExplosionDamage() or dmginfo:IsDamageType(DMG_SONIC)) then
 		local infl = dmginfo:GetInflictor()		
-		local radius = infl:GetInternalVariable("m_DmgRadius")
-
+		
 		local dmgpos = dmginfo:GetDamagePosition()
 
-		local mod = 1
-		if (radius and radius != 0) then			
-			mod = (radius - dmgpos:Distance(self:GetPos())) / radius
+		local mod = gib_chance:GetFloat()
+
+		local radius = infl:GetInternalVariable("m_DmgRadius")
+
+		if (infl:GetClass() == "rpg_missile") then
+			radius = 100 --hard coded
 		end
+
+		if (radius and radius != 0) then			
+			mod = math.max(0, 1 - dmgpos:Distance(self:GetPos()) / radius) ^ 2			
+		end
+
 		local ent = self.TargetEntity
 		local phys_bone = self.TargetPhysBone
-
-		ent:GS2Gib(phys_bone)
 		
 		local phys = ent:GetPhysicsObjectNum(phys_bone)
 
-		phys:ApplyForceOffset(dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())
+		local dmgforce = dmginfo:GetDamageForce()
+		dmgforce:Div(ent:GetPhysicsObjectCount())
+
+		phys:ApplyForceOffset(dmgforce, dmgpos)
 		
 		if (math.random() < 0.3) then
 			local ent = self.TargetEntity
@@ -82,6 +93,12 @@ function ENT:OnTakeDamage(dmginfo)
 					net.WriteVector(-tr.HitNormal)
 				net.Broadcast()
 			end
+		end
+
+		local chance = 1 - (1 - gib_chance:GetFloat()) / (multiplier:GetFloat() * mod)
+
+		if (math.random() < chance) then
+			ent:GS2Gib(phys_bone, false, true)
 		end
 	end
 end

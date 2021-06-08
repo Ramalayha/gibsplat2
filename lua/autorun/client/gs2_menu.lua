@@ -23,7 +23,8 @@ local defaults =
     ["gs2_gib_chance"] = "0.15",
     ["gs2_gib_sv"] = "1",
     ["gs2_default_ragdolls"] = "1",
-    ["gs2_max_decals_transfer"] = "5"
+    ["gs2_max_decals_transfer"] = "5",
+    ["gs2_gib_chance_explosion_multiplier"] = "10"
 }
 
 concommand.Add("gs2_reset_cvars", function()
@@ -95,6 +96,9 @@ local function PopulateGS2Menu(pnl)
     --float options
     pnl:NumSlider("Gib Chance", "gs2_gib_chance", 0, 1, 3)
     pnl:ControlHelp("The chance of a ragdoll gibbing from taking damage.")
+
+    pnl:NumSlider("Explosion Chance", "gs2_gib_chance_explosion_multiplier", 0, 50, 3)
+    pnl:ControlHelp("How much more likely the ragdoll is to gib from an explosion.")
 
     pnl:NumSlider("Gib Spawnrate", "gs2_gib_factor", 0, 1, 3)
     pnl:ControlHelp("Controls how many gibs to spawn.")
