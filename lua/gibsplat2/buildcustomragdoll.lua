@@ -636,6 +636,9 @@ function ENTITY:MakeCustomRagdoll()
 				limb:SetTargetBone(part_info.child)
 				limb:Spawn()
 				limb:SetLightingOriginEntity(self.GS2LimbRelays[part_info.child])
+				if IsValid(self.GS2Player) then
+					limb:SetPlayerColor(self.GS2Player:GetPlayerColor())
+				end
 
 				self:DeleteOnRemove(limb)
 
@@ -736,6 +739,10 @@ function ENTITY:MakeCustomRagdoll()
 	limb:SetBody(self)					
 	limb:SetTargetBone(0)			
 	limb:Spawn()
+
+	if IsValid(self.GS2Player) then
+		limb:SetPlayerColor(self.GS2Player:GetPlayerColor())
+	end
 
 	self:DeleteOnRemove(limb)	
 	self.GS2Limbs = {[0] = limb}

@@ -1,7 +1,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_anim"
 
-ENT.LifeTime = GetConVar("gs2_gib_lifetime")
+local lifetime      = GetConVar("gs2_gib_lifetime")
 
 ENT.NetMsg = "GS2MakeDecal"
 

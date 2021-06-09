@@ -29,12 +29,6 @@ function ENT:Initialize()
 	self:SetUseType(SIMPLE_USE)
 end
 
-function ENT:Think()
-	if (self.LastSim and self.LastSim + self.LifeTime:GetFloat() < CurTime()) then
-		self:Remove()
-	end
-end
-
 function ENT:OnTakeDamage(dmginfo)
 	local phys = self:GetPhysicsObject()
 	if (!self.GS2_dummy and IsValid(phys)) then		

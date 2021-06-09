@@ -370,6 +370,8 @@ local function CreateRagdoll(self)
 
 	dolls[self] = ragdoll
 
+	ragdoll.GS2Player = self
+
 	GS2CreateEntityRagdoll(self, ragdoll)
 end
 

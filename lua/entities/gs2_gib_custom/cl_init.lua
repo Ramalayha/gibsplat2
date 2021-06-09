@@ -1,5 +1,7 @@
 include("shared.lua")
 
+local lifetime      = GetConVar("gs2_gib_lifetime")
+
 function ENT:Initialize()
 	self.Created = CurTime()
 	if (self:EntIndex() == -1) then
@@ -25,6 +27,8 @@ function ENT:Initialize()
 		self_phys:SetAngleDragCoefficient(0.3)
 
 		self:StartMotionController()
+
+		SafeRemoveEntityDelayed(self, lifetime:GetFloat() * math.random(0.9, 1.1))
 	end
 end
 

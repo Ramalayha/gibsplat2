@@ -7,4 +7,5 @@ function ENT:SetupDataTables()
 	self:NetworkVar("Int", 0, "DisMask")
 	self:NetworkVar("Int", 1, "GibMask")
 	self:NetworkVar("Int", 2, "TargetBone")
+	self:NetworkVar("Vector", 0, "PlayerColor")
 end

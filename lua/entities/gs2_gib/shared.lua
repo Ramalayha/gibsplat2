@@ -2,11 +2,10 @@ include("gibsplat2/gibs.lua")
 
 local gib_expensive = GetConVar("gs2_gib_expensive")
 local gib_chance	= GetConVar("gs2_gib_chance")
+local lifetime      = GetConVar("gs2_gib_lifetime")
 
 ENT.Type = "anim"
 ENT.Base = "base_anim"
-
-ENT.LifeTime = GetConVar("gs2_gib_lifetime")
 
 ENT.NetMsg = "GS2MakeDecal"
 
@@ -54,6 +53,8 @@ function ENT:InitPhysics()
 			self:StartMotionController()
 			
 			phys_self:SetDragCoefficient(0)	
+
+			SafeRemoveEntityDelayed(self, lifetime:GetFloat() * math.random(0.9, 1.1))
 		end
 	end
 end

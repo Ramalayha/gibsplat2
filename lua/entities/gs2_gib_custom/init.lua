@@ -3,6 +3,8 @@ AddCSLuaFile("shared.lua")
 
 include("shared.lua")
 
+local lifetime      = GetConVar("gs2_gib_lifetime")
+
 local text = file.Read("materials/gibsplat2/gibs.vmt", "GAME")
 
 local gib_info = util.KeyValuesToTable(text or "")
@@ -35,12 +37,8 @@ function ENT:Initialize()
 	self_phys:SetAngleDragCoefficient(0.3)
 
 	self:StartMotionController()
-end
 
-function ENT:Think()
-	if (self.LastSim and self.LastSim + self.LifeTime:GetFloat() < CurTime()) then
-		self:Remove()
-	end
+	SafeRemoveEntityDelayed(self, lifetime:GetFloat() * math.random(0.9, 1.1))
 end
 
 function ENT:OnTakeDamage(dmginfo)

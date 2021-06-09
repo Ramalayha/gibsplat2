@@ -3,17 +3,17 @@ local defaults =
     ["gs2_bloodpool_size"] = "10",
     ["gs2_old_effects"] = "1",
     ["gs2_new_effects"] = "1",
-    ["gs2_particles_linger_chance"] = "0.1",
-    ["gs2_max_particles"] = "10000",
-    ["gs2_particles_lifetime"] = "60",
+    --["gs2_particles_linger_chance"] = "0.1",
+    --["gs2_max_particles"] = "10000",
+    --["gs2_particles_lifetime"] = "60",
     ["gs2_mesh_iterations"] = "10",
     ["gs2_gib_cl"] = "1",
-    ["gs2_less_limbs"] = "0",
+    --["gs2_less_limbs"] = "0",
     ["gs2_constraint_strength_multiplier"] = "250",
     ["gs2_max_constraint_strength"] = "15000",
     ["gs2_min_constraint_strength"] = "4000",
     ["gs2_gib_generate_all"] = "0",
-    ["gs2_max_gibs"] = "32",
+    ["gs2_max_gibs"] = "128",
     ["gs2_gib_custom"] = "1",
     ["gs2_gib_merge_chance"] = "0.7",
     ["gs2_gib_factor"] = "0.3",
@@ -84,14 +84,14 @@ local function PopulateGS2Menu(pnl)
 
     --int options
 
-    pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
+    --pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
     pnl:ControlHelp("Maximum number of decals to transfer to a mesh part.")
 
-    pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 100)
+    pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 512)
     pnl:ControlHelp("Controls how many gibs can exist in the map.")
 
-    pnl:NumSlider("Particle Limit", "gs2_max_particles", 0, 500)
-    pnl:ControlHelp("Controls how many particles can exist in the map.")
+    --pnl:NumSlider("Particle Limit", "gs2_max_particles", 0, 500)
+    --pnl:ControlHelp("Controls how many particles can exist in the map.")
 
     --float options
     pnl:NumSlider("Gib Chance", "gs2_gib_chance", 0, 1, 3)
@@ -109,11 +109,11 @@ local function PopulateGS2Menu(pnl)
     pnl:NumSlider("Gib Lifetime", "gs2_gib_lifetime", 0, 1000)
     pnl:ControlHelp("Controls how long gibs stay before disappearing.")
 
-    pnl:NumSlider("Particle Lifetime", "gs2_particles_lifetime", 1, 500, 3)
-    pnl:ControlHelp("Controls how long a particle stays.")
+    --pnl:NumSlider("Particle Lifetime", "gs2_particles_lifetime", 1, 500, 3)
+    --pnl:ControlHelp("Controls how long a particle stays.")
 
-    pnl:NumSlider("Particle Linger Chance", "gs2_particles_linger_chance", 0, 1, 3)
-    pnl:ControlHelp("The chance of a particle sticking to a surface.")
+    --pnl:NumSlider("Particle Linger Chance", "gs2_particles_linger_chance", 0, 1, 3)
+    --pnl:ControlHelp("The chance of a particle sticking to a surface.")
 end
 
 -- Check if sandbox is active gamemode and add in the settings

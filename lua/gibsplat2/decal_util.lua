@@ -140,12 +140,13 @@ function GetDecalMesh(input, pos, ang, w, h, scale)
 	W2L:Invert()
 
 	for _, vert in ipairs(input.vertexes) do
-		vert.lpos = nil
-		vert.valid = false
+		vert.lpos = nil	
+		vert.oldu = vert.oldu or vert.u
+		vert.oldv = vert.oldv or vert.v	
 		if (vert.normal:Dot(dir) > 0) then
-			vert.valid = true	
-			vert.oldu = vert.u
-			vert.oldv = vert.v		
+			vert.valid = true			
+		else
+			vert.valid = false
 		end		
 	end
 

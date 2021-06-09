@@ -11,7 +11,7 @@ local decal_lifetime 	= CreateClientConVar("gs2_particles_lifetime", 60, true)
 local max_particles 	= CreateClientConVar("gs2_max_particles", 10000, true)
 local linger_chance 	= CreateClientConVar("gs2_particles_linger_chance", 0.1, true)
 local new_effects		= CreateClientConVar("gs2_new_effects", 1, true)
-local old_effects		= CreateClientConVar("gs2_old_effects", 0, true)
+local old_effects		= CreateClientConVar("gs2_old_effects", 1, true)
 local bloodpool_size	= CreateClientConVar("gs2_bloodpool_size", 10, true)
 
 local bit_band = bit.band
@@ -244,6 +244,8 @@ function EFFECT:Init(data)
 		return
 	end
 
+	SafeRemoveEntityDelayed(self, self.DieTime)
+
 	self.Body.Blood_Pools = {}
 
 	self.PhysBone = self.Body:TranslateBoneToPhysBone(self.Bone)
@@ -278,8 +280,8 @@ function EFFECT:Init(data)
 	end
 
 	self:CallOnRemove("gs2_onremove", function()
-		if self.PE then
-			self.PE:StopEmission()
+		if self.PE then			
+			self.PE:StopEmission()				
 		end
 		if self.Sound then
 			self.Sound:Stop()
@@ -328,16 +330,22 @@ end
 
 function EFFECT:Think()
 	if !IsValid(self.Body) then return false end
-
-	if (CurTime() - self.Created > self.DieTime) then return false end
 		
-	if (bit_band(self.mask, self.Body:GetNWInt("GS2GibMask")) != 0) then return false end
+	if (bit_band(self.mask, self.Body:GetNWInt("GS2GibMask", 0)) != 0) then return false end
 
 	if (self.Sound and self.LastSound + 0.4 < CurTime()) then
 		self.LastSound = CurTime()
 		self.Sound:Stop()
 		self.Sound:PlayEx(0.5, 80)
 	end
+
+	local bone_pos, bone_ang = self.Body:GetBonePosition(self.Bone)
+
+	local pos, ang = LocalToWorld(self.LocalPos, self.LocalAng, bone_pos, bone_ang)
+
+	self:SetPos(pos)
+	self:SetAngles(ang)
+	self:SetupBones()
 
 	if !old_effects:GetBool() then return true end
 
