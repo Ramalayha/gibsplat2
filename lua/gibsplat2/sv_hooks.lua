@@ -53,7 +53,9 @@ local function GS2CreateEntityRagdoll(ent, doll)
 		SetDamageInfoVars(dmginfo, ent.__lastdmginfovars)
 		for _, relay in pairs(doll.GS2LimbRelays) do
 			relay:TakeDamageInfo(dmginfo)
-		end		
+		end
+		
+		doll:GetPhysicsObject():ApplyForceOffset(-dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())	
 	end
 	if ent.GS2Decals then
 		for phys_bone, decals in pairs(ent.GS2Decals) do
