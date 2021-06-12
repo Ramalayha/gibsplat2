@@ -1,7 +1,3 @@
---[[
-	Code borrowed from source sdk with slight modifications
-]]
-
 game.AddParticles("particles/gs2_particles.pcf")
 
 PrecacheParticleSystem("blood_fluid_BI")
@@ -34,12 +30,6 @@ local blood_decals = {
 	[BLOOD_COLOR_RED] = "Blood",
 	[BLOOD_COLOR_YELLOW] = "YellowBlood",
 	[BLOOD_COLOR_GREEN] = "YellowBlood"
-}
-
-local flesh_mats = {
-	[BLOOD_COLOR_RED] = Material("models/gibsplat2/flesh/flesh"),
-	[BLOOD_COLOR_YELLOW] = Material("models/gibsplat2/flesh/alienflesh"),
-	[BLOOD_COLOR_GREEN] = Material("models/gibsplat2/flesh/alienflesh")
 }
 
 sound.Add({
@@ -175,58 +165,6 @@ local function BloodPoolCollide(self, pos, norm)
 	end
 end
 
-local FLESH_PIECES = {}
-
-local flesh_mdl = "models/props_junk/watermelon01_chunk02a.mdl"
-
-local function FleshPieceCollide(self, pos, norm)
-	trace.start = pos
-	trace.endpos = pos - norm
-
-	util.TraceLine(trace)
-
-	if !tr.Hit then return end
-
-	if tr.HitNoDraw then return end
-
-	if tr.HitSky then return end
-
-	if tr.Entity:IsRagdoll() then return end
-
-	if (tr.Entity:GetMoveType() != MOVETYPE_NONE and
-		tr.Entity:GetMoveType() != MOVETYPE_PUSH and
-		tr.Entity:GetMoveType() != MOVETYPE_VPHYSICS) then return end
-
-	util.DecalEx(Material(util.DecalMaterial(blood_decals[self.BloodColor])), tr.Entity, tr.HitPos, -tr.HitNormal, color_white, 0.1, 0.1)
-
-	if (norm.z > 0) then
-		self:SetDieTime(0)
-
-		local mdl = ClientsideModel(flesh_mdl)
-		mdl:SetPos(tr.HitPos - tr.HitNormal)
-		mdl:SetAngles(self:GetAngles())
-		mdl:SetMaterial(self.Mat:GetName())
-		mdl:SetModelScale(0.4)
-		mdl:SetParent(tr.Entity)
-
-		mdl:EmitSound("Watermelon.Impact", 15, 100, 0.1)
-
-		SafeRemoveEntityDelayed(mdl, math.random(20, 60))
-
-		table.insert(FLESH_PIECES, mdl)
-	elseif (norm.z < 0) then
-		self:SetGravity(vector_origin)
-		self:SetVelocity(vector_origin)
-		self:SetAngleVelocity(angle_zero)
-
-		timer.Simple(math.random(10, 20) * (1 + norm.z), function()
-			self:SetGravity(physenv.GetGravity())
-		end)
-	end
-end
-
-local FLESH_PARTICLES = {}
-
 function EFFECT:Init(data)
 	self.LocalPos = data:GetOrigin()
 	self.LocalAng = data:GetAngles()
@@ -290,42 +228,6 @@ function EFFECT:Init(data)
 
 	self.Emitter = ParticleEmitter(matrix:GetTranslation())
 	self.Emitter3D = ParticleEmitter(matrix:GetTranslation(), true)
-
-	if !old_effects:GetBool() then return end
-
-	local flesh = flesh_mats[self.Blood]
-
-	if flesh then
-		local gravity = physenv.GetGravity()
-
-		for i = 1, math.random(1, 3) do
-			local particle = self.Emitter:Add("", self:GetPos())
-
-			particle:SetAngles(AngleRand())
-			particle:SetAngleVelocity(AngleRand())
-
-			particle:SetLifeTime(0)
-			particle:SetDieTime(15)
-
-			particle:SetStartSize(0)
-			particle:SetEndSize(0)
-
-			particle:SetStartAlpha(0)
-			particle:SetEndAlpha(0)
-
-			particle:SetVelocity(self:GetAngles():Forward() * 150 + VectorRand() * 30)
-			particle:SetGravity(gravity)
-
-			particle:SetCollide(true)
-			particle:SetCollideCallback(FleshPieceCollide)
-			particle:SetBounce(0.2)
-			particle.Parent = self
-			particle.Mat = flesh
-			particle.BloodColor = self.Blood
-
-			table.insert(FLESH_PARTICLES, particle)
-		end
-	end
 end
 
 function EFFECT:Think()
@@ -381,25 +283,6 @@ function EFFECT:Render()
 	
 end
 
-local mdl = ClientsideModel(flesh_mdl)
-mdl:SetNoDraw(true)
-mdl:SetModelScale(0.4)
-
-hook.Add("PostDrawOpaqueRenderables", "GS2DrawFleshParticles", function()
-	for key, piece in pairs(FLESH_PARTICLES) do
-		if (piece:GetDieTime() == 0) then
-			FLESH_PARTICLES[key] = nil
-		else
-			render.MaterialOverride(piece.Mat)
-				mdl:SetRenderOrigin(piece:GetPos())
-				mdl:SetRenderAngles(piece:GetAngles())
-				mdl:SetupBones()
-				mdl:DrawModel()
-			render.MaterialOverride()
-		end
-	end
-end)
-
 hook.Add("PostCleanupMap", "GS2ClearParticles", function()
 	for key, particle in pairs(PARTICLES) do
 		if particle then
@@ -412,9 +295,5 @@ hook.Add("PostCleanupMap", "GS2ClearParticles", function()
 			effect:StopEmissionAndDestroyImmediately()
 		end
 		PEFFECTS[key] = nil
-	end
-	for key, piece in pairs(FLESH_PIECES) do
-		SafeRemoveEntity(piece)
-		FLESH_PIECES[key] = nil
 	end
 end)

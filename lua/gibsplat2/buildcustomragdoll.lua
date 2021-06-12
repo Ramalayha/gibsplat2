@@ -401,12 +401,15 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 				local min, max = phys:GetAABB()
 				
 				local pos = phys:LocalToWorld((min + max) / 2)	
-				local EF = EffectData()				
+				local EF = EffectData()			
 					EF:SetOrigin(pos)
-					EF:SetColor(blood_color)						
-				for i = 1, 5 do
-					util.Effect("BloodImpact", EF)
-				end			
+					EF:SetAngles(ang)
+					EF:SetColor(blood_color)
+					EF:SetStart(max - (min + max) / 2)
+					EF:SetMagnitude(min:Distance(max) * 3)	
+					EF:SetNormal(vel:GetNormal())	
+					EF:SetScale(vel:Length())	
+				util.Effect("gs2_explode", EF)					
 			end	
 				
 			phys:SetContents(CONTENTS_EMPTY)
@@ -636,6 +639,7 @@ function ENTITY:MakeCustomRagdoll()
 				limb:SetTargetBone(part_info.child)
 				limb:Spawn()
 				limb:SetLightingOriginEntity(self.GS2LimbRelays[part_info.child])
+
 				if IsValid(self.GS2Player) then
 					limb:SetPlayerColor(self.GS2Player:GetPlayerColor())
 				end
@@ -681,7 +685,7 @@ function ENTITY:MakeCustomRagdoll()
 					EF:SetHitBox(bone)
 					EF:SetColor(blood_color)
 					EF:SetScale(phys_child:GetVolume() / 300)
-					util.Effect("gs2_bloodspray", EF)
+					--util.Effect("gs2_bloodspray", EF)
 				end
 			end
 
@@ -716,7 +720,7 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetHitBox(self:TranslatePhysBoneToBone(part_info.parent))
 				EF:SetColor(blood_color)
 				EF:SetScale(phys_parent:GetVolume() / 300)
-				util.Effect("gs2_bloodspray", EF)
+				--util.Effect("gs2_bloodspray", EF)
 
 				--RestorePose(self)
 			end
@@ -737,7 +741,7 @@ function ENTITY:MakeCustomRagdoll()
 	
 	local limb = ents_Create("gs2_limb")
 	limb:SetBody(self)					
-	limb:SetTargetBone(0)			
+	limb:SetTargetBone(0)	
 	limb:Spawn()
 
 	if IsValid(self.GS2Player) then

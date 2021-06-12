@@ -280,10 +280,10 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 					EF:SetHitBox(ent:TranslatePhysBoneToBone(phys_bone))
 					EF:SetColor(blood_color)
 					EF:SetScale(0.1)
-					util.Effect("gs2_bloodspray", EF)
+					--util.Effect("gs2_bloodspray", EF)
 
 					EF:SetOrigin(hitpos)
-					util.Effect("BloodImpact", EF)
+					--util.Effect("BloodImpact", EF)
 				end
 			end				
 		end
