@@ -139,6 +139,15 @@ function GetDecalMesh(input, pos, ang, w, h, scale)
 	W2L:Rotate(ang)
 	W2L:Invert()
 
+	if !input.vertexes then
+		input.vertexes = {}
+		for _, vert in ipairs(tris_in) do
+			if !table.HasValue(input.vertexes, vert) then
+				table.insert(input.vertexes, vert)
+			end
+		end
+	end
+
 	for _, vert in ipairs(input.vertexes) do
 		vert.lpos = nil	
 		vert.oldu = vert.oldu or vert.u

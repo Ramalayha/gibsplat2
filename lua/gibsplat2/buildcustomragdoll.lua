@@ -685,7 +685,7 @@ function ENTITY:MakeCustomRagdoll()
 					EF:SetHitBox(bone)
 					EF:SetColor(blood_color)
 					EF:SetScale(phys_child:GetVolume() / 300)
-					--util.Effect("gs2_bloodspray", EF)
+					util.Effect("gs2_bloodspray", EF)
 				end
 			end
 
@@ -720,7 +720,7 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetHitBox(self:TranslatePhysBoneToBone(part_info.parent))
 				EF:SetColor(blood_color)
 				EF:SetScale(phys_parent:GetVolume() / 300)
-				--util.Effect("gs2_bloodspray", EF)
+				util.Effect("gs2_bloodspray", EF)
 
 				--RestorePose(self)
 			end

@@ -669,7 +669,7 @@ if CLIENT then
 	end)
 
 	hook.Add("NetworkEntityCreated", "GS2Gibs", function(ent)
-		if !enabled:GetBool() then return end
+		if (!enabled:GetBool() or !IsValid(ent)) then return end
 		if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 		local mdl = ent:GetModel()
 		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then

@@ -61,7 +61,7 @@ local function FleshSlideThink(self)
 		}
 		table.insert(BLOOD_STRIPES, self.BloodStripe)
 
-		local color = blood_colors[self.Parent.Blood]
+		local color = blood_colors[self.BloodColor]
 
 		if color then
 			self.BloodStripe.color = color			
@@ -83,7 +83,7 @@ local function FleshSlideThink(self)
 
 	if tr.Hit then
 		self:SetPos(tr.HitPos)		
-		if (tr.HitNormal.z == 1) then
+		if (tr.HitNormal.z > 0.7) then
 			--resting on flat ground			
 			self.BloodStripe = nil
 			self.HitTime = nil			
@@ -182,7 +182,7 @@ local function FleshPieceCollide(self, pos, norm)
 		tr.Entity:GetMoveType() != MOVETYPE_PUSH and
 		tr.Entity:GetMoveType() != MOVETYPE_VPHYSICS) then return end
 
-	local color = blood_colors[self.Parent.Blood]
+	local color = blood_colors[self.BloodColor]
 
 	if color then		
 		color = Color(unpack(color))
@@ -193,7 +193,8 @@ local function FleshPieceCollide(self, pos, norm)
 	--util.DecalEx(Material(util.DecalMaterial(blood_decals[self.BloodColor])), tr.Entity, tr.HitPos, -tr.HitNormal, color_white, 0.1, 0.1)
 
 	if (norm.z >= 0 and norm.z < 1) then
-		self:SetDieTime(30)
+		local dietime = math.random(20, 60)
+		self:SetDieTime(dietime)
 		self:SetPos(tr.HitPos + tr.HitNormal * 0.1)
 
 		self:SetVelocity(vector_origin)
@@ -204,7 +205,7 @@ local function FleshPieceCollide(self, pos, norm)
 
 		self.Model:EmitSound("Watermelon.Impact", 15, 100, 0.1)
 
-		SafeRemoveEntityDelayed(self.Model, math.random(20, 60))
+		SafeRemoveEntityDelayed(self.Model, dietime)
 	elseif (norm.z < 0) then
 		
 		self:SetVelocity(vector_origin)
@@ -266,7 +267,7 @@ function EFFECT:Init(data)
 			local particle = self.Emitter:Add(smoke_sprites[math.random(1, #smoke_sprites)], offset)
 
 			particle:SetLifeTime(0)
-			particle:SetDieTime(math.Rand(0.5, 1))
+			particle:SetDieTime(math.Rand(0.3, 0.7))
 
 			particle:SetStartSize(math.Rand(size / 3, size / 6))
 			particle:SetEndSize(math.Rand(size / 7, size / 10))
@@ -333,7 +334,7 @@ function EFFECT:Init(data)
 end
 
 function EFFECT:Think()
-	return true
+	return false
 end
 
 
@@ -365,8 +366,9 @@ hook.Add("PostDrawOpaqueRenderables", "GS2DrawFleshParticles", function()
 	end
 end)
 
---local mat = Material("models/flesh")
-local mat = Material("effects/beam001_red")
+local mat_streak = Material("effects/beam001_red")
+
+local mat_drop = Material("effects/blooddrop")
 
 local vec_up = Vector(0, 0, 1)
 
@@ -383,11 +385,13 @@ local mesh_Color			= mesh.Color
 local mesh_AdvanceVertex 	= mesh.AdvanceVertex
 
 hook.Add("PostDrawOpaqueRenderables", "GS2DrawBloodStripes", function()
-	for _, strip in pairs(BLOOD_STRIPES) do
-		render_SetMaterial(mat)
-		mesh_Begin(MATERIAL_QUADS, (#strip - 1))
-
+	for _, strip in pairs(BLOOD_STRIPES) do		
 		local R, G, B, A = unpack(strip.color)
+
+		mat_streak:SetVector("$refracttint", Vector(R / 255, G / 255, B / 255))
+
+		render_SetMaterial(mat_streak)
+		mesh_Begin(MATERIAL_QUADS, (#strip - 1))
 
 		local len = 0
 		for i = 1, #strip - 1 do
