@@ -1,7 +1,0 @@
-"UnlitGeneric"
-{
-	$basetexture "decals/flesh/blood4"
-	$vertexcolor 1
-	$vertexalpha 1
-	$translucent 1
-}

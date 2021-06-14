@@ -136,6 +136,14 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 			end
 			MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
 		end
+		if !norec then		
+			for phys_bone2 = 0, phys_count - 1 do
+				if (phys_bone2 != phys_bone) then
+					SafeYield()	
+					GetPhysGibMeshes(mdl, phys_bone2, true)
+				end
+			end		
+		end
 		if MDL_INDEX[mdl][phys_bone] then
 			THREADS[mdl] = nil
 			GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
