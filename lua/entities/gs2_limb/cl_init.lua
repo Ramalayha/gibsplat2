@@ -16,7 +16,6 @@ local bit_bor 		= bit.bor
 
 local render_SetColorModulation = render.SetColorModulation
 local render_MaterialOverride = render.MaterialOverride
-local render_MaterialOverride = render.MaterialOverride
 local render_SetStencilEnable = render.SetStencilEnable
 local render_ClearStencil = render.ClearStencil
 local render_SetStencilReferenceValue = render.SetStencilReferenceValue
@@ -499,11 +498,9 @@ function ENT:Draw()
 					if bone_parent then
 						local bone_pos, bone_ang = body:GetBonePosition(bone)
 
-						local offset = vector_origin--bone_ang:Up() * 5
-
-						local bone_dir = bone_pos - body:GetBonePosition(bone_parent)
+						local bone_dir = bone_ang:Up() + bone_ang:Right()
 						bone_dir:Normalize()
-						--debugoverlay.Axis(bone_pos, bone_dir:Angle(), 5, 10, true)
+						
 						for _, limb in pairs(body.GS2Limbs) do
 							if !IsValid(limb) then
 								continue
@@ -511,10 +508,9 @@ function ENT:Draw()
 							local limb_phys_bone = limb:GetTargetBone()
 							local limb_bone = body:TranslatePhysBoneToBone(limb_phys_bone)
 
-							--if (limb == self or body:TranslateBoneToPhysBone(body:GetBoneParent(bone)) == limb_phys_bone) then
 							if (limb == self) then
-								limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos - bone_dir * 2 - offset, -bone_dir - offset, 5)
-								--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos - bone_dir * 2 + offset, -bone_dir + offset, 5)
+								limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos - bone_dir * 10, bone_dir, 2)
+								limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos + bone_dir * 10, -bone_dir, 2)
 							else
 								local parent = body:GetBoneParent(bone)
 								repeat
@@ -523,9 +519,14 @@ function ENT:Draw()
 									end
 									parent = body:GetBoneParent(parent)
 								until (parent == -1)
-								if (parent != -1) then
-									limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos + bone_dir * 2 + offset, bone_dir + offset, 5)
-									--limb:ApplyDecal(util.DecalMaterial("BloodSimple"), bone_pos + bone_dir * 2 - offset, bone_dir - offset, 5)						
+								if (parent != -1) then	
+									local bone_pos, bone_ang = body:GetBonePosition(bone_parent)
+
+									local bone_dir = bone_ang:Up() - bone_ang:Right()
+									bone_dir:Normalize()
+
+									limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos - bone_dir * 10, bone_dir, 2)
+									limb:ApplyDecal(util.DecalMaterial(decals[phys_mat]), bone_pos + bone_dir * 10, -bone_dir, 2)
 								end
 							end					
 						end

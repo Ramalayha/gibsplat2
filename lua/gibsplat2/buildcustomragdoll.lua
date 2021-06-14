@@ -591,15 +591,23 @@ function ENTITY:MakeCustomRagdoll()
 
 			local blood_color = blood_colors[phys_child:GetMaterial()]
 
-			local dir = phys_ang:Up() * 3
+			--local dir = phys_ang:Right()
 
 			if (GibEffects and !const_bs.__noblood and blood_color) then
+				local decal = decals[phys_mat]
+
+				if decal then
+					for i = 1, 3 do
+						local dir = VectorRand() * 10
+						--util.Decal(decal, phys_pos, phys_pos + dir, self)
+						--util.Decal(decal, phys_pos, phys_pos - dir, self)
+					end							
+				end
+
 				local EF = EffectData()
 				EF:SetOrigin(phys_pos)
 				EF:SetColor(blood_color)
 
-				util.Decal("Blood", phys_pos + dir, phys_pos - dir)
-				util.Decal("Blood", phys_pos - dir, phys_pos + dir)
 				for i = 1, 5 do
 					util.Effect("BloodImpact", EF)
 				end			
@@ -782,13 +790,13 @@ function ENTITY:MakeCustomRagdoll()
 				local blood_color = blood_colors[phys:GetMaterial()]		
 				if self:GS2IsDismembered(phys_bone) then
 					if decals[phys_mat] then
-						util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
-						net.Start("GS2ApplyDecal")
+						--util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
+						/*net.Start("GS2ApplyDecal")
 							net.WriteEntity(self)
 							net.WriteString(phys_mat)
-							net.WriteVector(data.HitPos)
-							net.WriteVector(-data.HitNormal)
-						net.Broadcast()
+							net.WriteVector(data.HitPos + data.HitNormal)
+							net.WriteVector(data.HitNormal)
+						net.Broadcast()*/
 					end
 					if blood_color then
 						local EF = EffectData()
@@ -814,13 +822,13 @@ function ENTITY:MakeCustomRagdoll()
 					end
 					if do_effects then
 						if decals[phys_mat] then
-							util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
-							net.Start("GS2ApplyDecal")
+							--util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
+							/*net.Start("GS2ApplyDecal")
 								net.WriteEntity(self)
 								net.WriteString(decals[phys_mat])
 								net.WriteVector(data.HitPos)
 								net.WriteNormal(-data.HitNormal)
-							net.Broadcast()
+							net.Broadcast()*/
 						end
 						if blood_color then
 							local EF = EffectData()

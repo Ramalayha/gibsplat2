@@ -14,6 +14,12 @@ local blood_colors = {
 	[BLOOD_COLOR_GREEN] = {195, 195, 0, 255}
 }
 
+local blood_decals = {
+	[BLOOD_COLOR_RED] = {"Blood", 0.4},
+	[BLOOD_COLOR_YELLOW] = {"YellowBlood", 0.8},
+	[BLOOD_COLOR_GREEN] = {"YellowBlood", 0.8}
+}
+
 local smoke_sprites = {
 	--"effects/blood_puff"
 	"particle/smokesprites_0001",
@@ -42,6 +48,17 @@ local tr = trace.output
 local vec_right = Vector(0, 1, 0)
 
 local function FleshSlideThink(self)
+	if !IsValid(self.Model) then
+		self:SetDieTime(0)
+		return
+	end
+	if (math.random() < 0.0003) then
+		self.Model:EmitSound("Watermelon.Impact", 15, 100, 0.1)
+		self:SetGravity(physenv.GetGravity())
+		self.HitTime = nil
+		self.BloodStripe = nil
+		return
+	end
 	if !self.HitTime then
 		self.HitTime = CurTime()
 
@@ -81,7 +98,7 @@ local function FleshSlideThink(self)
 
 	util.TraceLine(trace)
 
-	if tr.Hit then
+	if (tr.Hit and !tr.HitNoDraw and !tr.HitSky) then
 		self:SetPos(tr.HitPos)		
 		if (tr.HitNormal.z > 0.7) then
 			--resting on flat ground			
@@ -102,7 +119,7 @@ local function FleshSlideThink(self)
 
 		util.TraceLine(trace)
 
-		if (tr.Hit and tr.HitNormal.z != 1) then
+		if (tr.Hit and !tr.HitNoDraw and !tr.HitSky and tr.HitNormal.z != 1) then
 			if (tr.HitNormal == self.HitNormal) then
 				self.BloodStripe[#self.BloodStripe].pos = tr.HitPos
 				self:SetPos(tr.HitPos)
@@ -184,15 +201,18 @@ local function FleshPieceCollide(self, pos, norm)
 
 	local color = blood_colors[self.BloodColor]
 
-	if color then		
-		color = Color(unpack(color))
-		color = color_white
-		util.DecalEx(Material(util.DecalMaterial("Blood")), Entity(0), pos, -tr.HitNormal, color, 0.4, 0.4)
+	if color then
+		local decal = blood_decals[self.BloodColor]		
+		if decal then
+			color = Color(unpack(color))
+			color = color_white
+			util.DecalEx(Material(util.DecalMaterial(decal[1])), Entity(0), pos, -tr.HitNormal, color, decal[2], decal[2])
+		end
 	end
 
 	--util.DecalEx(Material(util.DecalMaterial(blood_decals[self.BloodColor])), tr.Entity, tr.HitPos, -tr.HitNormal, color_white, 0.1, 0.1)
 
-	if (norm.z >= 0 and norm.z < 1) then
+	if (norm.z >= 0 and norm.z < 0.7) then
 		local dietime = math.random(20, 60)
 		self:SetDieTime(dietime)
 		self:SetPos(tr.HitPos + tr.HitNormal * 0.1)
@@ -202,8 +222,6 @@ local function FleshPieceCollide(self, pos, norm)
 		self:SetNextThink(CurTime())
 
 		self.HitNormal = tr.HitNormal
-
-		self.Model:EmitSound("Watermelon.Impact", 15, 100, 0.1)
 
 		SafeRemoveEntityDelayed(self.Model, dietime)
 	elseif (norm.z < 0) then
@@ -221,6 +239,9 @@ local function FleshPieceCollide(self, pos, norm)
 			self:SetGravity(physenv.GetGravity())			
 			self.Model:EmitSound("Watermelon.Impact", 15, 100, 0.1)
 		end)
+	else
+		self.Model:EmitSound("Watermelon.Impact", 15, 100, 0.1)
+		self:SetVelocity(vector_origin)
 	end
 end
 
@@ -317,9 +338,17 @@ function EFFECT:Init(data)
 
 		table.insert(FLESH_PARTICLES, particle)
 
-		particle.Model = ClientsideModel(flesh_mdl)
+		local mdl = ClientsideModel(flesh_mdl)
+
+		particle.Model = mdl
 		particle.Model:SetModelScale(math.Rand(0.4, 1))
 		particle.Model:SetMaterial(self.FleshMat)
+
+		timer.Simple(15, function()
+			if (particle:GetDieTime() == 0) then
+				SafeRemoveEntity(mdl)
+			end
+		end)
 				
 		table.insert(FLESH_PIECES, particle.Model)
 	end
@@ -368,7 +397,7 @@ end)
 
 local mat_streak = Material("effects/beam001_red")
 
-local mat_drop = Material("effects/blooddrop")
+local mat_drop = Material("decals/droplet")
 
 local vec_up = Vector(0, 0, 1)
 
@@ -388,6 +417,10 @@ hook.Add("PostDrawOpaqueRenderables", "GS2DrawBloodStripes", function()
 	for _, strip in pairs(BLOOD_STRIPES) do		
 		local R, G, B, A = unpack(strip.color)
 
+		if (strip.color == blood_colors[BLOOD_COLOR_RED]) then
+			R = R * 2
+		end
+
 		mat_streak:SetVector("$refracttint", Vector(R / 255, G / 255, B / 255))
 
 		render_SetMaterial(mat_streak)
@@ -403,8 +436,8 @@ hook.Add("PostDrawOpaqueRenderables", "GS2DrawBloodStripes", function()
 
 			local len2 = len + p1:Distance(p2)
 
-			local v1 = len / 10
-			local v2 = len2 / 10
+			local v1 = len --/ 30
+			local v2 = len2 --/ 30
 
 			local n = s2.norm
 			local r = n:Cross(vec_up)
@@ -444,6 +477,11 @@ hook.Add("PostDrawOpaqueRenderables", "GS2DrawBloodStripes", function()
 			len = len2
 		end
 		mesh_End()
+
+		local s = strip[#strip]
+
+		--render.SetMaterial(mat_drop)
+		--render.DrawQuadEasy(s.pos, s.norm, width * 2, width * 2, color_white)
 	end
 end)
 
