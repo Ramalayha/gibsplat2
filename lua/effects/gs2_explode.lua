@@ -136,7 +136,7 @@ local function FleshSlideThink(self)
 				end
 			end
 		else
-			if tr.Hit then
+			if (tr.Hit and !tr.HitNoDraw and !tr.HitSky) then
 				--self:SetVelocity(-self.HitNormal)
 				self:SetGravity(physenv.GetGravity())
 				self:SetPos(tr.HitPos)				
@@ -150,7 +150,7 @@ local function FleshSlideThink(self)
 
 				util.TraceLine(trace)
 
-				if tr.Hit then
+				if (tr.Hit and !tr.HitNoDraw and !tr.HitSky) then
 					local pos = util.IntersectRayWithPlane(self:GetPos(), down, tr.HitPos, tr.HitNormal)
 				
 					self:SetPos(pos)						
@@ -331,7 +331,7 @@ function EFFECT:Init(data)
 
 		particle:SetCollide(true)
 		particle:SetCollideCallback(FleshPieceCollide)
-		--particle:SetBounce(0.2)
+		particle:SetBounce(0.1)
 		particle.Parent = self
 		particle.FleshMat = self.FleshMat
 		particle.BloodColor = self.Blood

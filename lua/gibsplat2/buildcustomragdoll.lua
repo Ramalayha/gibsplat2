@@ -791,12 +791,12 @@ function ENTITY:MakeCustomRagdoll()
 				if self:GS2IsDismembered(phys_bone) then
 					if decals[phys_mat] then
 						--util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
-						/*net.Start("GS2ApplyDecal")
+						net.Start("GS2ApplyDecal")
 							net.WriteEntity(self)
 							net.WriteString(phys_mat)
 							net.WriteVector(data.HitPos + data.HitNormal)
 							net.WriteVector(data.HitNormal)
-						net.Broadcast()*/
+						net.Broadcast()
 					end
 					if blood_color then
 						local EF = EffectData()
@@ -823,12 +823,12 @@ function ENTITY:MakeCustomRagdoll()
 					if do_effects then
 						if decals[phys_mat] then
 							--util.Decal(decals[phys_mat], data.HitPos + data.HitNormal, data.HitPos - data.HitNormal, self)
-							/*net.Start("GS2ApplyDecal")
+							net.Start("GS2ApplyDecal")
 								net.WriteEntity(self)
 								net.WriteString(decals[phys_mat])
 								net.WriteVector(data.HitPos)
 								net.WriteNormal(-data.HitNormal)
-							net.Broadcast()*/
+							net.Broadcast()
 						end
 						if blood_color then
 							local EF = EffectData()
