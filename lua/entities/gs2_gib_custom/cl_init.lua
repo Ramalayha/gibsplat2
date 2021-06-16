@@ -34,9 +34,6 @@ end
 
 function ENT:Draw()
 	self:DrawModel()
-	if (self:EntIndex() == -1 and self.LastSim and self.LastSim + self.LifeTime:GetFloat() < CurTime()) then
-		SafeRemoveEntityDelayed(self, 0)
-	end
 end
 
 function ENT:MakeDecal(mat, ent, pos, norm, rad)

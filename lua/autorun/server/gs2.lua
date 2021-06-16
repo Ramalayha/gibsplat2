@@ -13,23 +13,3 @@ AddCSLuaFile("gibsplat2/clipmesh.lua")
 AddCSLuaFile("gibsplat2/filesystem.lua")
 AddCSLuaFile("gibsplat2/mesh_util.lua")
 AddCSLuaFile("autorun/client/gs2_menu.lua")
-
---[[local function AddFolder(path)
-	local files, folders = file.Find(path, "GAME")
-	for _, file_name in pairs(files) do		
-		resource.AddSingleFile(path:sub(0, -2)..file_name)
-	end
-	for _, folder in pairs(folders) do
-		AddFolder(path:sub(0, -2)..folder.."/*")
-	end
-end
-
-AddFolder("models/gibsplat2/*")
-AddFolder("materials/models/gibsplat2/*")
-AddFolder("materials/decals/alienflesh/*")
-
-resource.AddFile("materials/models/alienflesh.vmt")
-resource.AddFile("materials/models/zombieflesh.vmt")
-resource.AddFile("materials/models/antlion.vmt")
-resource.AddSingleFile("materials/gibsplat2/skeletons.vmt")
-resource.AddSingleFile("materials/gibsplat2/gibs.vmt")]]

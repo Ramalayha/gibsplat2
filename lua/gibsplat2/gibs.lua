@@ -383,7 +383,12 @@ if CLIENT then
 		if !cl_gibs:GetBool() then return end
 		local ent = net.ReadEntity()
 		if IsValid(ent) then
-			CreateGibs(ent, net.ReadInt(32), net.ReadVector(), net.ReadVector())
+			local phys_bone = net.ReadInt(32)
+			local vel = net.ReadVector()
+			local ang_vel = net.ReadVector()
+			local blood_color = net.ReadInt(8)
+
+			CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 		end
 	end)
 end
@@ -424,6 +429,7 @@ function CreateGibs(ent, phys_bone, vel, ang_vel, blood_color)
 				net.WriteInt(phys_bone, 32)
 				net.WriteVector(vel)
 				net.WriteVector(ang_vel)
+				net.WriteInt(blood_color, 8)
 			net.Send(RF)
 			return
 		end
