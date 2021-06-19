@@ -93,14 +93,14 @@ local function IsConnected(mesh, ent, phys_bone)
 	end
 end
 
-local function GetPhysCount(ent)
+--[[local function GetPhysCount(ent)
 	for phys_bone = 0, 23 do --MAX_RAGDOLL_PARTS = 23
 		if (phys_bone != 0 and ent:TranslatePhysBoneToBone(phys_bone) == 0) then
 			return phys_bone
 		end
 	end
 	return -1
-end
+end]]
 
 local MESH_HASH_LOOKUP = {}
 
@@ -115,7 +115,7 @@ function GetSortedMeshHashTable(mdl)
 	local temp = ClientsideRagdoll(mdl)
 	temp:SetupBones()
 
-	for phys_bone = 0, GetPhysCount(temp) - 1 do		
+	for phys_bone = 0, temp:GetPhysicsObjectCount() - 1 do		
 		for bg_num = 0, temp:GetNumBodyGroups() - 1 do
 			--Loop backwards so we end up reset to 0
 			for bg_val = temp:GetBodygroupCount(bg_num) - 1, 0, -1 do

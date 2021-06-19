@@ -694,6 +694,8 @@ if CLIENT then
 		end		
 	end)
 
+	local FLESH_PIECES
+
 	local function RemoveGibs()
 		for _, gib in ipairs(ents_GetAll()) do			
 			if gib:GetClass():find("^gs2_gib") then
@@ -703,6 +705,23 @@ if CLIENT then
 			end
 		end
 		table.Empty(G_GIBS)
+
+		if !FLESH_PIECES then			
+			for _, eff in pairs(effects.GetList()) do
+				if (eff.Folder == "effects/gs2_explode") then
+					local _, f = debug.getupvalue(eff.Init, 7)					
+					FLESH_PIECES = f
+					break
+				end
+			end		
+		end
+
+		if FLESH_PIECES then
+			for key, piece in pairs(FLESH_PIECES) do
+				SafeRemoveEntity(piece)
+				FLESH_PIECES[key] = nil
+			end
+		end
 	end
 
 	hook.Add("PostCleanupMap", HOOK_NAME, RemoveGibs)
