@@ -461,7 +461,11 @@ function ENT:Draw()
 		end
 
 		if !self.HasDecals then
+			local phys_mat = body:GetNWString("GS2PhysMat", "")
+			if (phys_mat == "") then return end
+
 			self.HasDecals = true
+
 			if body.GS2BulletHoles then
 				if self.GS2RenderMeshes then
 					local count = 0
@@ -487,8 +491,8 @@ function ENT:Draw()
 				end	
 			end
 			local phys_bone = self:GetTargetBone()
-			local phys_mat = body:GetNWString("GS2PhysMat")
-			if (phys_mat and decals[phys_mat]) then
+			
+			if decals[phys_mat] then
 				if (phys_bone != 0) then
 
 					local bone = body:TranslatePhysBoneToBone(phys_bone)
