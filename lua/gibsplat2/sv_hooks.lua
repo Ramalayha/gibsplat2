@@ -1,3 +1,5 @@
+include("extensions.lua")
+
 util.AddNetworkString("GS2Dissolve")
 
 local enabled 			= GetConVar("gs2_enabled")
@@ -18,7 +20,7 @@ local HOOK_NAME = "GibSplat2"
 local var_funcs = {}
 
 for key, value in pairs(FindMetaTable("CTakeDamageInfo")) do
-	if key:find("^Get") then
+	if (key:find("^Get") and debug.getinfo(value).what == "C") then		
 		table.insert(var_funcs, key:match("^Get(.-)$"))
 	end
 end
@@ -42,11 +44,9 @@ local function GS2CreateEntityRagdoll(ent, doll)
 	doll:MakeCustomRagdoll()
 
 	if ent.__forcegib then 
-		local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib, nil, true)
-		
-		if phys_bone then
-			doll:GS2Gib(phys_bone, false, true)
-		end
+		--local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib, nil, true)
+
+		doll:GS2Gib(ent.__forcegib, false, true)		
 	end
 	if (ent.__lastdmginfovars and ent.__lastdmgtime == CurTime()) then
 		local dmginfo = DamageInfo()
@@ -114,7 +114,8 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 	local dmg_force = dmginfo:GetDamageForce()
 
 	if ent.__gs2custom and ent:IsRagdoll() then
-		local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos, nil, true)
+		--local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos, nil, true)
+		local phys_bone = dmginfo:GetHitPhysBone(ent)
 		if !phys_bone then
 			return
 		end
@@ -297,10 +298,11 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 			ent.__lastdmgtime = CurTime()
 		elseif IsKindaBullet(dmginfo) then
 			if ShouldGib(dmginfo) then
-				ent.__forcegib = dmg_pos
+				ent.__forcegib = dmginfo:GetHitPhysBone(ent)
 			else
 				ent.GS2Decals = ent.GS2Decals or {}
-				local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos)
+				--local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos)
+				local phys_bone = dmginfo:GetHitPhysBone(ent)
 				if (phys_bone) then
 					ent.GS2Decals[phys_bone] = ent.GS2Decals[phys_bone] or {}
 					table.insert(ent.GS2Decals[phys_bone], dmg_pos)

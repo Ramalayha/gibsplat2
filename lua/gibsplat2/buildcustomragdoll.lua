@@ -79,7 +79,7 @@ local RAGDOLL_POSE = {}
 
 local RESTORE_POSE = {}
 
-function PutInRagdollPose(self)
+local function PutInRagdollPose(self)
 	local mdl = self:GetModel()
 	local pose = RAGDOLL_POSE[mdl]
 	if !pose then
@@ -455,7 +455,7 @@ function ENTITY:MakeCustomRagdoll()
 		return
 	end
 
-	self:SetCustomCollisionCheck(true)
+	self:SetNotSolid(true)
 
 	local phys_mat = phys:GetMaterial()
 	self:SetNWString("GS2PhysMat", phys_mat)
@@ -878,6 +878,10 @@ function ENTITY:MakeCustomRagdoll()
 			end
 		end)
 	end
+
+	self:SetNotSolid(false)
+
+	self:SetCustomCollisionCheck(true)
 
 	self.__gs2custom = true
 end

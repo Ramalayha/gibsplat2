@@ -43,7 +43,11 @@ function ENT:Initialize()
 	self:Think() --Forces think once for clientside only gibs
 end
 
-function ENT:Think()
+local function SimpleDraw(self)
+	self:DrawModel()
+end
+
+function ENT:Draw()
 	local body = self:GetBody()
 	if (self.MeshData.Mesh == dummy_mesh) then
 		local gib_index = self:GetGibIndex()
@@ -57,17 +61,16 @@ function ENT:Think()
 			end
 		end	
 	end
-	if (self.MeshData.Material == mat_default) then
+	if (self.MeshData.Material == mat_default and IsValid(body)) then
 		local phys_mat = body:GetNWString("GS2PhysMat", "")
 		if (phys_mat != "") then
 			MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/gibsplat2/flesh/"..phys_mat)
 			self.MeshData.Material = MATERIAL_CACHE[phys_mat]
 		end
 	end
-end
-
-function ENT:Draw()
-	self:DrawModel()
+	if (self.MeshData.Mesh != dummy_mesh and self.MeshData.Material != mat_default) then
+		self.Draw = SimpleDraw
+	end
 end
 
 function ENT:GetRenderMesh()
