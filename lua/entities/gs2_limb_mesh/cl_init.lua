@@ -221,7 +221,7 @@ function ENT:AddDecal(mesh, mat, pos, norm, size)
 
 --mat = Material("models/wireframe")
 	local mesh_decal, tris = GetDecalMesh(mesh, pos, norm, size, size, scale)
-	if mesh_decal then		
+	if IsValid(mesh_decal) then		
 		local decal = {
 			Mesh = mesh_decal,
 			Material = mat

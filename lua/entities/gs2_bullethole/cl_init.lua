@@ -75,8 +75,10 @@ function ENT:Think()
 		if !IsValid(body) then
 			return
 		end
-		for _, limb in pairs(body.GS2Limbs) do
-			self:ApplyDecal(limb)
+		if body.GS2Limbs then
+			for _, limb in pairs(body.GS2Limbs) do
+				self:ApplyDecal(limb)
+			end
 		end
 	end
 end
