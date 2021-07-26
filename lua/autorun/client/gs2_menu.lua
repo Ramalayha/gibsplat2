@@ -73,7 +73,7 @@ local function PopulateGS2Menu(pnl)
     pnl:ControlHelp("Controls if gibs should be created server-side.")
 
     pnl:CheckBox("Clientside Gibs", "gs2_gib_cl")
-    pnl:ControlHelp("Controls if gibs should be created client-side (if server-side gibs are on this does nothing)")
+    pnl:ControlHelp("Controls if gibs should be created client-side.")
 
     --this is broken :(
     --pnl:CheckBox("Less Limbs", "gs2_less_limbs")
@@ -84,7 +84,7 @@ local function PopulateGS2Menu(pnl)
 
     --int options
 
-    --pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
+    pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
     pnl:ControlHelp("Maximum number of decals to transfer to a mesh part.")
 
     pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 512)

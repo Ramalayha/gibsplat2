@@ -78,9 +78,9 @@ local MESH_CACHE = {}
 
 local function GetModelMeshesCached(mdl, bg_mask)
 	if (!MESH_CACHE[mdl] or !MESH_CACHE[mdl][bg_mask]) then
-		SetMulti(MESH_CACHE, mdl, bg_mask, util.GetModelMeshes(mdl, 0, bg_mask) or {})
+		SetMulti(MESH_CACHE, mdl, bg_mask, {util.GetModelMeshes(mdl, 0, bg_mask)})
 	end
-	return MESH_CACHE[mdl][bg_mask]
+	return unpack(MESH_CACHE[mdl][bg_mask])
 end
 
 local function IsConnected(mesh, ent, phys_bone)
@@ -106,14 +106,18 @@ local MESH_HASH_LOOKUP = {}
 
 local MDL_LOOKUP = {}
 
+local BONE_MATRIXES = {}
+
 function GetSortedMeshHashTable(mdl)
 	if MDL_LOOKUP[mdl] then
-		return MDL_LOOKUP[mdl], MESH_HASH_LOOKUP
+		return MDL_LOOKUP[mdl], MESH_HASH_LOOKUP, BONE_MATRIXES[mdl]
 	end
 
 	local ret = {}
 	local temp = ClientsideRagdoll(mdl)
 	temp:SetupBones()
+
+	local bone_matrixes
 
 	for phys_bone = 0, temp:GetPhysicsObjectCount() - 1 do		
 		for bg_num = 0, temp:GetNumBodyGroups() - 1 do
@@ -121,7 +125,8 @@ function GetSortedMeshHashTable(mdl)
 			for bg_val = temp:GetBodygroupCount(bg_num) - 1, 0, -1 do
 				temp:SetBodygroup(bg_num, bg_val) 
 				local bg_mask = util.GetBodygroupMask(temp)
-				local meshes = GetModelMeshesCached(mdl, bg_mask)
+				local meshes, matrixes = GetModelMeshesCached(mdl, bg_mask)
+				bone_matrixes = matrixes
 				for _, mesh in pairs(meshes) do
 					local hash = MESH2HASH(mesh, temp, phys_bone)
 					if IsConnected(mesh, temp, phys_bone) then
@@ -140,6 +145,7 @@ function GetSortedMeshHashTable(mdl)
 	temp:Remove()
 
 	MDL_LOOKUP[mdl] = ret
+	BONE_MATRIXES[mdl] = bone_matrixes
 
-	return ret, MESH_HASH_LOOKUP
+	return ret, MESH_HASH_LOOKUP, bone_matrixes
 end

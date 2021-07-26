@@ -84,38 +84,25 @@ local function PutInRagdollPose(self)
 	local pose = RAGDOLL_POSE[mdl]
 	if !pose then
 		pose = {}
-		local temp = ents_Create("prop_physics")
-		temp:SetModel(mdl)	
-		temp:Spawn()
-		temp:ResetSequence(-2)
-		temp:SetCycle(0)
-
-		for pose_param = 0, temp:GetNumPoseParameters() - 1 do
-			local min, max = temp:GetPoseParameterRange(pose_param)
-			temp:SetPoseParameter(temp:GetPoseParameterName(pose_param), (min + max) / 2)
-		end		
-
-		--This forces temp to setup its bone
-		local meme = ents_Create("prop_physics")
-		meme:FollowBone(temp, 0)
-		meme:Remove()
-						
+		
+		local _, bone_info = util.GetModelMeshes(mdl)
+				
 		for phys_bone = 0, self:GetPhysicsObjectCount() - 1 do
-			local bone = temp:TranslatePhysBoneToBone(phys_bone)
-			local matrix = temp:GetBoneMatrix(bone)
-			local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--temp:GetBonePosition(bone)
-			
+			local bone = self:TranslatePhysBoneToBone(phys_bone)
+			local info = bone_info[bone]
+
+			local matrix = info.matrix:GetInverse()
+
 			pose[phys_bone] = {
-				pos = pos,
-				ang = ang
-			}
+				pos = matrix:GetTranslation(),
+				ang = matrix:GetAngles()
+			}			
 		end
 
-		temp:Remove()
 		RAGDOLL_POSE[mdl] = pose
 	end
 
-	for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
+	/*for phys_bone = 0, self:GetPhysicsObjectCount()-1 do
 		local posang = pose[phys_bone]
 		if !posang then
 			RAGDOLL_POSE[mdl] = nil
@@ -129,7 +116,7 @@ local function PutInRagdollPose(self)
 		}
 		phys:SetPos(posang.pos)
 		phys:SetAngles(posang.ang)
-	end
+	end*/
 end
 
 local function RestorePose(self)
@@ -430,18 +417,16 @@ function ENTITY:GS2Gib(phys_bone, no_gibs, forcegib)
 		end
 
 		local mdl = self:GetModel()
+	
+		local CONST_INFO = GetModelConstraintInfo(mdl)
 
-		if !pull_limb:GetBool() then			
-			local CONST_INFO = GetModelConstraintInfo(mdl)
-
-			for key, const in ipairs(CONST_INFO) do
-				if (const.child == phys_bone or const.parent == phys_bone) then
-					self:RemoveInternalConstraint(key)
-					SafeRemoveEntity(self.GS2Joints[const.child])					
-				end
+		for key, const in ipairs(CONST_INFO) do
+			if (const.child == phys_bone or const.parent == phys_bone) then
+				self:RemoveInternalConstraint(key)
+				SafeRemoveEntity(self.GS2Joints[const.child])					
 			end
 		end
-		
+				
 		self:CollisionRulesChanged()
 		self:EnableCustomCollisions(true)
 	end)
@@ -456,6 +441,7 @@ function ENTITY:MakeCustomRagdoll()
 	end
 
 	self:SetNotSolid(true)
+	PutInRagdollPose(self)
 
 	local phys_mat = phys:GetMaterial()
 	self:SetNWString("GS2PhysMat", phys_mat)
@@ -472,10 +458,6 @@ function ENTITY:MakeCustomRagdoll()
 		self.GS2LimbRelays[phys_bone] = relay		
 	end
 
-	PutInRagdollPose(self)
-	if pull_limb:GetBool() then
-		self:RemoveInternalConstraint()
-	end
 	self:DrawShadow(false)
 	
 	self.GS2Joints = {}
@@ -499,52 +481,38 @@ function ENTITY:MakeCustomRagdoll()
 	SetPhysConstraintSystem(const_system)
 	
 	local should_activate = pull_limb:GetBool()
-
+ 
 	for _, part_info in pairs(CONST_INFO) do
 		local phys_parent = self:GetPhysicsObjectNum(part_info.parent)
 		local phys_child  = self:GetPhysicsObjectNum(part_info.child)
 		
-		local const_bs = ents_Create("phys_ballsocket")
-		const_bs:SetPos(phys_child:GetPos())
-		const_bs:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_bs:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 0.5 * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
+		local forcelimit = math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * 0.5 * math_max(phys_parent:GetMass(), phys_child:GetMass())))
+		local torquelimit = forcelimit * 3
+
+		local const_bs = ents_Create("gs2_stress_detector")
+		const_bs:SetTarget(self)
+		const_bs:SetPhysBones(part_info.parent, part_info.child)
+		const_bs:SetForceLimit(forcelimit * 0.5)
+		const_bs:SetTorqueLimit(torquelimit * 0.5)
 		const_bs:Spawn()
-		if should_activate then
-			const_bs:Activate()
-		end
-		
-		local const_rc = ents_Create("phys_ragdollconstraint")
-		const_rc:SetPos(phys_child:GetPos())
-		const_rc:SetAngles(phys_child:GetAngles())
-		const_rc:SetPhysConstraintObjects(phys_parent, phys_child)
-		const_rc:SetKeyValue("spawnflags", 2) --free movement, let const_bs keep them together
-		for key, value in pairs(part_info) do
-			const_rc:SetKeyValue(key, value)
-		end
-		const_rc:Spawn()
-		if should_activate then
-			const_rc:Activate()
-		end
 
 		local body_type = GS2GetBodyType(mdl)
 		local skel_parts = skeleton_parts[body_type]
-		local bone_child = self:TranslatePhysBoneToBone(part_info.child)		
+		local bone_child = self:TranslatePhysBoneToBone(part_info.child)	
 		local const_bs2
-		if (skel_parts and skel_parts[self:GetBoneName(bone_child):lower()]) then			
-			const_bs2 = ents_Create("phys_ballsocket") 
-			const_bs2:SetPos(phys_child:GetPos())
-			const_bs2:SetPhysConstraintObjects(phys_parent, phys_child)
-			const_bs2:SetKeyValue("forcelimit", math_min(max_strength:GetFloat(), math_max(min_strength:GetFloat(), strength_mul:GetFloat() * math_max(phys_parent:GetMass(), phys_child:GetMass()))))
+		if (should_activate and skel_parts and skel_parts[self:GetBoneName(bone_child):lower()]) then
+			const_bs2 = ents_Create("gs2_stress_detector")
+			const_bs2:SetTarget(self)
+			const_bs2:SetPhysBones(part_info.parent, part_info.child)
+			const_bs2:SetForceLimit(forcelimit)
+			const_bs2:SetTorqueLimit(torquelimit)
 			const_bs2:Spawn()
-			if should_activate then
-				const_bs2:Activate()
-			end
 
 			local const_rc2 = ents_Create("phys_ragdollconstraint")
 			const_rc2:SetPos(phys_child:GetPos())
 			const_rc2:SetAngles(phys_child:GetAngles())
 			const_rc2:SetPhysConstraintObjects(phys_parent, phys_child)
-			const_rc2:SetKeyValue("spawnflags", 2) --free movement, let const_bs2 keep them together
+			--const_rc2:SetKeyValue("spawnflags", 2) --free movement, let const_bs2 keep them together
 			for key, value in pairs(part_info) do
 				if key:find("^[xyz]min$") then
 					const_rc2:SetKeyValue(key, value - 15)
@@ -569,7 +537,10 @@ function ENTITY:MakeCustomRagdoll()
 				end
 				SafeRemoveEntity(const_bs)
 				SafeRemoveEntity(const_rc2)				
-			end)	
+			end)
+		else
+			const_bs:SetForceLimit(forcelimit)
+			const_bs:SetTorqueLimit(torquelimit)	
 		end
 				
 		const_bs:CallOnRemove("GS2Dismember", function()
@@ -729,8 +700,6 @@ function ENTITY:MakeCustomRagdoll()
 				EF:SetColor(blood_color)
 				EF:SetScale(phys_parent:GetVolume() / 300)
 				util.Effect("gs2_bloodspray", EF)
-
-				--RestorePose(self)
 			end
 
 			for _, limb in pairs(self.GS2Limbs) do
@@ -760,8 +729,6 @@ function ENTITY:MakeCustomRagdoll()
 	self.GS2Limbs = {[0] = limb}
 
 	SetPhysConstraintSystem(NULL)
-
-	RestorePose(self)
 
 	if GibEffects then
 		self:AddCallback("PhysicsCollide", function(self, data)

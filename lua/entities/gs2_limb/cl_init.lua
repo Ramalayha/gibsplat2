@@ -281,6 +281,8 @@ end
 
 local dummy_tbl = {}
 
+local SDV = Vector(1, 1, 1) * STUMP_DEPTH_FACTOR
+
 function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 	local body = self:GetBody()
 	
@@ -301,16 +303,10 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 		if (parent_bone != -1) then
 			local bone_matrix = dummy:GetBoneMatrix(parent_bone)
 
-			local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
-
 			local bone_override_matrix = dummy:GetBoneMatrix(bone_override)
 
-			local bone_override_pos, bone_override_ang = bone_override_matrix:GetTranslation(), bone_override_matrix:GetAngles()
-
-			bone_pos, bone_ang = WorldToLocal(bone_pos, bone_ang, bone_override_pos, bone_override_ang)
-
-			local matrix = Matrix()
-			matrix:Translate(bone_pos * STUMP_DEPTH_FACTOR)
+			local matrix = bone_override_matrix:GetInverse() * bone_matrix
+			matrix:Scale(SDV)
 
 			self.GS2BoneList[bone] = {
 				parent = bone_override,

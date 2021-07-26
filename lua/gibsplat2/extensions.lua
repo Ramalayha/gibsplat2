@@ -27,7 +27,7 @@ function DMGINFO:GetHitPhysBone(ent)
 		local bone = ent:TranslatePhysBoneToBone(phys_bone)
 		local pos, ang = ent:GetBonePosition(bone)
 		
-		if coll:TraceBox(pos, ang, ray_start, ray_end, vec_min, vec_max) then
+		if (pos and coll:TraceBox(pos, ang, ray_start, ray_end, vec_min, vec_max)) then
 			return phys_bone
 		end
 	end

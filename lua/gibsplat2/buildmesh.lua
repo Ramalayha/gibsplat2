@@ -43,31 +43,11 @@ function GetBoneMeshes(ent, phys_bone, norec)
 		while (coroutine.status(THREADS[mdl]) != "dead") do 
 			coroutine.resume(THREADS[mdl]) --force it to finish
 		end		
-	end	
+	end
 
-	if !MDL_INDEX[mdl] then			
+	if !MDL_INDEX[mdl] then	print"yo"		
 		local BONES = {}
-		local poser = ents.CreateClientProp(mdl)
-		poser:ResetSequence(-2)
-		poser:SetCycle(0)
-
-		for pose_param = 0, poser:GetNumPoseParameters() - 1 do
-			local name = poser:GetPoseParameterName(pose_param)
-			local min, max = poser:GetPoseParameterRange(pose_param)
-			if !name:find("^body_") then
-				poser:SetPoseParameter(name, (min + max) / 2)
-			end
-		end
-
-		poser:SetupBones()
-		poser:SetNoDraw(true)
-
-		for bone = 0, poser:GetBoneCount() - 1 do
-			BONES[bone] = poser:GetBoneMatrix(bone)
-		end
-
-		SafeRemoveEntityDelayed(poser, 0)
-	
+			
 		local temp = ClientsideRagdoll(mdl)
 		temp:SetupBones()
 		temp:SetNoDraw(true)
@@ -96,7 +76,11 @@ function GetBoneMeshes(ent, phys_bone, norec)
 
 		temp:Remove()
 
-		local hash_tbl, mesh_lookup = GetSortedMeshHashTable(mdl)
+		local hash_tbl, mesh_lookup, bone_matrixes = GetSortedMeshHashTable(mdl)
+
+		for bone, matrix_info in pairs(bone_matrixes) do
+			BONES[bone] = matrix_info.matrix
+		end
 
 		local new_meshes = {}
 
@@ -123,7 +107,7 @@ function GetBoneMeshes(ent, phys_bone, norec)
 			end 
 			local bone = table.KeyFromValue(BONE2PBONE, phys_bone)
 			local bone_matrix = BONES[bone]
-			local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
+			--local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
 
 			for bg_num, meshes in pairs(hash_tbl[phys_bone]) do
 				for bg_val, data in pairs(meshes) do		
@@ -167,7 +151,8 @@ function GetBoneMeshes(ent, phys_bone, norec)
 						
 						for vert_index, vert in pairs(verts) do
 							vert._pos = vert._pos or vert.pos
-							vert.pos = WorldToLocal(vert._pos, ang_zero, bone_pos, bone_ang)
+							--vert.pos = WorldToLocal(vert._pos, ang_zero, bone_pos, bone_ang)
+							vert.pos = bone_matrix * vert._pos
 							
 							vert.is_conn = nil
 							vert.is_strong = nil
@@ -269,14 +254,16 @@ function GetBoneMeshes(ent, phys_bone, norec)
 											local parent_pos = parent_matrix:GetTranslation()
 											local parent_ang = parent_matrix:GetAngles()
 
-											local lpos = WorldToLocal(current_pos, current_ang, bone_pos, bone_ang)
+											--local lpos = WorldToLocal(current_pos, current_ang, bone_pos, bone_ang)
+											local lpos = bone_matrix * current_pos
 
-											local lpos2 = WorldToLocal(parent_pos, parent_ang, bone_pos, bone_ang)
+											--local lpos2 = WorldToLocal(parent_pos, parent_ang, bone_pos, bone_ang)
+											local lpos2 = bone_matrix * parent_pos
 
-											vert.pos = vert.pos + (lpos - vert.pos) * weight.weight * 0.7
-											vert.pos = vert.pos + (lpos2 - vert.pos) * weight.weight * 0.3
+											vert.pos:Add((lpos - vert.pos) * weight.weight * 0.7)
+											vert.pos:Add((lpos2 - vert.pos) * weight.weight * 0.3)
 										else
-											vert.pos = vert.pos * (1 - weight.weight)
+											vert.pos:Mul(1 - weight.weight)
 										end
 									end
 								end
@@ -292,23 +279,26 @@ function GetBoneMeshes(ent, phys_bone, norec)
 											if (BONE2PBONE[parent_bone] == phys_bone) then
 												local weight_matrix = BONES[weight.bone]
 												local weight_pos = weight_matrix:GetTranslation()
-												local weight_ang = weight_matrix:GetAngles()
+												--local weight_ang = weight_matrix:GetAngles()
 
 												local parent_matrix = BONES[parent_bone]
-												local parent_pos = parent_matrix:GetTranslation()
-												local parent_ang = parent_matrix:GetAngles()
+												--local parent_pos = parent_matrix:GetTranslation()
+												--local parent_ang = parent_matrix:GetAngles()
 
-												local lpos = WorldToLocal(weight_pos, weight_ang, parent_pos, parent_ang)
+												--local lpos = WorldToLocal(weight_pos, weight_ang, parent_pos, parent_ang)
+												local lpos = parent_matrix * weight_pos
 
-												parent_pos = LocalToWorld(lpos * 0.7, ang_zero, parent_pos, parent_ang)
+												--parent_pos = LocalToWorld(lpos * 0.7, ang_zero, parent_pos, parent_ang)
+												local parent_pos = parent_matrix:GetInverse() * (lpos * 0.7)
 
-												vert_pos = vert_pos + WorldToLocal(parent_pos, ang_zero, bone_pos, bone_ang)
+												--vert_pos = vert_pos + WorldToLocal(parent_pos, ang_zero, bone_pos, bone_ang)
+												vert_pos:Add(bone_matrix * parent_pos)
 												weight_count = weight_count + 1
 											end			
 										end
 									end
 									if (weight_count > 0) then
-										vert.pos = vert_pos / weight_count
+										vert.pos:Div(weight_count)
 									end
 								end					
 							end	
