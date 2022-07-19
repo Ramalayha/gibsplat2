@@ -71,6 +71,117 @@ local function SafeResume(thread)
 	end
 end
 
+local function Tesselate(mesh)
+	local new_mesh = {}
+	for vert_index = 1, #mesh - 2, 3 do
+		local v1 = mesh[vert_index]
+		local v2 = mesh[vert_index + 1]
+		local v3 = mesh[vert_index + 2]
+		
+		v1.new = false
+		v2.new = false
+		v3.new = false
+
+		/*v1.points = v1.points or {}
+		v1.points[v2] = true
+		v1.points[v3] = true
+
+		v2.points = v2.points or {}
+		v2.points[v1] = true
+		v2.points[v3] = true
+
+		v3.points = v3.points or {}
+		v3.points[v1] = true
+		v3.points[v2] = true*/
+
+		local v12 = {pos = (v1.pos + v2.pos) * 0.375, new = true, extra = v3}
+		local v23 = {pos = (v2.pos + v3.pos) * 0.375, new = true, extra = v1}
+		local v13 = {pos = (v1.pos + v3.pos) * 0.375, new = true, extra = v2}
+
+		table.insert(new_mesh, v1)
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v13)
+
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v2)
+		table.insert(new_mesh, v23)
+
+		table.insert(new_mesh, v23)
+		table.insert(new_mesh, v3)
+		table.insert(new_mesh, v13)
+
+		table.insert(new_mesh, v12)
+		table.insert(new_mesh, v23)
+		table.insert(new_mesh, v13)
+	end
+
+	local verts = {}
+
+	for key, vert in ipairs(new_mesh) do		
+		local exists = false
+		
+		for _, vert2 in ipairs(verts) do
+			if (vert != vert2 and vert.pos:IsEqualTol(vert2.pos, 0)) then
+				new_mesh[key] = vert2
+				vert2.extra2 = vert.extra		
+				exists = true
+				break
+			end
+		end
+		
+		if !exists then			
+			table.insert(verts, vert)
+		end
+	end
+
+	for _, vert in ipairs(verts) do
+		if vert.new then
+			vert.pos:Add(vert.extra.pos * 1 / 16)
+			vert.pos:Add(vert.extra2.pos * 1 / 16)
+		end
+	end
+
+	for _, vert in ipairs(verts) do
+		if !vert.new then			
+			local points = {}
+			for vert_index = 1, #new_mesh - 2, 3 do
+				for offset = 0, 2 do
+					local v1 = new_mesh[vert_index + offset]
+					if (v1 == vert) then
+						local v2 = new_mesh[vert_index + (offset + 1) % 2]
+						local v3 = new_mesh[vert_index + (offset + 2) % 2]
+						points[v2] = true
+						points[v3] = true
+					end
+				end
+			end
+			--local points = vert.points
+			local n = table.Count(points)
+						
+			local B = 3 / (8 * n)
+			
+			local p = Vector(0, 0, 0)
+			for p0 in pairs(points) do
+				p:Add(p0.pos * B)				
+			end
+
+			local norm = p:GetNormal()
+
+			for p0 in pairs(points) do
+				p0.normal = norm			
+			end
+
+			vert.normal = norm
+
+			--vert.pos = vert.pos * (1 - B * n) + p
+			vert.pos:Mul(1 - B * n)
+			vert.pos:Add(p)
+		end
+	end
+
+	return new_mesh
+end
+
 function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (MDL_INDEX[mdl] and MDL_INDEX[mdl][phys_bone]) then
 		return MDL_INDEX[mdl][phys_bone]
@@ -83,6 +194,15 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 		THREADS[mdl] = nil
 	end
 	
+	if !norec then
+		local data = GS2ReadGibData(mdl)
+
+		if data then
+			MDL_INDEX[mdl] = data
+			return data[phys_bone]
+		end
+	end
+
 	MDL_INDEX[mdl] = MDL_INDEX[mdl] or {}
 
 	local temp
@@ -106,7 +226,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 	if (!IsValid(phys) or !ShouldGib(phys:GetMaterial())) then
 		temp:Remove()
 		MDL_INDEX[mdl][phys_bone] = {}
-		GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
+		--GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
 		return MDL_INDEX[mdl][phys_bone]
 	end
 
@@ -121,35 +241,11 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 		end
 	end
 	
-	local hash = TBL2HASH(vertex_tbl)
+	--local hash = TBL2HASH(vertex_tbl)
 
 	local phys_count = temp:GetPhysicsObjectCount()
 
 	temp:Remove()
-
-	local mdl_info = GS2ReadModelData(mdl)
-
-	if (mdl_info and mdl_info.gib_data) then
-		for phys_bone, hash in pairs(mdl_info.gib_data) do
-			if !PHYS_GIB_CACHE[hash] then				
-				GS2ReadGibData(hash, PHYS_GIB_CACHE, size)
-			end
-			MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
-		end
-		if !norec then		
-			for phys_bone2 = 0, phys_count - 1 do
-				if (phys_bone2 != phys_bone) then
-					SafeYield()	
-					GetPhysGibMeshes(mdl, phys_bone2, true)
-				end
-			end		
-		end
-		if MDL_INDEX[mdl][phys_bone] then
-			THREADS[mdl] = nil
-			GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
-			return MDL_INDEX[mdl][phys_bone]
-		end
-	end
 
 	math_randomseed(util.CRC(mdl) + phys_bone)
 
@@ -216,16 +312,9 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 
 	local meshes = VoronoiSplit(convex, points)
 
-	for key, mesh in pairs(meshes) do
-		mesh.vertex_buffer = {}
-		mesh.index_buffer = {}
-		for _, vert in ipairs(mesh.triangles) do
-			table.insert(mesh.index_buffer, table.KeyFromValue(mesh.vertex_buffer, vert.pos) or table.insert(mesh.vertex_buffer, vert.pos))
-		end	
-	end
-
 	if CLIENT then
 		for key, mesh in pairs(meshes) do
+			mesh.triangles = Tesselate(mesh.triangles)
 			local center = mesh.center
 			for _, vert in ipairs(mesh.triangles) do
 				vert.normal = (vert.pos - center):GetNormal()
@@ -237,12 +326,21 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 			mesh.mesh = M
 		end
 	end
-	
-	meshes.hash = hash
 
-	PHYS_GIB_CACHE[hash] = meshes
+	for key, mesh in pairs(meshes) do
+		mesh.vertex_buffer = {}
+		mesh.index_buffer = {}
+		for _, vert in ipairs(mesh.triangles) do
+			table.insert(mesh.index_buffer, table.KeyFromValue(mesh.vertex_buffer, vert.pos) or table.insert(mesh.vertex_buffer, vert.pos))
+		end	
+	end
+	
+	--meshes.hash = hash
+
+	--PHYS_GIB_CACHE[hash] = meshes
 			
-	MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
+	--MDL_INDEX[mdl][phys_bone] = PHYS_GIB_CACHE[hash]
+	MDL_INDEX[mdl][phys_bone] = meshes
 
 	if !norec then		
 		for phys_bone2 = 0, phys_count - 1 do
@@ -251,12 +349,7 @@ function GetPhysGibMeshes(mdl, phys_bone, norec)
 				GetPhysGibMeshes(mdl, phys_bone2, true)
 			end
 		end		
-	end
-
-	GS2WriteGibData(hash, PHYS_GIB_CACHE[hash])
-
-	if (!norec and !mdl_info) then
-		GS2LinkModelInfo(mdl, "gib_data", MDL_INDEX[mdl])
+		GS2WriteGibData(mdl, MDL_INDEX[mdl])
 	end
 
 	PERCENT = PERCENT + 1 / phys_count
@@ -634,21 +727,41 @@ if SERVER then
 		timer.Simple(0.1, function()
 			if !IsValid(ent) then return end
 			local mdl = ent:GetModel()
-			if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-				if GS2ReadModelData(mdl) then
+			
+			if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then				
+				if mdl:find("zombie") then
 					GetPhysGibMeshes(mdl, 0)
-				else
-					THREADS[mdl] = coroutine.create(function()			
-						GetPhysGibMeshes(mdl, 0)
-					end)					
+					--auto load headcrabs with zombies
+					if mdl:find("poison") then
+						print("GS2: Loading poison headcrab gibs")
+						GetPhysGibMeshes("models/headcrabblack.mdl", 0)
+					elseif mdl:find("fast") then
+						print("GS2: Loading fast headcrab gibs")
+						GetPhysGibMeshes("models/headcrab.mdl", 0)
+					elseif mdl:find("classic") or mdl:find("soldier") then
+						print("GS2: Loading headcrab gibs")
+						GetPhysGibMeshes("models/headcrabclassic.mdl", 0)
+					end
 				end
+
+				local data = GS2ReadGibData(mdl)
+
+				if data then
+					MDL_INDEX[mdl] = data
+					return
+				end
+
+				THREADS[mdl] = coroutine.create(function()	
+					GetPhysGibMeshes(mdl, 0)					
+				end)
+				SafeResume(THREADS[mdl])		
 			end
 		end)
 	end)
 
 	local function RemoveGibs(ply)
 		if !ply:IsAdmin() then return end
-		for _, gib in ipairs(ents_GetAll()) do			
+		for _, gib in ipairs(ents_GetAll()) do
 			if gib:GetClass():find("^gs2_gib") then
 				SafeRemoveEntity(gib)
 			end
@@ -660,8 +773,8 @@ if SERVER then
 	concommand.Add("gs2_cleargibs_sv", RemoveGibs)
 end
 if CLIENT then
-	local form = [[GS2: Building gibs for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
-	local form2 = [[GS2: Building gibs for "%s" (%3.2f%% done)]]
+	local form = [[GS2: Building/loading gibs for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
+	local form2 = [[GS2: Building/loading gibs for "%s" (%3.2f%% done)]]
 
 	hook.Add("HUDPaint", "GS2BuildGibsDisplay", function()
 		if !enabled:GetBool() then return end
@@ -686,9 +799,31 @@ if CLIENT then
 		if (!enabled:GetBool() or !IsValid(ent)) then return end
 		if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 		local mdl = ent:GetModel()
-		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-			THREADS[mdl] = coroutine.create(function()			
+		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then					
+			if mdl:find("zombie") then
 				GetPhysGibMeshes(mdl, 0)
+				--auto load headcrabs with zombies
+				if mdl:find("poison") then
+					print("GS2: Loading poison headcrab gibs")
+					GetPhysGibMeshes("models/headcrabblack.mdl", 0)
+				elseif mdl:find("fast") then
+					print("GS2: Loading fast headcrab gibs")
+					GetPhysGibMeshes("models/headcrab.mdl", 0)
+				elseif mdl:find("classic") or mdl:find("soldier") then
+					print("GS2: Loading headcrab gibs")
+					GetPhysGibMeshes("models/headcrabclassic.mdl", 0)
+				end
+			end
+
+			local data = GS2ReadGibData(mdl)
+
+			if data then
+				MDL_INDEX[mdl] = data
+				return
+			end	
+
+			THREADS[mdl] = coroutine.create(function()	
+				GetPhysGibMeshes(mdl, 0)					
 			end)
 			SafeResume(THREADS[mdl])
 		end		
@@ -709,9 +844,13 @@ if CLIENT then
 		if !FLESH_PIECES then			
 			for _, eff in pairs(effects.GetList()) do
 				if (eff.Folder == "effects/gs2_explode") then
-					local _, f = debug.getupvalue(eff.Init, 7)					
-					FLESH_PIECES = f
-					break
+					for i = 1, debug.getinfo(eff.Init).nups do
+						local key, f = debug.getupvalue(eff.Init, i)
+						if key == "FLESH_PIECES" then
+							FLESH_PIECES = f
+							break
+						end
+					end
 				end
 			end		
 		end

@@ -232,6 +232,8 @@ end
 
 function EFFECT:Think()
 	if !IsValid(self.Body) then return false end
+
+	if FrameTime() == 0 then return true end --if the game is paused particles will build up
 		
 	if (bit_band(self.mask, self.Body:GetNWInt("GS2GibMask", 0)) != 0) then return false end
 

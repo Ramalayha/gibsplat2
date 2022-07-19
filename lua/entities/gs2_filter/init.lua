@@ -11,6 +11,10 @@ function ENT:PassesFilter(caller, ent)
 	if ent.__gs2custom then	
 		ent.collides = ent.collides or CreatePhysCollidesFromModel(ent:GetModel())
 
+		if !ent.collides then
+			return false
+		end
+
 		local pos = caller:GetPos()
 		local min, max = caller:GetCollisionBounds()
 

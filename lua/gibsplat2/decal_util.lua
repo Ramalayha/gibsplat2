@@ -1,5 +1,7 @@
 local MAT_CACHE = {}
 
+local MAX_TRIS = 300
+
 function ApplyDecal(mat, ent, pos, norm, size)
 	if !mat then return	end
 
@@ -123,7 +125,10 @@ end
 local table_insert = table.insert
 
 function GetDecalMesh(input, pos, ang, w, h, scale)
-	local tris_in = input.tris
+	local tris_in = input.decal_tris
+
+	if #tris_in > MAX_TRIS then return end --dont try to make decals for really high poly models
+
 	local tris_out = {}
 
 	local dir = ang:Forward()

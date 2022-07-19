@@ -40,6 +40,8 @@ local smoke_sprites = {
 	"particle/smokesprites_0016"
 }
 
+local old_effects	= GetConVar("gs2_old_effects") --misleading name
+
 local BLOOD_STRIPES = {}
 
 local trace = {output={}, mask=MASK_NPCWORLDSTATIC}
@@ -153,12 +155,14 @@ local function FleshSlideThink(self)
 				if (tr.Hit and !tr.HitNoDraw and !tr.HitSky) then
 					local pos = util.IntersectRayWithPlane(self:GetPos(), down, tr.HitPos, tr.HitNormal)
 				
-					self:SetPos(pos)						
-					self.HitNormal = tr.HitNormal
+					if pos then
+						self:SetPos(pos)						
+						self.HitNormal = tr.HitNormal
 
-					self.BloodStripe[#self.BloodStripe].pos = pos
-					table.insert(self.BloodStripe, table.Copy(self.BloodStripe[#self.BloodStripe]))
-					self.BloodStripe[#self.BloodStripe].norm = tr.HitNormal
+						self.BloodStripe[#self.BloodStripe].pos = pos
+						table.insert(self.BloodStripe, table.Copy(self.BloodStripe[#self.BloodStripe]))
+						self.BloodStripe[#self.BloodStripe].norm = tr.HitNormal
+					end
 				else
 					self.HitTime = nil
 					self:SetPos(tr.HitPos)
@@ -173,6 +177,8 @@ local function FleshSlideThink(self)
 	self:SetNextThink(CurTime())
 end
 
+local FLESH_PARTICLES = {}
+
 local FLESH_PIECES = {}
 
 local flesh_mdl = "models/props_junk/watermelon01_chunk02a.mdl"
@@ -182,7 +188,7 @@ local function FleshPieceCollide(self, pos, norm)
 		self:SetDieTime(0)
 		return
 	end
-	trace.start = pos
+	trace.start = pos + norm
 	trace.endpos = pos - norm
 
 	util.TraceLine(trace)
@@ -198,6 +204,8 @@ local function FleshPieceCollide(self, pos, norm)
 	if (tr.Entity:GetMoveType() != MOVETYPE_NONE and
 		tr.Entity:GetMoveType() != MOVETYPE_PUSH and
 		tr.Entity:GetMoveType() != MOVETYPE_VPHYSICS) then return end
+
+	self.Collided = true
 
 	local color = blood_colors[self.BloodColor]
 
@@ -245,9 +253,9 @@ local function FleshPieceCollide(self, pos, norm)
 	end
 end
 
-local FLESH_PARTICLES = {}
-
 function EFFECT:Init(data)
+	if !old_effects:GetBool() then return end
+	
 	local pos = data:GetOrigin()
 	local ang = data:GetAngles()
 	local vel = data:GetNormal() * data:GetScale()
@@ -344,7 +352,7 @@ function EFFECT:Init(data)
 		particle.Model:SetModelScale(math.Rand(0.4, 1))
 		particle.Model:SetMaterial(self.FleshMat)
 
-		timer.Simple(15, function()
+		timer.Simple(16, function()
 			if (particle:GetDieTime() == 0) then
 				SafeRemoveEntity(mdl)
 			end
@@ -377,7 +385,7 @@ local center_offset = Vector(-1.186550, -1.807150, 2.105250)
 
 hook.Add("PostDrawOpaqueRenderables", "GS2DrawFleshParticles", function()
 	for key, piece in pairs(FLESH_PARTICLES) do
-		if (piece:GetDieTime() == 0 or !IsValid(piece.Model)) then
+		if (piece:GetDieTime() == 0 or !IsValid(piece.Model) or (!piece.Collided and piece:GetVelocity():LengthSqr() == 0)) then
 			FLESH_PARTICLES[key] = nil
 			SafeRemoveEntity(piece.Model)
 		else

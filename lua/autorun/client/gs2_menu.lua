@@ -20,11 +20,12 @@ local defaults =
     ["gs2_gib_lifetime"] = "300",
     ["gs2_gib_expensive"] = "0",
     ["gs2_pull_limb"] = "1",
-    ["gs2_gib_chance"] = "0.15",
+    ["gs2_gib_chance"] = "0.3",
     ["gs2_gib_sv"] = "1",
     ["gs2_default_ragdolls"] = "1",
     ["gs2_max_decals_transfer"] = "5",
-    ["gs2_gib_chance_explosion_multiplier"] = "10"
+    --["gs2_gib_chance_explosion_multiplier"] = "10"
+    ["gs2_health_multiplier"] = "1"
 }
 
 concommand.Add("gs2_reset_cvars", function()
@@ -73,7 +74,7 @@ local function PopulateGS2Menu(pnl)
     pnl:ControlHelp("Controls if gibs should be created server-side.")
 
     pnl:CheckBox("Clientside Gibs", "gs2_gib_cl")
-    pnl:ControlHelp("Controls if gibs should be created client-side.")
+    pnl:ControlHelp("Controls if gibs should be created client-side")
 
     --this is broken :(
     --pnl:CheckBox("Less Limbs", "gs2_less_limbs")
@@ -84,7 +85,7 @@ local function PopulateGS2Menu(pnl)
 
     --int options
 
-    pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
+    --pnl:NumSlider("Max Decal Transfer", "gs2_max_decals_transfer", 0, 15)
     pnl:ControlHelp("Maximum number of decals to transfer to a mesh part.")
 
     pnl:NumSlider("Gib Limit", "gs2_max_gibs", 0, 512)
@@ -94,11 +95,14 @@ local function PopulateGS2Menu(pnl)
     --pnl:ControlHelp("Controls how many particles can exist in the map.")
 
     --float options
-    pnl:NumSlider("Gib Chance", "gs2_gib_chance", 0, 1, 3)
-    pnl:ControlHelp("The chance of a ragdoll gibbing from taking damage.")
+    pnl:NumSlider("Health Multiplier", "gs2_health_multiplier", 0, 10, 3)
+    pnl:ControlHelp("The health of each body part will be multiplied by this.")
 
-    pnl:NumSlider("Explosion Chance", "gs2_gib_chance_explosion_multiplier", 0, 50, 3)
-    pnl:ControlHelp("How much more likely the ragdoll is to gib from an explosion.")
+    pnl:NumSlider("Explosion gib Chance", "gs2_gib_chance", 0, 1, 3)
+    pnl:ControlHelp("The chance of a ragdoll gibbing from explosion damage.")
+
+    /*pnl:NumSlider("Explosion Chance", "gs2_gib_chance_explosion_multiplier", 0, 50, 3)
+    pnl:ControlHelp("How much more likely the ragdoll is to gib from an explosion.")*/
 
     pnl:NumSlider("Gib Spawnrate", "gs2_gib_factor", 0, 1, 3)
     pnl:ControlHelp("Controls how many gibs to spawn.")

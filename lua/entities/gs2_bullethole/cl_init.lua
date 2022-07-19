@@ -44,25 +44,10 @@ function ENT:ApplyDecal(target)
 		local mat = util.DecalMaterial("impact."..phys_mat)
 
 		if mat then
-			ApplyDecal(mat, target, pos, norm)
-
-			if (target == body.GS2Limbs[self:GetTargetBone()] and target.GS2RenderMeshes) then
-				local size = 1-- + math.log(Material(mat):GetTexture("$basetexture"):Width(), 2) - 6 --log2(64) = 6
-				self.Decals = {}
-				for _, rm in pairs(target.GS2RenderMeshes) do
-					local mesh = rm:GetMesh()		
-					if mesh.body then
-						local decal = rm:AddDecal(mesh.body, mat, self:GetLPos(), self:GetLAng(), size)
-						if decal then
-							table.insert(self.Decals, decal)
-						end
-					elseif mesh.flesh then
-						local decal = rm:AddDecal(mesh.flesh, mat, self:GetLPos(), self:GetLAng(), size)
-						if decal then
-							table.insert(self.Decals, decal)
-						end
-					end
-				end
+			if target.ApplyDecal then
+				target:ApplyDecal(mat, pos, norm, 1)
+			else
+				ApplyDecal(mat, target, pos, norm)
 			end
 		end
 	end

@@ -6,15 +6,6 @@ local enabled 			= GetConVar("gs2_enabled")
 local player_ragdolls 	= GetConVar("gs2_player_ragdolls")
 local default_ragdolls 	= GetConVar("gs2_default_ragdolls")
 
-local ang_zero = Angle(0, 0, 0)
-
-local blood_colors = {
-	flesh = BLOOD_COLOR_RED,
-	zombieflesh = BLOOD_COLOR_RED,
-	alienflesh = BLOOD_COLOR_YELLOW,
-	antlion = BLOOD_COLOR_YELLOW
-}
-
 local HOOK_NAME = "GibSplat2"
 
 local var_funcs = {}
@@ -43,19 +34,45 @@ local function GS2CreateEntityRagdoll(ent, doll)
 	if !IsValid(doll) or !doll:IsRagdoll() or !IsValid(doll:GetPhysicsObjectNum(0)) then return end
 	doll:MakeCustomRagdoll()
 
-	if ent.__forcegib then 
-		--local phys_bone = doll:GS2GetClosestPhysBone(ent.__forcegib, nil, true)
-
-		doll:GS2Gib(ent.__forcegib, false, true)		
-	end
 	if (ent.__lastdmginfovars and ent.__lastdmgtime == CurTime()) then
 		local dmginfo = DamageInfo()
 		SetDamageInfoVars(dmginfo, ent.__lastdmginfovars)
-		for _, relay in pairs(doll.GS2LimbRelays) do
-			relay:TakeDamageInfo(dmginfo)
+
+		local dmg_pos = dmginfo:GetDamagePosition()
+
+		if ent:IsPlayer() then
+			--doll:TakePhysicsDamage(dmginfo)
+			local force = dmginfo:GetDamageForce()
+			doll:GetPhysicsObject():ApplyForceOffset(force, dmg_pos)
+			doll.took_damage = true
 		end
-		
-		doll:GetPhysicsObject():ApplyForceOffset(-dmginfo:GetDamageForce(), dmginfo:GetDamagePosition())	
+
+		if dmginfo:IsExplosionDamage() then
+			local pbone = dmginfo:GetHitPhysBone(doll) or 0
+			local phys = doll:GetPhysicsObjectNum(pbone)
+
+			local dmg = dmginfo:GetDamage()
+			local dmg_max = dmginfo:GetMaxDamage()
+						
+			dmginfo:SetDamageForce(vector_origin) --no extra force on limbs when npc died
+			
+			if dmg == dmg_max then
+				dmg_max = 150
+				dmginfo:SetMaxDamage(150) --fix for gmod bug
+			end
+
+			local dist = phys:GetPos():Distance(dmg_pos)
+
+			for _, relay in pairs(doll.GS2LimbRelays) do
+				local dist2 = relay:GetPos():Distance(dmg_pos)
+				local frac = dist / dist2
+				local dmg = dmg * frac				
+				dmginfo:SetDamage(dmg)				
+				relay:TakeDamageInfo(dmginfo)
+			end			
+		else			
+			doll:TakeDamageInfo(dmginfo)
+		end
 	end
 	if ent.GS2Decals then
 		for phys_bone, decals in pairs(ent.GS2Decals) do
@@ -70,34 +87,9 @@ local function GS2CreateEntityRagdoll(ent, doll)
 	end
 end
 
-local AXIS_X 	= 1
-local AXIS_Y	= 2
-local AXIS_Z	= 3
-
-local function IsSharp(ent)
-	local min, max = ent:GetCollisionBounds()
-
-	if (max.x - min.x < 5) then
-		return AXIS_X
-	elseif (max.y - min.y < 5) then
-		return AXIS_Y
-	elseif (max.z - min.z < 5) then
-		return AXIS_Z
-	end	
-end
-
-local function IsKindaBullet(dmginfo)
-	return 	dmginfo:IsBulletDamage() or 
-			dmginfo:IsDamageType(DMG_CLUB) or 
-			dmginfo:IsDamageType(DMG_ENERGYBEAM) or 
-			dmginfo:IsDamageType(DMG_NEVERGIB) or --crossbow
-			dmginfo:IsDamageType(DMG_SNIPER) or
-			dmginfo:IsDamageType(DMG_BUCKSHOT) --this doesnt count as bullet damage for some reason
-end
-
 local gib_chance = GetConVar("gs2_gib_chance")
 
-local function ShouldGib(dmginfo)
+local function ShouldGib(dmginfo, ragdoll)
 	local chance = gib_chance:GetFloat()
 	if (chance >= 1) then
 		return true
@@ -114,201 +106,35 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 	local dmg_force = dmginfo:GetDamageForce()
 
 	if ent.__gs2custom and ent:IsRagdoll() then
-		--local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos, nil, true)
+		
 		local phys_bone = dmginfo:GetHitPhysBone(ent)
 		if !phys_bone then
 			return
 		end
-		local phys = ent:GetPhysicsObjectNum(phys_bone)
-		if dmginfo:IsDamageType(DMG_ALWAYSGIB) then
-			ent:GS2Gib(phys_bone)
-		elseif dmginfo:IsExplosionDamage() then
-			return true	--Let relay deal with this instead
-		elseif dmginfo:IsDamageType(DMG_DISSOLVE) then			
-			ent:SetCollisionGroup(COLLISION_GROUP_NONE)
+		
+		local relay = ent.GS2LimbRelays[phys_bone]
 
-			local bone = ent:TranslatePhysBoneToBone(phys_bone)
-
-			local mask = ent:GetNWInt("GS2DisMask")
-			
-			local to_dissolve = {}
-
-			local parent = bone
-
-			repeat				
-				local phys_bone_parent = ent:TranslateBoneToPhysBone(parent)
-				table.insert(to_dissolve, phys_bone_parent)
-				if (bit.band(mask, bit.lshift(1, phys_bone_parent)) != 0) then
-					break
-				end
-				parent = ent:GetBoneParent(parent)
-			until (parent == -1)
-
-			for phys_bone2 = 0, ent:GetPhysicsObjectCount() - 1 do
-				local phys2 = ent:GetPhysicsObjectNum(phys_bone2)
-				if (phys_bone2 != phys_bone) then
-					local bone2 = ent:TranslatePhysBoneToBone(phys_bone2)
-					local parent = bone2
-					repeat					
-						local phys_bone_parent = ent:TranslateBoneToPhysBone(parent)
-						if (phys_bone_parent == phys_bone or table.HasValue(to_dissolve, phys_bone_parent)) then
-							break
-						elseif (bit.band(mask, bit.lshift(1, phys_bone_parent)) != 0) then
-							parent = -1
-							break
-						end				
-						parent = ent:GetBoneParent(parent)			
-					until (parent == -1)
-
-					if (parent == -1) then				
-						phys2:EnableGravity(true)
-						phys2:SetDragCoefficient(0)
-						continue
-					end
-				end	
-
-				phys2:EnableGravity(false)
-				phys2:SetDragCoefficient(100)
-				table.insert(to_dissolve, phys_bone2)				
-			end
-
-			local mask = 0
-
-			for _, phys_bone in pairs(to_dissolve) do
-				mask = bit.bor(mask, bit.lshift(1, phys_bone))
-				local limb = ent.GS2Limbs[phys_bone]
-				if IsValid(limb) then
-					limb.dissolving = CurTime()
-					local name = "gs2_memename"..limb:EntIndex()
-					limb:SetName(name)
-					local diss = ents.Create("env_entity_dissolver")
-					diss:Spawn()			
-					diss:Fire("Dissolve", name)
-					diss:SetParent(limb)
-				end
-			end
-
-			net.Start("GS2Dissolve")
-			net.WriteEntity(ent)
-			net.WriteFloat(CurTime())
-			net.WriteUInt(mask, 32)
-			net.Broadcast()
-
-			timer.Simple(2, function()
-				if IsValid(ent) then
-					for _, phys_bone in pairs(to_dissolve) do
-						ent:GS2Gib(phys_bone, true)
-					end
-				end
-			end)
-
-			for _, diss in pairs(ents.FindByClass("env_entity_dissolver")) do
-				if (diss:GetMoveParent() == ent) then
-					--[[for k,v in pairs(diss:GetSaveTable()) do
-						if k:find("Fade") then
-							print(k,v)
-						end
-					end]]
-					diss:Remove()	
-					return true
-				end
-			end
-		elseif dmginfo:IsDamageType(DMG_CRUSH) then			
-			local att = dmginfo:GetAttacker()
-			local axis = IsSharp(att)
-			if axis then
-				local phys = att:GetPhysicsObject()
-				if IsValid(phys) then
-					local vel = phys:GetVelocityAtPoint(dmg_pos)
-					local ang = phys:GetAngles()
-					local dir
-					if (axis == AXIS_X) then
-						dir = ang:Forward()				
-					elseif (axis == AXIS_Y) then
-						dir = ang:Right()
-					else
-						dir = ang:Up()
-					end
-
-					local pre_speed = vel:Length()
-
-					vel = vel - dir * dir:Dot(vel)	
-
-					local post_speed = vel:Length()
-
-					local ang_offset = math.acos(post_speed / pre_speed)
-
-					if (ang_offset < 0.25 and math.random() > 0.5) then -- 0.25 ~= 15 degrees
-						ent:GS2Dismember(phys_bone)
-					end
-				end
-			else
-				if (!att:IsPlayer() and dmg >= 100) then
-					ent:GS2Gib(phys_bone)
-				end
-			end
-		elseif dmginfo:IsDamageType(DMG_SLASH) then
-			if ShouldGib(dmginfo) then
-				ent:GS2Gib(phys_bone, false, true)
-			else
-				ent:GS2Dismember(phys_bone)	
-			end
-		elseif IsKindaBullet(dmginfo) then
-			if ShouldGib(dmginfo) then
-				ent:GS2Gib(phys_bone, false, true)
-			else
-				local blood_color = blood_colors[phys:GetMaterial()]
-				if blood_color then 					
-					local hole = ents.Create("gs2_bullethole")
-					hole:SetBody(ent)
-					hole:SetTargetBone(phys_bone)			
-					hole:SetPos(dmg_pos)					
-					hole:Spawn()
-					
-					local pos = phys:GetPos()
-					local ang = phys:GetAngles()
-
-					local norm = ang:Forward()
-
-					local hitpos = pos + norm * norm:Dot(dmg_pos - pos)
-
-					local lpos, lang = WorldToLocal(dmg_pos, (hitpos - dmg_pos):Angle(), pos, ang)
-
-					local EF = EffectData()
-					EF:SetEntity(ent)
-					EF:SetOrigin(lpos)		
-					EF:SetAngles(lang)
-					EF:SetHitBox(ent:TranslatePhysBoneToBone(phys_bone))
-					EF:SetColor(blood_color)
-					EF:SetScale(0.1)
-					util.Effect("gs2_bloodspray", EF)
-
-					EF:SetOrigin(hitpos)
-					util.Effect("BloodImpact", EF)
-				end
-			end				
+		if IsValid(relay) then
+			relay:OnTakeDamage(dmginfo)
 		end
+
+		return true		
 	elseif (ent:IsNPC() or ent:IsPlayer()) then
 		if (dmginfo:IsDamageType(5) and dmginfo:GetDamage() > ent:Health()) then --5 = DMG_CRUSH | DMG_SLASH
 			local dmg_type = dmginfo:GetDamageType() --Prevents zombie from cutting in half
 			dmginfo:SetDamageType(bit.band(dmg_type, bit.bnot(DMG_SLASH)))			
 		end
-		if dmginfo:IsExplosionDamage() then
-			ent.__lastdmginfovars = GetDamageInfoVars(dmginfo)
-			ent.__lastdmgtime = CurTime()
-		elseif IsKindaBullet(dmginfo) then
-			if ShouldGib(dmginfo) then
-				ent.__forcegib = dmginfo:GetHitPhysBone(ent)
-			else
-				ent.GS2Decals = ent.GS2Decals or {}
-				--local phys_bone = ent:GS2GetClosestPhysBone(dmg_pos)
-				local phys_bone = dmginfo:GetHitPhysBone(ent)
-				if (phys_bone) then
-					ent.GS2Decals[phys_bone] = ent.GS2Decals[phys_bone] or {}
-					table.insert(ent.GS2Decals[phys_bone], dmg_pos)
-				end
-			end
-		else
+
+		if ent:GetClass():find("antlion") and ent:Health() - dmg < 20 then
+			dmginfo:SetDamageType(DMG_GENERIC)
+			dmginfo:SetDamage(ent:Health() + 20) --override default gibbing mechanic of antlions
+			ent:SetSaveValue("m_bDontExplode", true)
+		end
+		
+		ent.__lastdmginfovars = GetDamageInfoVars(dmginfo)
+		ent.__lastdmgtime = CurTime()
+		
+		if ent:GetClass():find("zombie") then
 			local att = dmginfo:GetAttacker()
 			local is_heavy
 			if IsValid(att) then
@@ -317,9 +143,19 @@ local function GS2EntityTakeDamage(ent, dmginfo)
 					is_heavy = phys:GetMass() >= 300 --this triggers zombie splitting to occur and we dont want that
 				end
 			end
-			if (dmginfo:IsDamageType(DMG_CRUSH) and is_heavy and ent:GetClass():find("zombie")) then
+			if (dmginfo:IsDamageType(DMG_CRUSH) and is_heavy) then
+				dmginfo:SetDamageType(DMG_GENERIC) --change damage type so zombies dont split
+			elseif (dmginfo:IsDamageType(DMG_BLAST) and dmg > ent:GetMaxHealth() / 2) then
 				dmginfo:SetDamageType(DMG_GENERIC) --change damage type so zombies dont split
 			end
+		end
+		
+		ent.GS2Decals = ent.GS2Decals or {}
+		
+		local phys_bone = dmginfo:GetHitPhysBone(ent)
+		if (phys_bone) then
+			ent.GS2Decals[phys_bone] = ent.GS2Decals[phys_bone] or {}
+			table.insert(ent.GS2Decals[phys_bone], dmg_pos)
 		end
 	end
 end
@@ -364,7 +200,7 @@ local function CreateRagdoll(self)
 		local pos, ang = matrix:GetTranslation(), matrix:GetAngles()--self:GetBonePosition(bone)
 		phys:SetPos(pos)
 		phys:SetAngles(ang)
-		phys:SetVelocity(self:GetVelocity())
+		--phys:SetVelocity(self:GetVelocity())
 	end
 
 	self:SpectateEntity(ragdoll)
@@ -375,6 +211,17 @@ local function CreateRagdoll(self)
 	ragdoll.GS2Player = self
 
 	GS2CreateEntityRagdoll(self, ragdoll)
+
+	if !ragdoll.took_damage then --no forces where applied from damage, copy player velocity
+		for i = 0, ragdoll:GetPhysicsObjectCount()-1 do
+			local phys = ragdoll:GetPhysicsObjectNum(i)
+			phys:SetVelocity(self:GetVelocity())
+		end
+	end
+
+	ragdoll.took_damage = nil
+
+	return ragdoll
 end
 
 local oldGetRagdollEntity = PLAYER.GetRagdollEntity

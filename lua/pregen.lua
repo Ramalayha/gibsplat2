@@ -19,11 +19,8 @@ local function PreGenerate(path)
 	path = path:sub(1,-2)
 	for _, file_name in ipairs(files) do 
 		local mdl = path..file_name
-		local F = file.Open(mdl, "rb", "GAME")
-		F:Seek(8)
-		local checksum = F:Read(4)
-		F:Close()
-		if (file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/model_data/"..util.CRC(mdl..checksum)..".txt", "DATA") and !file.Exists("materials/gibsplat2/model_data/"..util.CRC(mdl..checksum)..".vmt", "GAME") and IsRagdoll(mdl:sub(1,-4).."phy")) then
+		
+		if (file_name:sub(-4) == ".mdl" and !file.Exists("gibsplat2/mesh_data_new/"..util.CRC(mdl), "DATA") and IsRagdoll(mdl:sub(1,-4).."phy")) then
 			if util.IsValidRagdoll(mdl) then
 				n = n+1
 				models[n] = mdl			
@@ -57,15 +54,15 @@ local function Process()
 		SafeRemoveEntity(temp)
 		return
 	end
-	
-	SafeRemoveEntity(temp)
-	
+		
 	temp = ents.Create("prop_ragdoll")
 	temp:SetModel(mdl)
 	temp:Spawn()
+
+	SafeRemoveEntityDelayed(temp, 1)
 		
 	key = key + 1
-	timer.Simple(0.5, Process)
+	timer.Simple(2, Process)
 end
 
 timer.Simple(1, Process)

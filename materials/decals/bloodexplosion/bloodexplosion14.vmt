@@ -1,0 +1,15 @@
+
+SpriteCard
+{
+$basetexture "decals/bloodexplosion/bloodexplosion14"
+ 
+$vertexcolor 1
+$vertexalpha 0
+$translucent 0
+$depthblend 0
+$depthblendscale 45
+ 
+$blendframes 1
+}
+
+

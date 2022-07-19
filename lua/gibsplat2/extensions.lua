@@ -14,6 +14,8 @@ function DMGINFO:GetHitPhysBone(ent)
 		COLL_CACHE[mdl] = colls
 	end
 
+	if !colls then return 0 end
+
 	local dmgpos = self:GetDamagePosition()
 
 	local dmgdir = self:GetDamageForce()
@@ -25,10 +27,27 @@ function DMGINFO:GetHitPhysBone(ent)
 	for phys_bone, coll in pairs(colls) do
 		phys_bone = phys_bone - 1
 		local bone = ent:TranslatePhysBoneToBone(phys_bone)
-		local pos, ang = ent:GetBonePosition(bone)
+		local matrix = ent:GetBoneMatrix(bone)
+		if !matrix then continue end
+
+		local pos, ang = matrix:GetTranslation(), matrix:GetAngles()
+
+		if !pos or !ang then continue end
 		
-		if (pos and coll:TraceBox(pos, ang, ray_start, ray_end, vec_min, vec_max)) then
+		if coll:TraceBox(pos, ang, ray_start, ray_end, vec_min, vec_max) then
 			return phys_bone
+		end
+	end
+end
+
+local PHYSOBJ = FindMetaTable("PhysObj")
+
+function PHYSOBJ:GetID()
+	local ent = self:GetEntity()
+	for pbone = 0, ent:GetPhysicsObjectCount() - 1 do
+		local phys = ent:GetPhysicsObjectNum(pbone)
+		if phys == self then
+			return pbone
 		end
 	end
 end

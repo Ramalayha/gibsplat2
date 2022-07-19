@@ -17,6 +17,10 @@ function ENT:Initialize()
 	self:SetSkin(body:GetSkin())
 	self:SetPos(body:GetPos())
 	self:SetParent(body)
+	self:AddEffects(EF_BONEMERGE)
+
+	self:SetLightingOriginEntity(body.GS2LimbRelays[self:GetTargetBone()])
+
 	self:SetTransmitWithParent(true)
 	self:DrawShadow(false)
 	body:DrawShadow(false)

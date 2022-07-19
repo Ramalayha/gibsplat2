@@ -116,7 +116,7 @@ local function BuildBones(self, num_bones)
 	if !self_matrix then
 		return
 	end
-
+	
 	if self.SkinPass then
 		self_matrix:Translate(vec_offset)
 		self_matrix:Scale(vec_zero)
@@ -128,14 +128,9 @@ local function BuildBones(self, num_bones)
 					self:SetBoneMatrix(bone, self_matrix)
 				elseif (info.parent != bone) then
 					local matrix = body:GetBoneMatrix(info.parent)
-					matrix:Translate(vec_offset)
+					matrix:Translate(vec_offset)					
 					matrix:Scale(vec_zero)
 					self:SetBoneMatrix(bone, matrix)
-				else
-					local matrix = body:GetBoneMatrix(bone)
-					if matrix then
-						self:SetBoneMatrix(bone, matrix)
-					end
 				end				
 			end
 		end	
@@ -159,7 +154,7 @@ local function BuildBones(self, num_bones)
 			
 			self:SetBoneMatrix(bone, matrix or self_matrix)
 		end
-	end	
+	end
 end
 
 function ENT:Initialize()
@@ -176,7 +171,7 @@ function ENT:Initialize()
 
 	local phys_bone = self:GetTargetBone()
 
-	self.mat_restore = {}
+	/*self.mat_restore = {}
 
 	if (phys_bone != 0) then
 		for key, mat in pairs(self:GetMaterials()) do
@@ -185,17 +180,13 @@ function ENT:Initialize()
 				self.mat_restore[key - 1] = mat_bloody
 			end
 		end
-	end
+	end*/
 
 	self:UpdateRenderInfo()
 end
 
 function ENT:OnRemove()
-	if self.GS2RenderMeshes then
-		for _, mesh in ipairs(self.GS2RenderMeshes) do
-			SafeRemoveEntity(mesh)
-		end
-	end
+	SafeRemoveEntity(self.GS2RenderMesh)
 end
 
 local alpha_tags = 
@@ -252,6 +243,13 @@ function ENT:Think()
 		for _, bg in pairs(body:GetBodyGroups()) do
 			self:SetBodygroup(bg.id, body:GetBodygroup(bg.id))
 		end
+
+		local bg_mask = util.GetBodygroupMask(body)
+
+		if self.BGMask != bg_mask then
+			self.BGMask = bg_mask
+			GetBoneMeshes(body)
+		end
 		
 		local min, max = body:GetRenderBounds()
 		min = body:LocalToWorld(min)
@@ -281,8 +279,6 @@ end
 
 local dummy_tbl = {}
 
-local SDV = Vector(1, 1, 1) * STUMP_DEPTH_FACTOR
-
 function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 	local body = self:GetBody()
 	
@@ -303,10 +299,18 @@ function ENT:UpdateChildBonesRec(bone, mask, bone_override)
 		if (parent_bone != -1) then
 			local bone_matrix = dummy:GetBoneMatrix(parent_bone)
 
+			local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
+
 			local bone_override_matrix = dummy:GetBoneMatrix(bone_override)
 
-			local matrix = bone_override_matrix:GetInverse() * bone_matrix
-			matrix:Scale(SDV)
+			local bone_override_pos, bone_override_ang = bone_override_matrix:GetTranslation(), bone_override_matrix:GetAngles()
+
+			bone_pos, bone_ang = WorldToLocal(bone_pos, bone_ang, bone_override_pos, bone_override_ang)
+
+			local offset_matrix = bone_override_matrix:GetInverse() * bone_matrix
+
+			local matrix = Matrix()
+			matrix:Translate(offset_matrix:GetTranslation() * STUMP_DEPTH_FACTOR)
 
 			self.GS2BoneList[bone] = {
 				parent = bone_override,
@@ -345,16 +349,13 @@ function ENT:UpdateRenderInfo()
 	local self_mask = bit_lshift(1, self_phys_bone)
 	
 	if (bit_band(self_mask, gib_mask) != 0) then
-		if self.GS2RenderMeshes then
-			for _, mesh in ipairs(self.GS2RenderMeshes) do
-				SafeRemoveEntity(mesh)
-			end	
-			self.GS2RenderMeshes = nil
-		end		
+		SafeRemoveEntity(self.GS2RenderMesh)
+		self.GS2RenderMesh = nil
+			
 		return
 	end
 
-	if self.GS2RenderMeshes then return end --Already at mesh stage, nothing can change from here
+	if self.GS2RenderMesh then return end --Already at mesh stage, nothing can change from here
 
 	--Checks if any other parts of the ragdoll are attached to us
 	local is_lonely = true
@@ -364,65 +365,63 @@ function ENT:UpdateRenderInfo()
 			break			
 		end
 	end
-		
+	
 	if is_lonely then
 		--If no other parts are attached generate a mesh to optimize
 		local bone = body:TranslatePhysBoneToBone(self_phys_bone)
 		local bone_pos, bone_ang = body:GetBonePosition(bone)
 		local meshes = GetBoneMeshes(body, self_phys_bone)
-		if (table.Count(meshes) > 0) then
-			self.GS2RenderMeshes = {}
-			for key, mesh in pairs(meshes) do				
-				local M = ents.CreateClientside("gs2_limb_mesh")
-				M:SetBody(body, self_phys_bone)	
-				M:SetMesh(mesh)	
-				M:Spawn()
+		if (table.Count(meshes) > 0) then								
+			local M = ents.CreateClientside("gs2_limb_mesh")
+			M:SetBody(body, self_phys_bone)	
+			M:SetMesh(meshes)
+			M:SetPlayerColor(self:GetPlayerColor())	
+			M:Spawn()
 
-				M.GS2ParentLimb = self
-				self.GS2RenderMeshes[key] = M
-
-				if (mesh.body) then	
-					local phys_mat = body:GetNWString("GS2PhysMat")
-					if (phys_mat and decals[phys_mat]) then
-						if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then
-							local count = 0
-							for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do
-								if IsValid(bh) then						
-									M:AddDecal(mesh.body, util.DecalMaterial(decals[phys_mat]), bh:GetLPos(), bh:GetLAng(), 1)
-									count = count + 1
-									if (count >= max_decals:GetInt()) then
-										break
-									end
-								else
-									body.GS2BulletHoles[self_phys_bone][key] = nil
-								end
+			M.GS2ParentLimb = self
+			self.GS2RenderMesh = M
+			
+			local phys_mat = body:GetNWString("GS2PhysMat")
+			if (phys_mat and decals[phys_mat]) then
+				if (body.GS2BulletHoles and body.GS2BulletHoles[self_phys_bone]) then
+					local count = 0
+					for key, bh in pairs(body.GS2BulletHoles[self_phys_bone]) do
+						if IsValid(bh) then						
+							M:AddDecal(util.DecalMaterial(decals[phys_mat]), bh:GetLPos(), bh:GetLAng(), 1)
+							count = count + 1
+							if (count >= max_decals:GetInt()) then
+								break
 							end
+						else
+							body.GS2BulletHoles[self_phys_bone][key] = nil
 						end
-						M:AddDecal(mesh.body, util.DecalMaterial(decals[phys_mat]), vector_origin, Angle(0, 0, math.Rand(-180, 180)), 3, -0.1)					
 					end
 				end
-			end
+				M:AddDecal(util.DecalMaterial(decals[phys_mat]), vector_origin, Angle(0, 0, math.Rand(-180, 180)), 3, -0.1)					
+			end 
 		end	
 		if self.BBID then
 			self:RemoveCallback("BuildBonePositions", self.BBID)
 			self.BBID = nil			
-		end
+		end	
 		--self:SetNoDraw(true)
 	else		
 		body:SetupBones()
 		--Update bone info
 		table_Empty(self.GS2BoneList)		
-		self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bit_bor(dis_mask, gib_mask))	
+		self:UpdateChildBonesRec(self:TranslatePhysBoneToBone(self_phys_bone), bit_bor(dis_mask, gib_mask))
 	end
+
 end
 
 local function null() end
 
 function ENT:Draw()
 	local body = self:GetBody()
-	if IsValid(body) then	
+	if IsValid(body) then
+		self:SetSkin(body:GetSkin())
 		body.RenderOverride = null --Hide actual ragdoll		
-		if !self.GS2RenderMeshes and self.GS2BoneList then			
+		if !self.GS2RenderMesh and self.GS2BoneList then			
 			self:SetupBones()						
 			if body.GS2Dissolving then
 				local start = body.GS2Dissolving[self:GetTargetBone()]
@@ -441,7 +440,7 @@ function ENT:Draw()
 				end
 				self:DrawModel()
 				for _, id in pairs(self.flesh_mat_replace) do
-					self:SetSubMaterial(id, self.mat_restore[id]) --if self.mat_restore[id] == nil then it will restore to default
+					self:SetSubMaterial(id)--, self.mat_restore[id]) --if self.mat_restore[id] == nil then it will restore to default
 				end
 
 				--Draw skin
@@ -463,7 +462,7 @@ function ENT:Draw()
 			self.HasDecals = true
 
 			if body.GS2BulletHoles then
-				if self.GS2RenderMeshes then
+				if self.GS2RenderMesh then
 					local count = 0
 					for phys_bone, holes in pairs(body.GS2BulletHoles) do
 						for _, hole in pairs(holes) do
@@ -555,16 +554,9 @@ function ENT:ApplyDecal(mat, pos, norm, size, mesh_size)
 		Size = size
 	})
 
-	if self.GS2RenderMeshes then
+	if self.GS2RenderMesh then
 		mat = Material(mat):GetString("$modelmaterial") or mat
-		for _, M in pairs(self.GS2RenderMeshes) do
-			if M.meshes.body then
-				M:AddDecal(M.meshes.body, mat, lpos, lang, mesh_size or size)
-			end	
-			if M.meshes.flesh then
-				M:AddDecal(M.meshes.flesh, mat, lpos, lang, mesh_size or size)
-			end	
-		end
+		self.GS2RenderMesh:AddDecal(mat, lpos, lang, mesh_size or size)
 	end
 end
 
@@ -589,7 +581,7 @@ end)
 
 hook.Add("NotifyShouldTransmit", HOOK_NAME, function(ent, should)
 	if (should and ent.UpdateRenderInfo) then
-		ent.GS2RenderMeshes = nil
+		ent.GS2RenderMesh = nil
 		ent.BBID = ent:AddCallback("BuildBonePositions", BuildBones)
 		timer.Simple(1, function()
 			if IsValid(ent) then

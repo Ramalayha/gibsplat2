@@ -5,448 +5,180 @@ local VERSION = 6
 
 local BONE_CACHE = {}
 
-local vec_zero = Vector(0,0,0)
-local ang_zero = Angle(0,0,0)
-
 local MDL_INDEX = {}
 
 local MATERIAL_CACHE = {}
 
-local THREADS = {}
-
-local PERCENT = 0
-
-local iterations = GetConVar("gs2_mesh_iterations")
-
-local function SafeYield()
-	if coroutine.running() then
-		coroutine.yield()
-	end
-end
-
-function GetBoneMeshes(ent, phys_bone, norec)
-	PERCENT = 0
-
+function GetBoneMeshes(ent, phys_bone)
 	local mdl = ent:GetModel()
 
 	local bg_mask = util.GetBodygroupMask(ent)
 
 	if !MDL_INDEX[mdl] then
-		local data = GS2ReadModelData(mdl)
-		if (data and data.mesh_data) then
-			MDL_INDEX[mdl] = data.mesh_data
-			THREADS[mdl] = nil
-		end
+		MDL_INDEX[mdl] = {}
+		GetSkinGroups(mdl) --preload skingroups
 	end
 
-	if (!MDL_INDEX[mdl] and THREADS[mdl] and coroutine.running() != THREADS[mdl]) then
-		while (coroutine.status(THREADS[mdl]) != "dead") do 
-			coroutine.resume(THREADS[mdl]) --force it to finish
-		end		
+	if !MDL_INDEX[mdl][bg_mask] then
+		MDL_INDEX[mdl][bg_mask] = GS2ReadMeshData(mdl, bg_mask)
 	end
 
-	if !MDL_INDEX[mdl] then	print"yo"		
-		local BONES = {}
-			
+	if !MDL_INDEX[mdl][bg_mask] then
 		local temp = ClientsideRagdoll(mdl)
 		temp:SetupBones()
-		temp:SetNoDraw(true)
-		
+
 		local phys_count = temp:GetPhysicsObjectCount()
 
-		local phys_mat = ""
+		local phys_mat = temp:GetPhysicsObject():GetMaterial()
 
-		for phys_bone = 0, phys_count - 1 do
-			local phys = temp:GetPhysicsObjectNum(phys_bone)
-			if IsValid(phys) then
-				phys_mat = phys:GetMaterial()
-				break
-			end
+		local BONE2PBONE = {}
+		local PBONE2BONE = {}
+		for bone = 0, temp:GetBoneCount() - 1 do			
+			local pbone = temp:TranslateBoneToPhysBone(bone)
+			BONE2PBONE[bone] = pbone
+				
 		end
 
-		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/gibsplat2/flesh/"..phys_mat)
-				
-		local BONE2PBONE = {}
-		local BONE_PARENT = {}
-
-		for bone = 0, temp:GetBoneCount() - 1 do
-			BONE2PBONE[bone] = temp:TranslateBoneToPhysBone(bone)
-			BONE_PARENT[bone] = temp:GetBoneParent(bone)
+		for pbone = 0, phys_count - 1 do
+			local bone = temp:TranslatePhysBoneToBone(pbone)
+			PBONE2BONE[pbone] = bone
 		end
 
 		temp:Remove()
 
-		local hash_tbl, mesh_lookup, bone_matrixes = GetSortedMeshHashTable(mdl)
-
-		for bone, matrix_info in pairs(bone_matrixes) do
-			BONES[bone] = matrix_info.matrix
-		end
+		MATERIAL_CACHE[phys_mat] = MATERIAL_CACHE[phys_mat] or Material("models/gibsplat2/flesh/"..phys_mat)
+		
+		local flesh_mat = MATERIAL_CACHE[phys_mat]
 
 		local new_meshes = {}
 
-		--Calculate how much to increase each iteration for percentage mete
-		local incr = 0
-		for phys_bone = 0, phys_count - 1 do
-			if !hash_tbl[phys_bone] then
-				continue
+		for pbone = 0, phys_count - 1 do
+			local meshes, bones = util.GetModelMeshes(mdl, 0, bg_mask)
+
+			local root_bone = PBONE2BONE[pbone]
+
+			for bone, info in pairs(bones) do
+				info.matrix:Invert()
 			end
-			for bg_num, meshes in pairs(hash_tbl[phys_bone]) do
-				for bg_val, data in pairs(meshes) do		
-					for _, hash in pairs(data) do
-						incr = incr + 1
+
+			for bone, info in pairs(bones) do
+				if BONE2PBONE[bone] == pbone then
+					continue
+				end
+				local parent = bone
+				repeat
+					if BONE2PBONE[bones[parent].parent] == pbone then
+						break
+					end
+					parent = bones[parent].parent
+				until (parent == -1)
+				
+				if parent == -1 then
+					info.matrix:Set(bones[root_bone].matrix)
+				else					
+					local matrix = bones[parent].matrix
+					local parent = bones[parent].parent
+					local matrix2 = bones[parent].matrix
+
+					local center = matrix:GetTranslation() * 0.7 + matrix2:GetTranslation() * 0.3
+
+					info.matrix:Identity()
+					info.matrix:Translate(center)
+					info.matrix:Scale(vector_origin)			
+				end
+			end
+
+			local root_matrix = bones[root_bone].matrix:GetInverse()
+
+			local new_entries = {}
+
+			for _, mesh in ipairs(meshes) do
+				for _, vert in ipairs(mesh.verticies) do
+					local pos = vert.pos * 1
+					vert.pos:Set(vector_origin)
+					vert.strong_conn = true
+					for _, bw in ipairs(vert.weights) do
+						if BONE2PBONE[bw.bone] != pbone then
+							vert.strong_conn = false
+							local matrix = bones[bw.bone].matrix
+							vert.pos:Add(matrix:GetTranslation() * bw.weight)
+						else
+							vert.pos:Add(pos * bw.weight)
+							vert.conn = true
+						end						
+					end
+
+					vert.pos = root_matrix * vert.pos				
+				end
+
+				local tris = mesh.triangles
+				local skin_tris = {}
+				local flesh_tris = {}
+
+				for idx = 1, #tris - 2, 3 do
+					local conn = false
+					local strong_count = 0
+					for off = 0, 2 do
+						local vert = tris[idx + off]
+						if vert.conn then
+							conn = true
+						end
+						if vert.strong_conn then
+							strong_count = strong_count + 1
+						end
+					end
+
+					if conn then
+						if strong_count == 3 then
+							for off = 0, 2 do
+								local vert = tris[idx + off]
+								table.insert(skin_tris, vert)
+							end
+						else
+							for off = 0, 2 do
+								local vert = tris[idx + off]
+								table.insert(flesh_tris, vert)
+							end
+						end
 					end
 				end
+
+				local mesh_skin = Mesh()
+				mesh_skin:BuildFromTriangles(skin_tris)			
+				local mesh_flesh = Mesh()
+				mesh_flesh:BuildFromTriangles(flesh_tris)
+
+				local entry = {}
+				entry.body = {
+					Mesh = mesh_skin,
+					Material = Material(mesh.material),
+					decal_tris = skin_tris,
+					mat_name = mesh.material
+				}
+				entry.flesh = {
+					Mesh = mesh_flesh,
+					Material = flesh_mat,
+					is_flesh = true,
+					decal_tris = flesh_tris
+				}
+				
+				table.insert(new_entries, entry)
 			end
+
+			new_meshes[pbone] = new_entries
 		end
 
-		incr = 1 / incr
-
-		for phys_bone = 0, phys_count - 1 do
-			if !hash_tbl[phys_bone] then
-				continue
-			end 
-			local bone = table.KeyFromValue(BONE2PBONE, phys_bone)
-			local bone_matrix = BONES[bone]
-			--local bone_pos, bone_ang = bone_matrix:GetTranslation(), bone_matrix:GetAngles()
-
-			for bg_num, meshes in pairs(hash_tbl[phys_bone]) do
-				for bg_val, data in pairs(meshes) do		
-					for _, hash in pairs(data) do
-						local mesh = GS2ReadMesh(hash)
-						if mesh then
-							PERCENT = PERCENT + incr
-							SetMulti(new_meshes, phys_bone, bg_num, bg_val, hash, mesh)
-							continue
-						end
-						
-						mesh = mesh_lookup[hash]
-
-						if !MATERIAL_CACHE[mesh.material] then
-							local mat = Material(mesh.material)
-							if (phys_mat and file.Exists("models/gibsplat2/overlays/"..phys_mat..".vmt", "GAME")) then
-								local mat_bloody = CreateMaterial(mesh.material.."_bloody", "VertexLitGeneric", {["$detail"] = mat_path})
-								for key, value in pairs(mat:GetKeyValues()) do
-									if (key == "$detail") then
-										continue
-									end
-									if (type(value) == "string") then
-										mat_bloody:SetString(key, value)
-									elseif (type(value) == "number") then
-										mat_bloody:SetFloat(key, value)
-									elseif (type(value) == "Vector") then
-										mat_bloody:SetVector(key, value)
-									elseif (type(value) == "ITexture") then
-										mat_bloody:SetTexture(key, value)
-									elseif (type(value) == "VMatrix") then
-										mat_bloody:SetMatrix(key, value)							
-									end
-								end	
-								MATERIAL_CACHE[mesh.material] = mat_bloody
-							else
-								MATERIAL_CACHE[mesh.material] = mat
-							end
-						end
-
-						local verts = mesh.verticies
-						
-						for vert_index, vert in pairs(verts) do
-							vert._pos = vert._pos or vert.pos
-							--vert.pos = WorldToLocal(vert._pos, ang_zero, bone_pos, bone_ang)
-							vert.pos = bone_matrix * vert._pos
-							
-							vert.is_conn = nil
-							vert.is_strong = nil
-						end
-
-						local new_tris = {}
-						local new_verts = {}
-						
-						local TRIS = mesh.triangles			
-						
-						for tri_idx = 1, #TRIS-2, 3 do 
-							local is_strong = true
-							for offset = 0, 2 do
-								local vert = TRIS[tri_idx + offset]
-								for _, weight in pairs(vert.weights) do
-									if BONE2PBONE[weight.bone] != phys_bone then
-										is_strong = false
-										break
-									end
-								end
-								if !is_strong then
-									break
-								end
-							end
-							if is_strong then
-								for offset = 0, 2 do
-									local vert = TRIS[tri_idx + offset]
-									vert.is_strong = true
-									if !new_verts[vert] then
-										local new_vert = {
-											pos = vert.pos * 1,
-											normal = (vert.normal or vector_origin) * 1,
-											tangent = (vert.tangent or vector_origin) * 1,
-											binormal = (vert.binormal or vector_origin) * 1,
-											u = vert.u,
-											v = vert.v,
-											userdata = vert.userdata,
-											is_strong = true
-										}
-										new_verts[vert] = new_vert
-									end
-									table.insert(new_tris, new_verts[vert])	
-								end
-							end
-							if (tri_idx % 500 == 0) then
-								SafeYield()						
-							end 																
-						end
-
-						if #new_tris != 0 then
-							local new_mesh = Mesh()
-							new_mesh:BuildFromTriangles(new_tris)
-
-							local mat = MATERIAL_CACHE[mesh.material]
-							
-							SetMulti(new_meshes, phys_bone, bg_num, bg_val, hash, {body = {
-								Mesh = new_mesh,
-								Material = mat,
-								tris = new_tris,
-								mat_name = mesh.material								
-							}})
-						end	
-
-						if mesh.material:find("eyeball") then --dont draw eyes as flesh
-							continue
-						end
-						
-						local mat = MATERIAL_CACHE[mesh.material]
-
-						if (bit.band(mat:GetInt("$flags"), 0x200000) != 0) then --ignore translucent meshes
-							continue
-						end
-					
-						for vert_index, vert in pairs(verts) do
-							if !vert.is_strong then								
-								for _, weight in pairs(vert.weights) do
-									if BONE2PBONE[weight.bone] == phys_bone then
-										vert.is_conn = true										
-									else
-										local current_bone = weight.bone
-
-										repeat
-											if (BONE2PBONE[BONE_PARENT[current_bone]] == phys_bone) then
-												break
-											end
-											current_bone = BONE_PARENT[current_bone]
-										until (current_bone == -1)
-
-										if (current_bone != -1) then
-											local current_matrix = BONES[current_bone]
-
-											local current_pos = current_matrix:GetTranslation()
-											local current_ang = current_matrix:GetAngles()
-
-											local parent_bone = BONE_PARENT[current_bone]
-
-											local parent_matrix = BONES[parent_bone]
-
-											local parent_pos = parent_matrix:GetTranslation()
-											local parent_ang = parent_matrix:GetAngles()
-
-											--local lpos = WorldToLocal(current_pos, current_ang, bone_pos, bone_ang)
-											local lpos = bone_matrix * current_pos
-
-											--local lpos2 = WorldToLocal(parent_pos, parent_ang, bone_pos, bone_ang)
-											local lpos2 = bone_matrix * parent_pos
-
-											vert.pos:Add((lpos - vert.pos) * weight.weight * 0.7)
-											vert.pos:Add((lpos2 - vert.pos) * weight.weight * 0.3)
-										else
-											vert.pos:Mul(1 - weight.weight)
-										end
-									end
-								end
-
-								if !vert.is_conn then														
-									vert.pos = vec_zero
-									local vert_pos = Vector(0,0,0)
-									local weight_count = 0
-									for _, weight in pairs(vert.weights) do
-										if (weight.bone != bone) then
-											local parent_bone = BONE_PARENT[weight.bone]
-
-											if (BONE2PBONE[parent_bone] == phys_bone) then
-												local weight_matrix = BONES[weight.bone]
-												local weight_pos = weight_matrix:GetTranslation()
-												--local weight_ang = weight_matrix:GetAngles()
-
-												local parent_matrix = BONES[parent_bone]
-												--local parent_pos = parent_matrix:GetTranslation()
-												--local parent_ang = parent_matrix:GetAngles()
-
-												--local lpos = WorldToLocal(weight_pos, weight_ang, parent_pos, parent_ang)
-												local lpos = parent_matrix * weight_pos
-
-												--parent_pos = LocalToWorld(lpos * 0.7, ang_zero, parent_pos, parent_ang)
-												local parent_pos = parent_matrix:GetInverse() * (lpos * 0.7)
-
-												--vert_pos = vert_pos + WorldToLocal(parent_pos, ang_zero, bone_pos, bone_ang)
-												vert_pos:Add(bone_matrix * parent_pos)
-												weight_count = weight_count + 1
-											end			
-										end
-									end
-									if (weight_count > 0) then
-										vert.pos:Div(weight_count)
-									end
-								end					
-							end	
-							if (vert_index % 500 == 0) then
-								SafeYield()
-							end 						
-						end	
-							
-						new_tris = {}
-						new_verts = {}				
-
-						for tri_idx = 1, #TRIS-2, 3 do
-							local strong_count = 0
-							local conn_count = 0
-							for offset = 0, 2 do
-								local vert = TRIS[tri_idx + offset]
-								if vert.is_strong then
-									conn_count = conn_count + 1
-									strong_count = strong_count + 1
-								else
-									if vert.is_conn then
-										conn_count = conn_count + 1					
-									end	
-								end			
-							end
-							if conn_count > 0 and strong_count < 3 then
-								local vert1 = TRIS[tri_idx]
-								local vert2 = TRIS[tri_idx + 1]
-								local vert3 = TRIS[tri_idx + 2]
-								
-								if (!vert1.pos:IsEqualTol(vert2.pos, 0) and
-									!vert1.pos:IsEqualTol(vert3.pos, 0) and
-									!vert2.pos:IsEqualTol(vert3.pos, 0)) then
-									for offset = 0, 2 do
-										local vert = TRIS[tri_idx + offset]
-										if !new_verts[vert] then
-											local new_vert = {
-												pos = vert.pos * 1,
-												normal = (vert.normal or vector_origin) * 1,
-												tangent = (vert.tangent or vector_origin) * 1,
-												binormal = (vert.binormal or vector_origin) * 1,
-												u = vert.u,
-												v = vert.v,
-												userdata = vert.userdata
-											}
-											new_verts[vert] = new_vert
-										end
-										table.insert(new_tris, new_verts[vert])					
-									end				
-								end
-							end
-							if (tri_idx % 500 == 0) then
-								SafeYield()
-							end 																					
-						end
-
-						if #new_tris != 0 then
-							local new_mesh = Mesh()
-							new_mesh:BuildFromTriangles(new_tris)
-
-							local mat = MATERIAL_CACHE[phys_mat]
-
-							if (!mat or mat:IsError()) then
-								MATERIAL_CACHE[mesh.material] = MATERIAL_CACHE[mesh.material] or Material(mesh.material)
-								mat = MATERIAL_CACHE[mesh.material]
-							end
-							
-							InsertMultiWithKey(new_meshes, phys_bone, bg_num, bg_val, hash, "flesh", {
-								Mesh = new_mesh,
-								Material = mat,				
-								tris = new_tris,
-								is_flesh = true
-							}) 
-						end	
-
-						PERCENT = PERCENT + incr
-					end
-					SafeYield()
-				end
-				SafeYield()
-			end 
-		end
-
-		MDL_INDEX[mdl] = new_meshes
-
-		GS2WriteMeshData(new_meshes) 
-		GS2LinkModelInfo(mdl, "mesh_data", new_meshes)
+		MDL_INDEX[mdl][bg_mask] = new_meshes
+		
+		GS2WriteMeshData(mdl, bg_mask, new_meshes)
 	end
 
-	if coroutine.running() then
-		return --We're in generation phase
-	end
+	if !phys_bone then return end --pregen
 
-	local ret = {}
-	if MDL_INDEX[mdl][phys_bone] then
-		for bg_num, data in pairs(MDL_INDEX[mdl][phys_bone]) do
-			local bg_val = ent:GetBodygroup(bg_num)
-			if data[bg_val] then
-				for hash, mesh in pairs(data[bg_val]) do
-					table.insert(ret, mesh)
-				end
-			end
-		end
-	end
-
-	return ret
+	return MDL_INDEX[mdl][bg_mask][phys_bone]
 end
 
-local start
-
 local enabled = GetConVar("gs2_enabled")
-
-hook.Add("HUDPaint", "GS2BuildMesh", function()
-	if !enabled:GetBool() then return end
-	local mdl, thread = next(THREADS)
-	if !mdl then
-		return
-	end
-	if !start then
-		start = SysTime()
-		PERCENT = 0
-		print("Started generating meshes for "..mdl)
-	end			
-	
-	if (coroutine.status(thread) == "dead") then
-		THREADS[mdl] = nil
-		local nmodels = table.Count(THREADS)
-		local form = nmodels > 1 and [[Generated meshes for "%s" in %i:%02i.%02i (%i models left)]] or [[Generated meshes for "%s" in %i:%02i.%02i]]
-		local ft = string.FormattedTime(math.Round(SysTime() - start, 3))
-		local str = form:format(mdl, ft.m, ft.s, ft.ms, nmodels)
-		print(str)
-		start = nil	
-	else		
-		local iter = iterations:GetInt()
-		if !system.HasFocus() then
-			iter = iter * 10
-		end
-		for i = 1, iter do
-			local bool, err = coroutine.resume(thread)
-			if !bool then
-				print(mdl, err)
-				break
-			elseif (coroutine.status(thread) == "dead") then
-				break
-			end	
-		end
-	end			
-end)
 
 local player_ragdolls = GetConVar("gs2_player_ragdolls")
 
@@ -454,15 +186,28 @@ hook.Add("NetworkEntityCreated", "GS2BuildMesh", function(ent)
 	if !enabled:GetBool() then return end
 	if (ent:IsPlayer() and !player_ragdolls:GetBool() and !engine.ActiveGamemode():find("ttt")) then return end
 	local mdl = ent:GetModel()
-	if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-		if GS2ReadModelData(mdl) then
-			GetBoneMeshes(ent, 0)
-		else
-			THREADS[mdl] = coroutine.create(function()			
-				GetBoneMeshes(ent, 0)
-			end)
-			coroutine.resume(THREADS[mdl])			
-		end
+	if (mdl and !MDL_INDEX[mdl] and util.IsValidRagdoll(mdl)) then
+		GetBoneMeshes(ent, 0)
+	end
+end)
+
+local keep_corpses = GetConVar("ai_serverragdolls")
+
+hook.Add("OnEntityCreated", "GS2DeleteFakeRagdolls", function(ent)
+	if !enabled:GetBool() or !keep_corpses:GetBool() then return end
+
+	if !ent:IsNPC() or !ent:GetClass():find("headcrab") then return end
+
+	local zombie = ent:GetOwner()
+
+	if IsValid(zombie) then
+		timer.Simple(0.015, function()
+			for _, ragdoll in pairs(ents.FindByClass("class C_ClientRagdoll")) do
+				if ragdoll:GetModel():find("zombie") then
+					ragdoll:Remove()
+				end
+			end
+		end)
 	end
 end)
 
@@ -470,43 +215,12 @@ net.Receive("GS2ForceModelPregen", function()
 	local count = net.ReadUInt(16)
 	for i = 1, count do
 		local mdl = net.ReadString()
-		if (mdl and !MDL_INDEX[mdl] and !THREADS[mdl] and util.IsValidRagdoll(mdl)) then
-			if GS2ReadModelData(mdl) then
-				local ent = ClientsideModel(mdl)		
-				GetBoneMeshes(ent, 0)
-				ent:Remove()
-			else
-				THREADS[mdl] = coroutine.create(function()	
-					local ent = ClientsideModel(mdl)		
-					GetBoneMeshes(ent, 0)
-					ent:Remove()
-				end)				
-			end		
-		end
+		local ent = ClientsideModel(mdl)		
+		GetBoneMeshes(ent, 0)
+		ent:Remove()
+		
 		local temp = ClientsideModel(mdl)
 		hook.GetTable()["NetworkEntityCreated"]["GS2Gibs"](temp) --ugly!
 		temp:Remove()
 	end
-end)
-
-local form = [[GS2: Building meshes for "%s" (%3.2f%% done), %i models remaining (PREPARE FOR FPS SPIKES)]]
-local form2 = [[GS2: Building meshes for "%s" (%3.2f%% done)]]
-
-hook.Add("HUDPaint", "GS2BuildMeshDisplay", function()
-	if !enabled:GetBool() then return end
-	local mdl = next(THREADS)
-	if !mdl then return end
-
-	local nmodels = table.Count(THREADS)
-
-	local form = nmodels > 1 and form or form2
-
-	local msg = form:format(mdl, 100 * PERCENT, nmodels - 1)
-
-	surface.SetFont("DebugFixed")
-	local w, h = surface.GetTextSize(msg)
-	
-	surface.SetTextColor(255, 0, 0)
-	surface.SetTextPos(ScrW() * 0.99 - w, ScrH() / 2 - h / 2)
-	surface.DrawText(msg)
 end)
